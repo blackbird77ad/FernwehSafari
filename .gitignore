@@ -1,0 +1,90 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.*
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+Backend/.env
+Backend/.env.*
+!Backend/.env.example
+Frontend/.env
+Frontend/.env.*
+!Frontend/.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cert
+*.keystore
+service-account*.json
+*-service-account.json
+
+# Build output
+dist/
+build/
+Frontend/dist/
+Frontend/build/
+Backend/dist/
+Backend/build/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+Backend/*.log
+Frontend/*.log
+
+# Local uploads, databases and generated assets
+uploads/
+Backend/uploads/
+Backend/public/uploads/
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+
+# Local tooling, editor and OS files
+.codex/
+.codex-spec/
+.agents/
+.vscode/
+.idea/
+.history/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+
+# Test and cache output
+coverage/
+.nyc_output/
+.cache/
+.vite/
+.eslintcache
+.npm/
+.pnpm-store/
+.parcel-cache/
+
+# Deployment/platform local state
+.vercel/
+.netlify/
+.wrangler/
+
+# Archives and local exports
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar

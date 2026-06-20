@@ -1,0 +1,17 @@
+{
+  "name": "fernweh-safari",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Africa-Europe travel referral platform for Tanzania and Zanzibar tours.",
+  "scripts": {
+    "dev:backend": "npm --prefix Backend run dev",
+    "dev:frontend": "npm --prefix Frontend run dev",
+    "start": "npm --prefix Backend start",
+    "build": "npm --prefix Frontend run build",
+    "test": "npm --prefix Backend test",
+    "install:all": "npm install --prefix Backend && npm install --prefix Frontend"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
