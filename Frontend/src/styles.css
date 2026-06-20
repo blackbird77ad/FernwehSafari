@@ -416,6 +416,7 @@ h3 {
 .tour-facts span,
 .tour-facts strong,
 .admin-row > select,
+.admin-row .button-row select,
 .tab-row button {
   border-radius: 999px;
   padding: 0.3rem 0.65rem;
@@ -423,6 +424,10 @@ h3 {
   color: var(--forest);
   font-size: 0.78rem;
   font-weight: 900;
+}
+
+.admin-row .button-row select {
+  border: 1px solid var(--line);
 }
 
 .card-meta {
@@ -687,6 +692,11 @@ textarea:focus {
 .panel-form,
 .auth-card {
   padding: 1rem;
+}
+
+.compact-panel {
+  padding: 0.85rem;
+  box-shadow: none;
 }
 
 .panel-form {

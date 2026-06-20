@@ -8,6 +8,17 @@ import {
   updatePartner
 } from "../services/partnerService";
 import {
+  deleteTourCompanyApplication,
+  getTourCompanyApplications,
+  updateTourCompanyApplicationStatus
+} from "../services/applicationService";
+import {
+  decideGuideApplicationByAdmin,
+  getGuideApplications,
+  getGuideBookings,
+  updateGuideBookingStatus
+} from "../services/guideService";
+import {
   createTour,
   deleteTour,
   getTours,
@@ -16,7 +27,24 @@ import {
 import { getEnquiries, updateEnquiryStatus } from "../services/enquiryService";
 import { getReferrals, markReferralConverted } from "../services/referralService";
 import { uploadImage } from "../services/uploadService";
+import {
+  createUser,
+  deleteUser,
+  getUsers,
+  updateUser,
+  updateUserRole
+} from "../services/userService";
 import { eur, formatDate } from "../utils/formatters";
+
+const userRoles = ["traveller", "tour_company", "tour_guide", "moderator", "admin"];
+
+const roleLabels = {
+  traveller: "Traveller",
+  tour_company: "Tour company",
+  tour_guide: "Tour guide",
+  moderator: "Moderator",
+  admin: "Admin"
+};
 
 const emptyTour = {
   title: "",
@@ -45,18 +73,32 @@ const emptyPartner = {
   isActive: true
 };
 
+const emptyUser = {
+  name: "",
+  email: "",
+  password: "",
+  country: "",
+  role: "traveller"
+};
+
 export default function Admin() {
-  const [activeTab, setActiveTab] = useState("tours");
+  const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [users, setUsers] = useState([]);
   const [tours, setTours] = useState([]);
   const [partners, setPartners] = useState([]);
   const [enquiries, setEnquiries] = useState([]);
   const [referrals, setReferrals] = useState([]);
+  const [companyApplications, setCompanyApplications] = useState([]);
+  const [guideApplications, setGuideApplications] = useState([]);
+  const [guideBookings, setGuideBookings] = useState([]);
   const [tourForm, setTourForm] = useState(emptyTour);
   const [editingTourId, setEditingTourId] = useState("");
   const [partnerForm, setPartnerForm] = useState(emptyPartner);
   const [editingPartnerId, setEditingPartnerId] = useState("");
+  const [userForm, setUserForm] = useState(emptyUser);
+  const [editingUserId, setEditingUserId] = useState("");
   const [uploading, setUploading] = useState(false);
 
   const partnerOptions = useMemo(
@@ -64,20 +106,57 @@ export default function Admin() {
     [partners]
   );
 
+  const crmStats = useMemo(
+    () => [
+      { label: "Users", value: users.length },
+      { label: "Tours", value: tours.length },
+      { label: "Operators", value: partners.length },
+      {
+        label: "Company applications",
+        value: companyApplications.filter((application) => !["approved", "rejected"].includes(application.status)).length
+      },
+      {
+        label: "Guide applications",
+        value: guideApplications.filter((application) => application.status === "company_approved").length
+      },
+      { label: "Open enquiries", value: enquiries.filter((enquiry) => enquiry.status !== "closed").length },
+      { label: "Booking clicks", value: referrals.length },
+      { label: "Converted", value: referrals.filter((referral) => referral.converted).length }
+    ],
+    [companyApplications, enquiries, guideApplications, partners, referrals, tours, users]
+  );
+
   async function loadAdminData() {
     setLoading(true);
     try {
-      const [tourResponse, partnerResponse, enquiryResponse, referralResponse] = await Promise.all([
+      const [
+        userResponse,
+        tourResponse,
+        partnerResponse,
+        enquiryResponse,
+        referralResponse,
+        companyApplicationResponse,
+        guideApplicationResponse,
+        guideBookingResponse
+      ] = await Promise.all([
+        getUsers(),
         getTours({ includeInactive: true }),
         getPartners({ includeInactive: true }),
         getEnquiries(),
-        getReferrals()
+        getReferrals(),
+        getTourCompanyApplications(),
+        getGuideApplications(),
+        getGuideBookings()
       ]);
 
+      setUsers(userResponse.data.users);
       setTours(tourResponse.data.tours);
       setPartners(partnerResponse.data.partners);
       setEnquiries(enquiryResponse.data.enquiries);
       setReferrals(referralResponse.data.referrals);
+      setCompanyApplications(companyApplicationResponse.data.applications);
+      setGuideApplications(guideApplicationResponse.data.applications);
+      setGuideBookings(guideBookingResponse.data.bookings);
     } catch (error) {
       setToast({ tone: "error", message: error.message });
     } finally {
@@ -95,6 +174,25 @@ export default function Admin() {
 
   function updatePartnerField(field, value) {
     setPartnerForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateUserField(field, value) {
+    setUserForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function serializeUserForm() {
+    const payload = {
+      name: userForm.name,
+      email: userForm.email,
+      country: userForm.country,
+      role: userForm.role
+    };
+
+    if (userForm.password) {
+      payload.password = userForm.password;
+    }
+
+    return payload;
   }
 
   function serializeTourForm() {
@@ -208,6 +306,58 @@ export default function Admin() {
     }
   }
 
+  async function handleUserSubmit(event) {
+    event.preventDefault();
+
+    try {
+      if (editingUserId) {
+        await updateUser(editingUserId, serializeUserForm());
+        setToast({ message: "User updated." });
+      } else {
+        await createUser(serializeUserForm());
+        setToast({ message: "User created." });
+      }
+
+      setUserForm(emptyUser);
+      setEditingUserId("");
+      await loadAdminData();
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    }
+  }
+
+  function editUser(user) {
+    setEditingUserId(user.id);
+    setUserForm({
+      name: user.name || "",
+      email: user.email || "",
+      password: "",
+      country: user.country || "",
+      role: user.role || "traveller"
+    });
+    setActiveTab("users");
+  }
+
+  async function handleUserRoleChange(id, role) {
+    try {
+      await updateUserRole(id, role);
+      setToast({ message: "User role updated." });
+      await loadAdminData();
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    }
+  }
+
+  async function removeUser(id) {
+    try {
+      await deleteUser(id);
+      setToast({ message: "User deleted." });
+      await loadAdminData();
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    }
+  }
+
   async function handleStatusChange(id, status) {
     try {
       await updateEnquiryStatus(id, status);
@@ -222,6 +372,50 @@ export default function Admin() {
     try {
       await markReferralConverted(id);
       setToast({ message: "Referral marked converted." });
+      await loadAdminData();
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    }
+  }
+
+  async function handleCompanyApplicationStatus(id, status) {
+    const reviewNotes = window.prompt("Review notes for this decision?") || "";
+
+    try {
+      await updateTourCompanyApplicationStatus(id, { status, reviewNotes });
+      setToast({ message: `Company application ${status}.` });
+      await loadAdminData();
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    }
+  }
+
+  async function removeCompanyApplication(id) {
+    try {
+      await deleteTourCompanyApplication(id);
+      setToast({ message: "Company application deleted." });
+      await loadAdminData();
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    }
+  }
+
+  async function handleGuideAdminDecision(id, decision) {
+    const notes = window.prompt("Admin notes for this guide decision?") || "";
+
+    try {
+      await decideGuideApplicationByAdmin(id, { decision, notes });
+      setToast({ message: `Guide application ${decision}.` });
+      await loadAdminData();
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    }
+  }
+
+  async function handleGuideBookingStatus(id, status) {
+    try {
+      await updateGuideBookingStatus(id, status);
+      setToast({ message: "Guide booking updated." });
       await loadAdminData();
     } catch (error) {
       setToast({ tone: "error", message: error.message });
@@ -255,11 +449,22 @@ export default function Admin() {
     <>
       <section className="page-hero compact-hero">
         <p className="eyebrow">Admin</p>
-        <h1>Manage tours, partners, enquiries and referrals.</h1>
+        <h1>CRM dashboard for users, tours, operators, enquiries and referrals.</h1>
       </section>
       <section className="section admin-section">
         <div className="tab-row">
-          {["tours", "partners", "enquiries", "referrals", "uploads"].map((tab) => (
+          {[
+            "overview",
+            "users",
+            "company applications",
+            "guide applications",
+            "guide bookings",
+            "tours",
+            "partners",
+            "enquiries",
+            "referrals",
+            "uploads"
+          ].map((tab) => (
             <button
               className={activeTab === tab ? "active" : ""}
               key={tab}
@@ -274,6 +479,247 @@ export default function Admin() {
           <Spinner />
         ) : (
           <>
+            {activeTab === "overview" && (
+              <div className="admin-list full">
+                <div className="card-grid">
+                  {crmStats.map((item) => (
+                    <article className="side-panel" key={item.label}>
+                      <p className="eyebrow">{item.label}</p>
+                      <h2>{item.value}</h2>
+                    </article>
+                  ))}
+                </div>
+                <div className="side-panel">
+                  <p className="eyebrow">CRM workflow</p>
+                  <h2>Manage the whole FernwehSafari pipeline.</h2>
+                  <p>
+                    Create user accounts, promote roles, review tour listing applications, manage operators, publish
+                    tours, track enquiries and mark successful referral conversions.
+                  </p>
+                </div>
+              </div>
+            )}
+            {activeTab === "users" && (
+              <div className="admin-grid">
+                <form className="panel-form admin-form" onSubmit={handleUserSubmit}>
+                  <h2>{editingUserId ? "Edit user" : "Create user"}</h2>
+                  <label className="field">
+                    <span>Name</span>
+                    <input value={userForm.name} onChange={(event) => updateUserField("name", event.target.value)} required />
+                  </label>
+                  <label className="field">
+                    <span>Email</span>
+                    <input type="email" value={userForm.email} onChange={(event) => updateUserField("email", event.target.value)} required />
+                  </label>
+                  <div className="form-grid">
+                    <label className="field">
+                      <span>Password {editingUserId ? "(leave blank to keep)" : ""}</span>
+                      <input
+                        type="password"
+                        minLength="8"
+                        value={userForm.password}
+                        onChange={(event) => updateUserField("password", event.target.value)}
+                        required={!editingUserId}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Country</span>
+                      <input value={userForm.country} onChange={(event) => updateUserField("country", event.target.value)} />
+                    </label>
+                  </div>
+                  <label className="field">
+                    <span>Role</span>
+                    <select value={userForm.role} onChange={(event) => updateUserField("role", event.target.value)}>
+                      {userRoles.map((role) => (
+                        <option key={role} value={role}>
+                          {roleLabels[role]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="button-row">
+                    <button className="button primary" type="submit">
+                      {editingUserId ? "Update user" : "Create user"}
+                    </button>
+                    {editingUserId && (
+                      <button
+                        className="button secondary"
+                        type="button"
+                        onClick={() => {
+                          setEditingUserId("");
+                          setUserForm(emptyUser);
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                </form>
+                <div className="admin-list">
+                  {users.map((user) => (
+                    <article className="admin-row" key={user.id}>
+                      <div>
+                        <strong>{user.name}</strong>
+                        <span>
+                          {user.email} - {roleLabels[user.role] || user.role} - {user.country || "No country"}
+                        </span>
+                      </div>
+                      <div className="button-row">
+                        <select value={user.role} onChange={(event) => handleUserRoleChange(user.id, event.target.value)}>
+                          {userRoles.map((role) => (
+                            <option key={role} value={role}>
+                              {roleLabels[role]}
+                            </option>
+                          ))}
+                        </select>
+                        <button className="button secondary compact" type="button" onClick={() => editUser(user)}>
+                          Edit
+                        </button>
+                        <button className="button danger compact" type="button" onClick={() => removeUser(user.id)}>
+                          Delete
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            )}
+            {activeTab === "company applications" && (
+              <div className="admin-list full">
+                {companyApplications.map((application) => (
+                  <article className="admin-row" key={application._id}>
+                    <div>
+                      <strong>{application.companyName}</strong>
+                      <span>
+                        {application.contactName} - {application.email} - {application.status}
+                      </span>
+                      <p>
+                        {application.headquarters} - Regions: {application.operatingRegions?.join(", ") || "Not provided"} -
+                        Guides: {application.hasInHouseGuides ? "In-house" : "External/none listed"}
+                      </p>
+                      <p>{application.notes || "No notes provided."}</p>
+                    </div>
+                    <div className="button-row">
+                      <a className="button secondary compact" href={`mailto:${application.email}`}>
+                        Email
+                      </a>
+                      {application.phone && (
+                        <a className="button secondary compact" href={`tel:${application.phone}`}>
+                          Call
+                        </a>
+                      )}
+                      {application.whatsapp && (
+                        <a
+                          className="button secondary compact"
+                          href={`https://wa.me/${application.whatsapp.replace(/\D/g, "")}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          WhatsApp
+                        </a>
+                      )}
+                      <button
+                        className="button secondary compact"
+                        type="button"
+                        onClick={() => handleCompanyApplicationStatus(application._id, "call_scheduled")}
+                      >
+                        Call scheduled
+                      </button>
+                      <button
+                        className="button primary compact"
+                        type="button"
+                        onClick={() => handleCompanyApplicationStatus(application._id, "approved")}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        className="button danger compact"
+                        type="button"
+                        onClick={() => handleCompanyApplicationStatus(application._id, "rejected")}
+                      >
+                        Reject
+                      </button>
+                      <button className="button danger compact" type="button" onClick={() => removeCompanyApplication(application._id)}>
+                        Delete
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+            {activeTab === "guide applications" && (
+              <div className="admin-list full">
+                {guideApplications.map((application) => (
+                  <article className="admin-row" key={application._id}>
+                    <div>
+                      <strong>{application.guideName}</strong>
+                      <span>
+                        {application.tour?.title || "Tour"} - {application.email} - {application.status}
+                      </span>
+                      <p>
+                        Rate: {application.dailyRateEUR ? eur.format(application.dailyRateEUR) : "Not provided"} per day -
+                        Languages: {application.languages?.join(", ") || "Not provided"}
+                      </p>
+                      <p>{application.message || "No message provided."}</p>
+                    </div>
+                    <div className="button-row">
+                      <a className="button secondary compact" href={`mailto:${application.email}`}>
+                        Email
+                      </a>
+                      {application.whatsapp && (
+                        <a
+                          className="button secondary compact"
+                          href={`https://wa.me/${application.whatsapp.replace(/\D/g, "")}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          WhatsApp
+                        </a>
+                      )}
+                      <button
+                        className="button primary compact"
+                        type="button"
+                        disabled={application.status !== "company_approved"}
+                        onClick={() => handleGuideAdminDecision(application._id, "approved")}
+                      >
+                        Confirm guide
+                      </button>
+                      <button
+                        className="button danger compact"
+                        type="button"
+                        onClick={() => handleGuideAdminDecision(application._id, "rejected")}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+            {activeTab === "guide bookings" && (
+              <div className="admin-list full">
+                {guideBookings.map((booking) => (
+                  <article className="admin-row" key={booking._id}>
+                    <div>
+                      <strong>{booking.tour?.title || "Tour"} guide request</strong>
+                      <span>
+                        Guide: {booking.guide?.name || "Guide"} - Traveller: {booking.name} ({booking.email}) - {booking.status}
+                      </span>
+                      <p>
+                        Dates: {booking.travelDates || "Not provided"} - Group: {booking.groupSize || "Not provided"}
+                      </p>
+                      <p>{booking.message || "No message provided."}</p>
+                    </div>
+                    <select value={booking.status} onChange={(event) => handleGuideBookingStatus(booking._id, event.target.value)}>
+                      <option value="requested">requested</option>
+                      <option value="accepted">accepted</option>
+                      <option value="declined">declined</option>
+                      <option value="closed">closed</option>
+                    </select>
+                  </article>
+                ))}
+              </div>
+            )}
             {activeTab === "tours" && (
               <div className="admin-grid">
                 <form className="panel-form admin-form" onSubmit={handleTourSubmit}>
@@ -463,7 +909,9 @@ export default function Admin() {
                     <div>
                       <strong>{enquiry.name}</strong>
                       <span>
-                        {enquiry.email} · {enquiry.tour?.title || "General"} · {formatDate(enquiry.createdAt)}
+                        {enquiry.email} -{" "}
+                        {enquiry.type === "partner_application" ? "Tour listing application" : enquiry.tour?.title || "General"} -{" "}
+                        {formatDate(enquiry.createdAt)}
                       </span>
                       <p>{enquiry.message}</p>
                     </div>

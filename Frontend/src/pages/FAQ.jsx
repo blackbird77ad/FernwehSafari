@@ -8,7 +8,7 @@ export default function FAQ() {
     <>
       <section className="page-hero compact-hero">
         <p className="eyebrow">FAQ</p>
-        <h1>Referral process, payments and partner handoff.</h1>
+        <h1>Tour planning, enquiries and booking next steps.</h1>
       </section>
       <section className="section narrow">
         <div className="accordion">

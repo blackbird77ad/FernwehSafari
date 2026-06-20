@@ -42,12 +42,12 @@ export default function Home() {
             ))}
           </div>
         ) : (
-          <p className="empty-state">No featured tours yet. Seed the backend database to populate this section.</p>
+          <p className="empty-state">Featured tours are being prepared.</p>
         )}
       </section>
       <section className="section tinted">
         <div className="section-heading">
-          <p className="eyebrow">Client destination set</p>
+          <p className="eyebrow">Destinations</p>
           <h2>Safari, mountain, coast, forest and heritage stops organised for quick discovery.</h2>
         </div>
         <div className="card-grid destination-grid">
@@ -59,12 +59,12 @@ export default function Home() {
       <section className="section">
         <div className="section-heading">
           <p className="eyebrow">How it works</p>
-          <h2>A referral flow that keeps the booking with the operating partner.</h2>
+          <h2>Find a route, ask your questions and continue when you are ready.</h2>
         </div>
         <div className="steps-grid">
           <StepCard number="01" title="Browse" text="Compare curated routes across Tanzania mainland and Zanzibar." />
           <StepCard number="02" title="Enquire" text="Share your dates, travel style, budget and must-see locations." />
-          <StepCard number="03" title="Get referred" text="FernwehSafari connects you to the right local partner booking flow." />
+          <StepCard number="03" title="Book" text="Continue to the selected tour booking page when the route feels right." />
         </div>
       </section>
       <section className="section muted-band">

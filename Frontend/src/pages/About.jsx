@@ -3,13 +3,12 @@ export default function About() {
     <>
       <section className="page-hero">
         <p className="eyebrow">About FernwehSafari</p>
-        <h1>A referral brand for European travellers and African tour partners.</h1>
+        <h1>A Tanzania and Zanzibar tour discovery site for travellers planning from Europe.</h1>
       </section>
       <section className="section text-page">
         <p className="lead">
-          FernwehSafari connects travellers in Europe, especially Germany, with trusted tour partners in Tanzania
-          and Zanzibar. The platform helps people discover experiences, ask better pre-booking questions and move
-          into the partner&apos;s own booking process with confidence.
+          FernwehSafari helps travellers in Europe, especially Germany, compare safari, Kilimanjaro, heritage and
+          Zanzibar coast experiences before choosing the route that fits their dates, budget and travel style.
         </p>
         <div className="feature-grid">
           <article>
@@ -21,11 +20,11 @@ export default function About() {
           </article>
           <article>
             <h2>For travellers</h2>
-            <p>Clear tour pages, euro pricing, partner context and a simple referral path before committing.</p>
+            <p>Clear tour pages, euro pricing, practical context and a simple path from discovery to booking.</p>
           </article>
           <article>
-            <h2>For partners</h2>
-            <p>Qualified referral traffic from an SEO-focused, Europe-facing travel discovery brand.</p>
+            <h2>For operators</h2>
+            <p>Selected tour companies can apply to feature routes for travellers planning from Europe.</p>
           </article>
         </div>
       </section>

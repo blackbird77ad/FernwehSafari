@@ -1,6 +1,6 @@
 # FernwehSafari Website
 
-FernwehSafari is an Africa-Europe travel referral platform for European travellers discovering Tanzania and Zanzibar tours. Customers browse tours and submit enquiries on FernwehSafari, then get referred to the relevant tour partner's booking system.
+FernwehSafari is a Tanzania and Zanzibar tour discovery site for European travellers. Customers browse curated tours, submit enquiries, and continue to the selected tour booking page when ready. Behind the scenes, listed tours are managed through operator partnerships and referral tracking.
 
 ## Stack
 

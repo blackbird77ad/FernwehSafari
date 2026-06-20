@@ -82,7 +82,7 @@ export const testimonials = [
     country: "Germany",
     tour: "Ngorongoro and Manyara Safari",
     rating: 5,
-    quote: "FernwehSafari helped us compare the crater, Lake Manyara and Zanzibar before speaking with the local operator."
+    quote: "FernwehSafari helped us compare the crater, Lake Manyara and Zanzibar before choosing the route."
   },
   {
     name: "Lukas Weber",
@@ -96,7 +96,7 @@ export const testimonials = [
     country: "France",
     tour: "Stone Town and North Coast Escape",
     rating: 5,
-    quote: "We wanted culture, Forodhani, Prison Island and Nungwi. The referral matched us with the right Zanzibar partner."
+    quote: "We wanted culture, Forodhani, Prison Island and Nungwi. The tour options made the route easy to understand."
   }
 ];
 
@@ -114,19 +114,14 @@ export const galleryImages = [
 
 export const faqs = [
   {
-    question: "Does FernwehSafari take direct bookings?",
+    question: "How do I book a tour?",
     answer:
-      "No. FernwehSafari helps travellers discover suitable tours and then refers them to the operating tour partner's own booking system."
+      "Choose a tour, send any questions you have, then continue to the selected tour booking page when you are ready."
   },
   {
-    question: "How does FernwehSafari earn money?",
+    question: "Can I ask questions before booking?",
     answer:
-      "FernwehSafari earns a commission from the tour partner when a referred traveller completes a booking."
-  },
-  {
-    question: "Can I ask questions before I am referred?",
-    answer:
-      "Yes. Submit an enquiry and FernwehSafari will review the request before connecting you with the most relevant partner."
+      "Yes. Submit an enquiry with your dates, group size, travel style and questions. FernwehSafari will follow up with next steps."
   },
   {
     question: "Which destinations can I ask about?",
@@ -140,6 +135,11 @@ export const faqs = [
   {
     question: "Is FernwehSafari based in Tanzania?",
     answer:
-      "FernwehSafari is Europe-facing and based around a Germany audience, while referrals are matched with local Tanzania and Zanzibar tour partners."
+      "FernwehSafari is built for travellers planning from Europe, with a strong focus on Germany and nearby European markets."
+  },
+  {
+    question: "Can tour operators apply to list tours?",
+    answer:
+      "Yes. Tour operators can use the List your tours page to apply. FernwehSafari will schedule a discussion about route fit, booking flow and commission terms."
   }
 ];

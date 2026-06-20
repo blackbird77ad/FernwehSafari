@@ -33,6 +33,14 @@ const tourPartnerSchema = new mongoose.Schema(
       type: String,
       trim: true
     },
+    ownerUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    },
+    application: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TourCompanyApplication"
+    },
     isActive: {
       type: Boolean,
       default: true

@@ -6,7 +6,7 @@ export default function Testimonials() {
     <>
       <section className="page-hero compact-hero">
         <p className="eyebrow">Testimonials</p>
-        <h1>Traveller proof for the referral journey.</h1>
+        <h1>Traveller stories from Tanzania and Zanzibar routes.</h1>
       </section>
       <section className="section">
         <div className="card-grid">

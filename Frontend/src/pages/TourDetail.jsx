@@ -4,6 +4,7 @@ import EnquiryForm from "../components/EnquiryForm";
 import ImageGallery from "../components/ImageGallery";
 import Spinner from "../components/Spinner";
 import useAuth from "../hooks/useAuth";
+import { createGuideApplication, createGuideBooking } from "../services/guideService";
 import { createReferral } from "../services/referralService";
 import { getTour } from "../services/tourService";
 import { eur } from "../utils/formatters";
@@ -11,10 +12,24 @@ import { eur } from "../utils/formatters";
 export default function TourDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated, saveTour } = useAuth();
+  const { isAuthenticated, saveTour, user } = useAuth();
   const [tour, setTour] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [guideApplicationForm, setGuideApplicationForm] = useState({
+    phone: "",
+    whatsapp: "",
+    location: "",
+    languages: "",
+    licenseNumber: "",
+    certifications: "",
+    experienceYears: "",
+    regions: "",
+    dailyRateEUR: "",
+    availabilityNote: "",
+    message: ""
+  });
+  const [guideBookingForms, setGuideBookingForms] = useState({});
 
   useEffect(() => {
     getTour(slug)
@@ -50,6 +65,74 @@ export default function TourDetail() {
     }
   }
 
+  function updateGuideApplicationField(field, value) {
+    setGuideApplicationForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateGuideBookingField(guideId, field, value) {
+    setGuideBookingForms((current) => ({
+      ...current,
+      [guideId]: {
+        name: user?.name || "",
+        email: user?.email || "",
+        travelDates: "",
+        groupSize: "",
+        message: "",
+        ...(current[guideId] || {}),
+        [field]: value
+      }
+    }));
+  }
+
+  async function handleGuideApplication(event) {
+    event.preventDefault();
+
+    if (!isAuthenticated) {
+      navigate("/login", { state: { from: `/tours/${slug}` } });
+      return;
+    }
+
+    try {
+      await createGuideApplication({
+        ...guideApplicationForm,
+        tourId: tour._id
+      });
+      setMessage("Guide application sent. The tour company reviews first, then FernwehSafari confirms.");
+      setGuideApplicationForm({
+        phone: "",
+        whatsapp: "",
+        location: "",
+        languages: "",
+        licenseNumber: "",
+        certifications: "",
+        experienceYears: "",
+        regions: "",
+        dailyRateEUR: "",
+        availabilityNote: "",
+        message: ""
+      });
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
+  async function handleGuideBooking(event, guideId) {
+    event.preventDefault();
+    const form = guideBookingForms[guideId] || {};
+
+    try {
+      await createGuideBooking({
+        ...form,
+        tourId: tour._id,
+        guideId
+      });
+      setMessage("Guide request sent. The guide and tour company will be notified.");
+      setGuideBookingForms((current) => ({ ...current, [guideId]: {} }));
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
   if (loading) {
     return <Spinner />;
   }
@@ -74,7 +157,7 @@ export default function TourDetail() {
           <p>{tour.shortDescription}</p>
           <div className="button-row">
             <button className="button primary" type="button" onClick={handleReferral}>
-              Book with partner
+              Continue to booking
             </button>
             <button className="button secondary light" type="button" onClick={handleSave}>
               Save tour
@@ -107,10 +190,85 @@ export default function TourDetail() {
               </article>
             ))}
           </div>
+          {tour.approvedGuides?.length > 0 && (
+            <>
+              <h2>Available tour guides</h2>
+              <div className="admin-list">
+                {tour.approvedGuides
+                  .filter((item) => item.isActive)
+                  .map((item) => {
+                    const guideId = item.guide?._id || item.guide;
+                    const form = guideBookingForms[guideId] || {
+                      name: user?.name || "",
+                      email: user?.email || "",
+                      travelDates: "",
+                      groupSize: "",
+                      message: ""
+                    };
+
+                    return (
+                      <article className="side-panel" key={guideId}>
+                        <p className="eyebrow">Approved guide</p>
+                        <h3>{item.guide?.name || "Tour guide"}</h3>
+                        <p>
+                          {item.languages?.join(", ") || "Languages not listed"} -{" "}
+                          {item.dailyRateEUR ? `${eur.format(item.dailyRateEUR)} per day` : "Rate on request"}
+                        </p>
+                        {item.availabilityNote && <p>{item.availabilityNote}</p>}
+                        <form className="panel-form" onSubmit={(event) => handleGuideBooking(event, guideId)}>
+                          <div className="form-grid">
+                            <label className="field">
+                              <span>Name</span>
+                              <input value={form.name} onChange={(event) => updateGuideBookingField(guideId, "name", event.target.value)} required />
+                            </label>
+                            <label className="field">
+                              <span>Email</span>
+                              <input
+                                type="email"
+                                value={form.email}
+                                onChange={(event) => updateGuideBookingField(guideId, "email", event.target.value)}
+                                required
+                              />
+                            </label>
+                          </div>
+                          <div className="form-grid">
+                            <label className="field">
+                              <span>Travel dates</span>
+                              <input
+                                value={form.travelDates}
+                                onChange={(event) => updateGuideBookingField(guideId, "travelDates", event.target.value)}
+                              />
+                            </label>
+                            <label className="field">
+                              <span>Group size</span>
+                              <input
+                                value={form.groupSize}
+                                onChange={(event) => updateGuideBookingField(guideId, "groupSize", event.target.value)}
+                              />
+                            </label>
+                          </div>
+                          <label className="field">
+                            <span>Message</span>
+                            <textarea
+                              value={form.message}
+                              onChange={(event) => updateGuideBookingField(guideId, "message", event.target.value)}
+                              rows="3"
+                            />
+                          </label>
+                          <button className="button secondary" type="submit">
+                            Request this guide
+                          </button>
+                        </form>
+                      </article>
+                    );
+                  })}
+              </div>
+            </>
+          )}
         </article>
         <aside className="detail-side">
           <div className="side-panel">
-            <p className="eyebrow">Tour partner</p>
+            <p className="eyebrow">Tour operator</p>
             <h2>{tour.partner?.name}</h2>
             <p>{tour.partner?.description}</p>
             <span>{tour.partner?.location}</span>
@@ -119,6 +277,94 @@ export default function TourDetail() {
             <p className="eyebrow">Enquire</p>
             <EnquiryForm tour={tour} />
           </div>
+          {user?.role === "tour_guide" && (
+            <div className="side-panel">
+              <p className="eyebrow">Tour guide application</p>
+              <h2>Apply to guide this tour</h2>
+              <form className="panel-form" onSubmit={handleGuideApplication}>
+                <div className="form-grid">
+                  <label className="field">
+                    <span>Phone</span>
+                    <input value={guideApplicationForm.phone} onChange={(event) => updateGuideApplicationField("phone", event.target.value)} />
+                  </label>
+                  <label className="field">
+                    <span>WhatsApp</span>
+                    <input
+                      value={guideApplicationForm.whatsapp}
+                      onChange={(event) => updateGuideApplicationField("whatsapp", event.target.value)}
+                    />
+                  </label>
+                </div>
+                <label className="field">
+                  <span>Location</span>
+                  <input value={guideApplicationForm.location} onChange={(event) => updateGuideApplicationField("location", event.target.value)} />
+                </label>
+                <label className="field">
+                  <span>Languages</span>
+                  <input
+                    value={guideApplicationForm.languages}
+                    onChange={(event) => updateGuideApplicationField("languages", event.target.value)}
+                    placeholder="English, German, Swahili..."
+                  />
+                </label>
+                <div className="form-grid">
+                  <label className="field">
+                    <span>Licence number</span>
+                    <input
+                      value={guideApplicationForm.licenseNumber}
+                      onChange={(event) => updateGuideApplicationField("licenseNumber", event.target.value)}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Years experience</span>
+                    <input
+                      value={guideApplicationForm.experienceYears}
+                      onChange={(event) => updateGuideApplicationField("experienceYears", event.target.value)}
+                    />
+                  </label>
+                </div>
+                <label className="field">
+                  <span>Certifications</span>
+                  <input
+                    value={guideApplicationForm.certifications}
+                    onChange={(event) => updateGuideApplicationField("certifications", event.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  <span>Regions covered</span>
+                  <input value={guideApplicationForm.regions} onChange={(event) => updateGuideApplicationField("regions", event.target.value)} />
+                </label>
+                <label className="field">
+                  <span>Daily rate EUR</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={guideApplicationForm.dailyRateEUR}
+                    onChange={(event) => updateGuideApplicationField("dailyRateEUR", event.target.value)}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>Availability note</span>
+                  <input
+                    value={guideApplicationForm.availabilityNote}
+                    onChange={(event) => updateGuideApplicationField("availabilityNote", event.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  <span>Message</span>
+                  <textarea
+                    value={guideApplicationForm.message}
+                    onChange={(event) => updateGuideApplicationField("message", event.target.value)}
+                    rows="4"
+                  />
+                </label>
+                <button className="button primary" type="submit">
+                  Apply as guide
+                </button>
+              </form>
+            </div>
+          )}
           {message && <p className="form-note">{message}</p>}
         </aside>
       </section>

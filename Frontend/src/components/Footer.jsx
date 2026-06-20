@@ -8,13 +8,14 @@ export default function Footer() {
           <span className="brand-mark">FS</span>
           <span>FernwehSafari</span>
         </Link>
-        <p>Europe-facing referrals for Tanzania and Zanzibar travel partners.</p>
+        <p>Curated Tanzania and Zanzibar tours for travellers planning from Europe.</p>
       </div>
       <div>
         <h3>Explore</h3>
         <Link to="/tours">Tours</Link>
         <Link to="/gallery">Gallery</Link>
         <Link to="/testimonials">Testimonials</Link>
+        <Link to="/list-your-tours">List your tours</Link>
       </div>
       <div>
         <h3>Contact</h3>

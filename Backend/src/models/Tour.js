@@ -20,6 +20,41 @@ const itineraryDaySchema = new mongoose.Schema(
   { _id: false }
 );
 
+const approvedGuideSchema = new mongoose.Schema(
+  {
+    guide: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    application: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TourGuideApplication"
+    },
+    dailyRateEUR: {
+      type: Number,
+      min: [0, "Guide day rate must be positive."]
+    },
+    languages: {
+      type: [String],
+      default: []
+    },
+    availabilityNote: {
+      type: String,
+      trim: true
+    },
+    isActive: {
+      type: Boolean,
+      default: true
+    },
+    approvedAt: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  { _id: false }
+);
+
 const tourSchema = new mongoose.Schema(
   {
     title: {
@@ -77,6 +112,14 @@ const tourSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "TourPartner",
       required: [true, "Tour partner is required."]
+    },
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    },
+    approvedGuides: {
+      type: [approvedGuideSchema],
+      default: []
     },
     referralLink: {
       type: String,

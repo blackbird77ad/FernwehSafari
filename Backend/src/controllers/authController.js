@@ -4,12 +4,17 @@ const ApiError = require("../utils/apiError");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/sendResponse");
 const User = require("../models/User");
+const { notifyOwner } = require("../lib/resend");
+
+function normalizeRole(role) {
+  return role === "user" ? User.DEFAULT_ROLE : role;
+}
 
 function signToken(user) {
   return jwt.sign(
     {
       id: user._id,
-      role: user.role
+      role: normalizeRole(user.role)
     },
     process.env.JWT_SECRET || "development-secret-change-me",
     { expiresIn: "7d" }
@@ -21,7 +26,7 @@ function serializeUser(user) {
     id: user._id,
     name: user.name,
     email: user.email,
-    role: user.role,
+    role: normalizeRole(user.role),
     country: user.country,
     savedTours: user.savedTours || []
   };
@@ -51,6 +56,13 @@ const register = asyncHandler(async (req, res) => {
     passwordHash,
     country
   });
+
+  await notifyOwner(`New FernwehSafari user registered: ${user.name}`, [
+    `Name: ${user.name}`,
+    `Email: ${user.email}`,
+    `Role: ${normalizeRole(user.role)}`,
+    `Country: ${user.country || "Not provided"}`
+  ]);
 
   sendResponse(res, 201, {
     token: signToken(user),

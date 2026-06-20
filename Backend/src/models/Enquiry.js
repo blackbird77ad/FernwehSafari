@@ -29,6 +29,11 @@ const enquirySchema = new mongoose.Schema(
       type: String,
       trim: true
     },
+    type: {
+      type: String,
+      enum: ["traveller", "partner_application"],
+      default: "traveller"
+    },
     status: {
       type: String,
       enum: ["new", "contacted", "referred", "closed"],

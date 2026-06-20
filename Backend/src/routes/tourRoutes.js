@@ -7,14 +7,13 @@ const {
   updateTour
 } = require("../controllers/tourController");
 const { auth, optionalAuth } = require("../middleware/auth");
-const adminOnly = require("../middleware/adminOnly");
 
 const router = express.Router();
 
 router.get("/", optionalAuth, listTours);
 router.get("/:slug", getTourBySlug);
-router.post("/", auth, adminOnly, createTour);
-router.put("/:id", auth, adminOnly, updateTour);
-router.delete("/:id", auth, adminOnly, deleteTour);
+router.post("/", auth, createTour);
+router.put("/:id", auth, updateTour);
+router.delete("/:id", auth, deleteTour);
 
 module.exports = router;

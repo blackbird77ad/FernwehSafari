@@ -4,11 +4,11 @@ export default function HeroSection() {
   return (
     <section className="hero-section">
       <div className="hero-content">
-        <p className="eyebrow">Africa-Europe travel referrals</p>
+        <p className="eyebrow">Tanzania & Zanzibar tours</p>
         <h1>FernwehSafari</h1>
         <p>
-          Discover Tanzania safari routes, Kilimanjaro views and Zanzibar coast experiences, then enquire and get
-          referred to trusted local tour partners.
+          Discover safari routes, Kilimanjaro views, Stone Town culture and Zanzibar coast experiences shaped for
+          travellers planning from Europe.
         </p>
         <div className="button-row">
           <Link className="button primary" to="/tours">
@@ -30,7 +30,7 @@ export default function HeroSection() {
         </span>
         <span>
           <strong>DE</strong>
-          Europe-facing
+          Europe-ready
         </span>
       </div>
     </section>

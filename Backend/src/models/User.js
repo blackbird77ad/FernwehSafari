@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 
+const USER_ROLES = ["traveller", "tour_company", "tour_guide", "moderator", "admin"];
+
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -20,8 +22,8 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["user", "admin"],
-      default: "user"
+      enum: USER_ROLES,
+      default: "traveller"
     },
     savedTours: [
       {
@@ -37,4 +39,17 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("User", userSchema);
+userSchema.pre("validate", function normalizeLegacyRole(next) {
+  if (this.role === "user") {
+    this.role = "traveller";
+  }
+
+  next();
+});
+
+const User = mongoose.model("User", userSchema);
+
+User.USER_ROLES = USER_ROLES;
+User.DEFAULT_ROLE = "traveller";
+
+module.exports = User;

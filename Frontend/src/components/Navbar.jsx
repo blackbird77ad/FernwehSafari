@@ -8,7 +8,8 @@ const links = [
   { to: "/about", label: "About" },
   { to: "/gallery", label: "Gallery" },
   { to: "/faq", label: "FAQ" },
-  { to: "/contact", label: "Contact" }
+  { to: "/contact", label: "Contact" },
+  { to: "/list-your-tours", label: "List your tours" }
 ];
 
 export default function Navbar() {
