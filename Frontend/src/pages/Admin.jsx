@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Spinner from "../components/Spinner";
 import Toast from "../components/Toast";
+import useAuth from "../hooks/useAuth";
 import {
   createPartner,
   deletePartner,
@@ -18,6 +19,13 @@ import {
   getGuideBookings,
   updateGuideBookingStatus
 } from "../services/guideService";
+import {
+  createGalleryMedia,
+  deleteGalleryMedia,
+  getAdminGalleryMedia,
+  reviewGalleryMedia,
+  updateGalleryMedia
+} from "../services/galleryService";
 import {
   createTour,
   deleteTour,
@@ -81,7 +89,24 @@ const emptyUser = {
   role: "traveller"
 };
 
+const emptyGalleryMedia = {
+  title: "",
+  description: "",
+  mediaType: "image",
+  url: "",
+  thumbnailUrl: "",
+  location: "",
+  travelDate: "",
+  creditName: "",
+  creditEmail: "",
+  status: "approved",
+  isActive: true,
+  visibleFrom: "",
+  expiresAt: ""
+};
+
 export default function Admin() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
@@ -93,12 +118,15 @@ export default function Admin() {
   const [companyApplications, setCompanyApplications] = useState([]);
   const [guideApplications, setGuideApplications] = useState([]);
   const [guideBookings, setGuideBookings] = useState([]);
+  const [galleryMedia, setGalleryMedia] = useState([]);
   const [tourForm, setTourForm] = useState(emptyTour);
   const [editingTourId, setEditingTourId] = useState("");
   const [partnerForm, setPartnerForm] = useState(emptyPartner);
   const [editingPartnerId, setEditingPartnerId] = useState("");
   const [userForm, setUserForm] = useState(emptyUser);
   const [editingUserId, setEditingUserId] = useState("");
+  const [galleryForm, setGalleryForm] = useState(emptyGalleryMedia);
+  const [editingGalleryMediaId, setEditingGalleryMediaId] = useState("");
   const [uploading, setUploading] = useState(false);
 
   const partnerOptions = useMemo(
@@ -106,67 +134,94 @@ export default function Admin() {
     [partners]
   );
 
+  const isAdmin = user?.role === "admin";
+  const isStaff = user?.role === "admin" || user?.role === "moderator";
+
+  const tabs = useMemo(
+    () => [
+      "overview",
+      ...(isAdmin ? ["users", "company applications"] : []),
+      ...(isStaff ? ["guide applications", "guide bookings", "gallery media", "tours", "uploads"] : []),
+      ...(isAdmin ? ["partners", "enquiries", "referrals"] : [])
+    ],
+    [isAdmin, isStaff]
+  );
+
   const crmStats = useMemo(
     () => [
-      { label: "Users", value: users.length },
+      ...(isAdmin ? [{ label: "Users", value: users.length }] : []),
       { label: "Tours", value: tours.length },
       { label: "Operators", value: partners.length },
-      {
-        label: "Company applications",
-        value: companyApplications.filter((application) => !["approved", "rejected"].includes(application.status)).length
-      },
+      ...(isAdmin
+        ? [
+            {
+              label: "Company applications",
+              value: companyApplications.filter((application) => !["approved", "rejected"].includes(application.status)).length
+            }
+          ]
+        : []),
       {
         label: "Guide applications",
         value: guideApplications.filter((application) => application.status === "company_approved").length
       },
-      { label: "Open enquiries", value: enquiries.filter((enquiry) => enquiry.status !== "closed").length },
-      { label: "Booking clicks", value: referrals.length },
-      { label: "Converted", value: referrals.filter((referral) => referral.converted).length }
+      { label: "Gallery pending", value: galleryMedia.filter((item) => item.status === "pending").length },
+      ...(isAdmin
+        ? [
+            { label: "Open enquiries", value: enquiries.filter((enquiry) => enquiry.status !== "closed").length },
+            { label: "Booking clicks", value: referrals.length },
+            { label: "Converted", value: referrals.filter((referral) => referral.converted).length }
+          ]
+        : [])
     ],
-    [companyApplications, enquiries, guideApplications, partners, referrals, tours, users]
+    [companyApplications, enquiries, galleryMedia, guideApplications, isAdmin, partners, referrals, tours, users]
   );
 
-  async function loadAdminData() {
+  const loadAdminData = useCallback(async () => {
     setLoading(true);
     try {
-      const [
-        userResponse,
-        tourResponse,
-        partnerResponse,
-        enquiryResponse,
-        referralResponse,
-        companyApplicationResponse,
-        guideApplicationResponse,
-        guideBookingResponse
-      ] = await Promise.all([
-        getUsers(),
-        getTours({ includeInactive: true }),
-        getPartners({ includeInactive: true }),
-        getEnquiries(),
-        getReferrals(),
-        getTourCompanyApplications(),
-        getGuideApplications(),
-        getGuideBookings()
-      ]);
+      const [tourResponse, partnerResponse, galleryMediaResponse, guideApplicationResponse, guideBookingResponse] =
+        await Promise.all([
+          getTours({ includeInactive: true }),
+          getPartners({ includeInactive: true }),
+          getAdminGalleryMedia(),
+          getGuideApplications(),
+          getGuideBookings()
+        ]);
 
-      setUsers(userResponse.data.users);
       setTours(tourResponse.data.tours);
       setPartners(partnerResponse.data.partners);
-      setEnquiries(enquiryResponse.data.enquiries);
-      setReferrals(referralResponse.data.referrals);
-      setCompanyApplications(companyApplicationResponse.data.applications);
       setGuideApplications(guideApplicationResponse.data.applications);
       setGuideBookings(guideBookingResponse.data.bookings);
+      setGalleryMedia(galleryMediaResponse.data.media);
+
+      if (isAdmin) {
+        const [userResponse, enquiryResponse, referralResponse, companyApplicationResponse] = await Promise.all([
+          getUsers(),
+          getEnquiries(),
+          getReferrals(),
+          getTourCompanyApplications()
+        ]);
+
+        setUsers(userResponse.data.users);
+        setEnquiries(enquiryResponse.data.enquiries);
+        setReferrals(referralResponse.data.referrals);
+        setCompanyApplications(companyApplicationResponse.data.applications);
+      } else {
+        setUsers([]);
+        setEnquiries([]);
+        setReferrals([]);
+        setCompanyApplications([]);
+      }
     } catch (error) {
       setToast({ tone: "error", message: error.message });
     } finally {
       setLoading(false);
     }
-  }
+  }, [isAdmin]);
 
   useEffect(() => {
     loadAdminData();
-  }, []);
+  }, [loadAdminData]);
 
   function updateTourField(field, value) {
     setTourForm((current) => ({ ...current, [field]: value }));
@@ -178,6 +233,18 @@ export default function Admin() {
 
   function updateUserField(field, value) {
     setUserForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateGalleryField(field, value) {
+    setGalleryForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function serializeGalleryForm() {
+    return {
+      ...galleryForm,
+      visibleFrom: galleryForm.visibleFrom || undefined,
+      expiresAt: galleryForm.expiresAt || undefined
+    };
   }
 
   function serializeUserForm() {
@@ -326,6 +393,68 @@ export default function Admin() {
     }
   }
 
+  async function handleGallerySubmit(event) {
+    event.preventDefault();
+
+    try {
+      if (editingGalleryMediaId) {
+        await updateGalleryMedia(editingGalleryMediaId, serializeGalleryForm());
+        setToast({ message: "Gallery media updated." });
+      } else {
+        await createGalleryMedia(serializeGalleryForm());
+        setToast({ message: "Gallery media created." });
+      }
+
+      setGalleryForm(emptyGalleryMedia);
+      setEditingGalleryMediaId("");
+      await loadAdminData();
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    }
+  }
+
+  function editGalleryMedia(item) {
+    setEditingGalleryMediaId(item._id);
+    setGalleryForm({
+      title: item.title || "",
+      description: item.description || "",
+      mediaType: item.mediaType || "image",
+      url: item.url || "",
+      thumbnailUrl: item.thumbnailUrl || "",
+      location: item.location || "",
+      travelDate: item.travelDate || "",
+      creditName: item.creditName || "",
+      creditEmail: item.creditEmail || "",
+      status: item.status || "approved",
+      isActive: Boolean(item.isActive),
+      visibleFrom: item.visibleFrom ? item.visibleFrom.slice(0, 16) : "",
+      expiresAt: item.expiresAt ? item.expiresAt.slice(0, 16) : ""
+    });
+    setActiveTab("gallery media");
+  }
+
+  async function handleGalleryReview(id, status) {
+    const reviewNotes = window.prompt("Review notes for this gallery decision?") || "";
+
+    try {
+      await reviewGalleryMedia(id, { status, reviewNotes });
+      setToast({ message: `Gallery media ${status}.` });
+      await loadAdminData();
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    }
+  }
+
+  async function removeGalleryMedia(id) {
+    try {
+      await deleteGalleryMedia(id);
+      setToast({ message: "Gallery media deleted." });
+      await loadAdminData();
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    }
+  }
+
   function editUser(user) {
     setEditingUserId(user.id);
     setUserForm({
@@ -447,24 +576,13 @@ export default function Admin() {
 
   return (
     <>
-      <section className="page-hero compact-hero">
-        <p className="eyebrow">Admin</p>
-        <h1>CRM dashboard for users, tours, operators, enquiries and referrals.</h1>
+      <section className="page-hero compact-hero admin-hero">
+        <p className="eyebrow">Staff CRM</p>
+        <h1>Review the travel marketplace without losing sight of the traveller journey.</h1>
       </section>
       <section className="section admin-section">
         <div className="tab-row">
-          {[
-            "overview",
-            "users",
-            "company applications",
-            "guide applications",
-            "guide bookings",
-            "tours",
-            "partners",
-            "enquiries",
-            "referrals",
-            "uploads"
-          ].map((tab) => (
+          {tabs.map((tab) => (
             <button
               className={activeTab === tab ? "active" : ""}
               key={tab}
@@ -718,6 +836,146 @@ export default function Admin() {
                     </select>
                   </article>
                 ))}
+              </div>
+            )}
+            {activeTab === "gallery media" && (
+              <div className="admin-grid">
+                <form className="panel-form admin-form" onSubmit={handleGallerySubmit}>
+                  <h2>{editingGalleryMediaId ? "Edit gallery media" : "Add gallery media"}</h2>
+                  <label className="field">
+                    <span>Title</span>
+                    <input value={galleryForm.title} onChange={(event) => updateGalleryField("title", event.target.value)} required />
+                  </label>
+                  <div className="form-grid">
+                    <label className="field">
+                      <span>Media type</span>
+                      <select value={galleryForm.mediaType} onChange={(event) => updateGalleryField("mediaType", event.target.value)}>
+                        <option value="image">Image</option>
+                        <option value="video">Video</option>
+                      </select>
+                    </label>
+                    <label className="field">
+                      <span>Status</span>
+                      <select value={galleryForm.status} onChange={(event) => updateGalleryField("status", event.target.value)}>
+                        <option value="pending">pending</option>
+                        <option value="approved">approved</option>
+                        <option value="rejected">rejected</option>
+                      </select>
+                    </label>
+                  </div>
+                  <label className="field">
+                    <span>Media URL</span>
+                    <input value={galleryForm.url} onChange={(event) => updateGalleryField("url", event.target.value)} required />
+                  </label>
+                  <label className="field">
+                    <span>Thumbnail URL for video</span>
+                    <input value={galleryForm.thumbnailUrl} onChange={(event) => updateGalleryField("thumbnailUrl", event.target.value)} />
+                  </label>
+                  <div className="form-grid">
+                    <label className="field">
+                      <span>Location</span>
+                      <input value={galleryForm.location} onChange={(event) => updateGalleryField("location", event.target.value)} />
+                    </label>
+                    <label className="field">
+                      <span>Travel date / season</span>
+                      <input value={galleryForm.travelDate} onChange={(event) => updateGalleryField("travelDate", event.target.value)} />
+                    </label>
+                    <label className="field">
+                      <span>Credit name</span>
+                      <input value={galleryForm.creditName} onChange={(event) => updateGalleryField("creditName", event.target.value)} />
+                    </label>
+                    <label className="field">
+                      <span>Credit email</span>
+                      <input
+                        type="email"
+                        value={galleryForm.creditEmail}
+                        onChange={(event) => updateGalleryField("creditEmail", event.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <div className="form-grid">
+                    <label className="field">
+                      <span>Visible from</span>
+                      <input
+                        type="datetime-local"
+                        value={galleryForm.visibleFrom}
+                        onChange={(event) => updateGalleryField("visibleFrom", event.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Switch off / expire at</span>
+                      <input
+                        type="datetime-local"
+                        value={galleryForm.expiresAt}
+                        onChange={(event) => updateGalleryField("expiresAt", event.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <label className="checkbox-inline">
+                    <input
+                      type="checkbox"
+                      checked={galleryForm.isActive}
+                      onChange={(event) => updateGalleryField("isActive", event.target.checked)}
+                    />
+                    Active in gallery
+                  </label>
+                  <label className="field">
+                    <span>Description / story</span>
+                    <textarea
+                      value={galleryForm.description}
+                      onChange={(event) => updateGalleryField("description", event.target.value)}
+                      rows="5"
+                    />
+                  </label>
+                  <div className="button-row">
+                    <button className="button primary" type="submit">
+                      {editingGalleryMediaId ? "Update media" : "Create media"}
+                    </button>
+                    {editingGalleryMediaId && (
+                      <button
+                        className="button secondary"
+                        type="button"
+                        onClick={() => {
+                          setEditingGalleryMediaId("");
+                          setGalleryForm(emptyGalleryMedia);
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                </form>
+                <div className="admin-list">
+                  {galleryMedia.map((item) => (
+                    <article className="admin-row" key={item._id}>
+                      <div>
+                        <strong>{item.title}</strong>
+                        <span>
+                          {item.mediaType} - {item.status} - {item.isActive ? "active" : "off"} -{" "}
+                          {item.expiresAt ? `expires ${formatDate(item.expiresAt)}` : "no expiry"}
+                        </span>
+                        <p>{item.location || "No location"} - {item.creditName || item.submittedBy?.name || "No credit"}</p>
+                      </div>
+                      <div className="button-row">
+                        <button className="button secondary compact" type="button" onClick={() => editGalleryMedia(item)}>
+                          Edit
+                        </button>
+                        <button className="button primary compact" type="button" onClick={() => handleGalleryReview(item._id, "approved")}>
+                          Approve
+                        </button>
+                        <button className="button secondary compact" type="button" onClick={() => handleGalleryReview(item._id, "pending")}>
+                          Pending
+                        </button>
+                        <button className="button danger compact" type="button" onClick={() => handleGalleryReview(item._id, "rejected")}>
+                          Reject
+                        </button>
+                        <button className="button danger compact" type="button" onClick={() => removeGalleryMedia(item._id)}>
+                          Delete
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
               </div>
             )}
             {activeTab === "tours" && (

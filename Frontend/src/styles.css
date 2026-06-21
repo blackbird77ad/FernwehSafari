@@ -6,10 +6,13 @@
   --line: #dbe4df;
   --forest: #184d3c;
   --forest-2: #0e3228;
+  --leaf: #4f8a4c;
+  --lagoon: #0f8c88;
+  --sand: #f2dfb6;
   --clay: #b85f39;
   --coral: #dc755a;
-  --gold: #d7a84d;
-  --sky: #c7e5ef;
+  --gold: #e2b34e;
+  --sky: #bde7ee;
   --mint: #e9f4ee;
   --danger: #9e352b;
   --shadow: 0 22px 60px rgba(20, 37, 31, 0.14);
@@ -30,7 +33,10 @@ html {
 body {
   margin: 0;
   min-width: 320px;
-  background: var(--paper);
+  background:
+    radial-gradient(circle at top left, rgba(226, 179, 78, 0.2), transparent 28rem),
+    radial-gradient(circle at top right, rgba(15, 140, 136, 0.15), transparent 24rem),
+    var(--paper);
 }
 
 button,
@@ -108,6 +114,21 @@ h3 {
   font-weight: 900;
 }
 
+.brand span:last-child {
+  display: grid;
+  gap: 0.08rem;
+}
+
+.brand small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.footer .brand small {
+  color: rgba(255, 255, 255, 0.62);
+}
+
 .brand-mark {
   display: grid;
   width: 2.35rem;
@@ -122,7 +143,7 @@ h3 {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: clamp(0.75rem, 2vw, 1.45rem);
+  gap: clamp(0.6rem, 1.5vw, 1.1rem);
   color: var(--muted);
   font-weight: 800;
 }
@@ -144,8 +165,16 @@ h3 {
 .nav-cta {
   border-radius: 0.45rem;
   padding: 0.55rem 0.8rem;
-  background: var(--forest);
+  background: linear-gradient(135deg, var(--forest), var(--lagoon));
   color: white !important;
+}
+
+.nav-soft {
+  border: 1px solid var(--line);
+  border-radius: 0.45rem;
+  padding: 0.5rem 0.75rem;
+  background: white;
+  color: var(--forest) !important;
 }
 
 .menu-button {
@@ -167,8 +196,80 @@ h3 {
   padding: clamp(5rem, 11vw, 9rem) clamp(1rem, 5vw, 5rem) clamp(2rem, 5vw, 3rem);
   background:
     linear-gradient(90deg, rgba(10, 22, 17, 0.88), rgba(10, 22, 17, 0.52), rgba(10, 22, 17, 0.18)),
-    url("https://images.unsplash.com/photo-1516426122078-c23e76319801?auto=format&fit=crop&w=2200&q=82") center / cover;
+    url("./assets/photos/ngorongoro-wide-with-tourists.jpg") center / cover;
   color: white;
+}
+
+.fast-hero {
+  isolation: isolate;
+}
+
+.hero-carousel {
+  scrollbar-width: none;
+}
+
+.hero-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.instant-filter {
+  position: sticky;
+}
+
+.fast-grid-section {
+  padding-top: clamp(1.2rem, 3vw, 2rem);
+  padding-bottom: clamp(1.2rem, 3vw, 2rem);
+}
+
+.quick-split-grid,
+.deal-feed,
+.benefits-matrix,
+.trust-anchor-row,
+.contact-action-layout,
+.faq-groups {
+  display: grid;
+  width: min(86rem, 100%);
+  gap: clamp(0.8rem, 2vw, 1.25rem);
+  margin: 0 auto;
+}
+
+.quick-split-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.quick-split-card {
+  display: flex;
+  min-height: 8rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  color: white;
+  font-size: clamp(1.2rem, 3vw, 2rem);
+  font-weight: 950;
+  box-shadow: var(--shadow);
+}
+
+.quick-split-card span {
+  font-size: 2.4rem;
+}
+
+.quick-split-card.safari {
+  background:
+    linear-gradient(135deg, rgba(14, 50, 40, 0.92), rgba(184, 95, 57, 0.74)),
+    url("./assets/photos/manyara-national-park-lion.jpg") center / cover;
+}
+
+.quick-split-card.coast {
+  background:
+    linear-gradient(135deg, rgba(15, 140, 136, 0.88), rgba(14, 50, 40, 0.68)),
+    url("./assets/photos/Kendwa-Beach-Zanzibar.jpg") center / cover;
+}
+
+.deal-feed {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .hero-content {
@@ -225,7 +326,89 @@ h3 {
   color: white;
   background:
     linear-gradient(90deg, rgba(14, 40, 32, 0.92), rgba(14, 40, 32, 0.66), rgba(14, 40, 32, 0.2)),
-    url("https://images.unsplash.com/photo-1586861256632-52a67f94497f?auto=format&fit=crop&w=2000&q=82") center / cover;
+    url("./assets/photos/Aerial-View-Stone-Town-Zanzibar.jpg") center / cover;
+}
+
+.destination-detail-hero {
+  min-height: min(42svh, 28rem);
+}
+
+.quick-facts-matrix {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin-bottom: 1.2rem;
+}
+
+.quick-facts-matrix span {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid var(--line);
+  border-radius: 0.55rem;
+  padding: 0.9rem;
+  background: white;
+  color: var(--muted);
+}
+
+.quick-facts-matrix strong {
+  color: var(--forest);
+}
+
+.content-block {
+  display: grid;
+  gap: 0.7rem;
+  margin-bottom: 1.25rem;
+}
+
+.content-block p {
+  margin: 0;
+  border-left: 4px solid var(--gold);
+  padding: 0.85rem 1rem;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.sticky-booking-bar {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 90;
+  display: flex;
+  max-width: 58rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 0.75rem;
+  padding: 0.8rem 0.9rem;
+  background: linear-gradient(135deg, rgba(24, 77, 60, 0.96), rgba(15, 140, 136, 0.96));
+  color: white;
+  box-shadow: var(--shadow);
+}
+
+.sticky-booking-bar span {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.sticky-booking-bar small {
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.partner-hero {
+  background:
+    linear-gradient(90deg, rgba(9, 31, 24, 0.92), rgba(24, 77, 60, 0.62), rgba(24, 77, 60, 0.14)),
+    url("./assets/photos/mount-kilimanjaro-tourist-gallery.jpg") center / cover;
+}
+
+.admin-hero {
+  background:
+    linear-gradient(90deg, rgba(14, 40, 32, 0.95), rgba(28, 83, 63, 0.72), rgba(28, 83, 63, 0.22)),
+    url("./assets/photos/lake-manyara-national-park-tourist-gallery.jpg") center / cover;
 }
 
 .compact-hero {
@@ -286,6 +469,15 @@ h3 {
   gap: 1rem;
 }
 
+.section-badge {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  background: var(--forest);
+  color: white;
+  font-weight: 900;
+}
+
 .small-heading {
   margin-inline: 0;
 }
@@ -321,7 +513,7 @@ h3 {
 }
 
 .button.primary {
-  background: var(--clay);
+  background: linear-gradient(135deg, var(--clay), var(--gold));
   color: white;
 }
 
@@ -359,7 +551,232 @@ h3 {
   display: grid;
   width: min(76rem, 100%);
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(0.9rem, 2vw, 1.25rem);
+  margin: 0 auto;
+}
+
+.story-band,
+.split-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: clamp(1rem, 5vw, 4rem);
+  align-items: center;
+}
+
+.story-media {
+  overflow: hidden;
+  border-radius: 0.7rem;
+  box-shadow: var(--shadow);
+}
+
+.story-media img {
+  width: 100%;
+  min-height: 22rem;
+  object-fit: cover;
+}
+
+.split-panel {
+  width: min(76rem, 100%);
+  margin: 0 auto;
+}
+
+.stat-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.stat-list span {
+  display: grid;
+  gap: 0.25rem;
+  border-left: 4px solid var(--clay);
+  padding: 0.8rem 1rem;
+  background: white;
+  color: var(--muted);
+}
+
+.stat-list strong {
+  color: var(--forest);
+  font-size: 1.25rem;
+}
+
+.media-grid {
+  display: grid;
+  width: min(82rem, 100%);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
+  margin: 0 auto;
+}
+
+.gallery-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  width: min(82rem, 100%);
+  margin: 0 auto 1rem;
+}
+
+.gallery-tabs button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  background: white;
+  color: var(--forest);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.gallery-tabs button.active {
+  background: var(--forest);
+  color: white;
+}
+
+.masonry-gallery {
+  column-count: 3;
+  column-gap: 1rem;
+  width: min(86rem, 100%);
+  margin: 0 auto;
+}
+
+.masonry-gallery .media-card {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  margin: 0 0 1rem;
+}
+
+.masonry-gallery .media-card.tall img {
+  aspect-ratio: 3 / 4;
+}
+
+.gallery-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(14, 50, 40, 0.58);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.media-card:hover .gallery-overlay,
+.media-card:focus-within .gallery-overlay {
+  opacity: 1;
+}
+
+.media-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 0.55rem;
+  background: white;
+  box-shadow: 0 12px 34px rgba(22, 36, 30, 0.08);
+}
+
+.media-card img,
+.media-card video {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--forest-2);
+}
+
+.media-card > div {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+}
+
+.destination-showcase {
+  position: relative;
+  overflow: hidden;
+}
+
+.destination-story-grid {
+  display: grid;
+  width: min(86rem, 100%);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(0.9rem, 2vw, 1.25rem);
+  margin: 0 auto;
+}
+
+.destination-story-card {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid rgba(219, 228, 223, 0.9);
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 16px 42px rgba(22, 36, 30, 0.1);
+}
+
+.destination-story-card.featured {
+  grid-column: span 2;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+}
+
+.destination-story-image {
+  min-height: 16rem;
+  overflow: hidden;
+  background: var(--forest-2);
+}
+
+.destination-story-image img {
+  width: 100%;
+  height: 100%;
+  min-height: 16rem;
+  object-fit: cover;
+  transition: transform 220ms ease;
+}
+
+.destination-story-card:hover .destination-story-image img {
+  transform: scale(1.035);
+}
+
+.destination-story-body {
+  display: grid;
+  gap: 0.9rem;
+  padding: clamp(1rem, 2vw, 1.25rem);
+}
+
+.destination-story-body h3 {
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+}
+
+.destination-story-body p {
+  color: var(--muted);
+}
+
+.place-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.place-meta span {
+  border-radius: 999px;
+  padding: 0.28rem 0.58rem;
+  background: rgba(15, 140, 136, 0.1);
+  color: var(--forest);
+  font-size: 0.73rem;
+  font-weight: 900;
+}
+
+.story-card-actions {
+  display: grid;
+  gap: 0.75rem;
+  align-content: end;
+}
+
+.story-card-actions .button {
+  width: fit-content;
+}
+
+.media-card span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.wide-form {
+  width: min(62rem, 100%);
   margin: 0 auto;
 }
 
@@ -448,6 +865,254 @@ h3 {
   border-radius: 0.5rem;
   background: var(--forest);
   color: white;
+}
+
+.partner-pitch-hero {
+  display: grid;
+  min-height: min(54svh, 34rem);
+  align-items: end;
+  padding: clamp(4rem, 10vw, 8rem) clamp(1rem, 5vw, 5rem) clamp(2rem, 5vw, 4rem);
+  background:
+    linear-gradient(90deg, rgba(9, 31, 24, 0.94), rgba(24, 77, 60, 0.72), rgba(24, 77, 60, 0.18)),
+    url("./assets/photos/mount-kilimanjaro-tourist-gallery.jpg") center / cover;
+  color: white;
+}
+
+.partner-pitch-hero > div {
+  width: min(56rem, 100%);
+}
+
+.partner-pitch-hero h1 {
+  font-size: clamp(3rem, 9vw, 7rem);
+}
+
+.partner-pitch-hero p:not(.eyebrow) {
+  max-width: 44rem;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: clamp(1rem, 2vw, 1.25rem);
+}
+
+.benefits-matrix {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.benefits-matrix article,
+.trust-anchor-row article {
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  background: white;
+  box-shadow: 0 14px 34px rgba(22, 36, 30, 0.08);
+}
+
+.partner-step-form {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  background: white;
+  box-shadow: var(--shadow);
+}
+
+.step-progress {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.step-progress span {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--mint);
+  color: var(--forest);
+  font-weight: 950;
+}
+
+.step-progress span.active {
+  background: var(--forest);
+  color: white;
+}
+
+.about-trust-layout {
+  display: grid;
+  grid-template-columns: minmax(18rem, 0.42fr) minmax(0, 1fr);
+  gap: clamp(1.5rem, 5vw, 4rem);
+  align-items: center;
+}
+
+.profile-orbit {
+  width: min(22rem, 100%);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 10px solid white;
+  border-radius: 50%;
+  box-shadow: var(--shadow);
+}
+
+.profile-orbit img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.trust-anchor-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.trust-icon {
+  width: 2.4rem;
+  height: 2.4rem;
+  margin-bottom: 1rem;
+  color: var(--lagoon);
+}
+
+.contact-action-layout {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.touch-action {
+  display: flex;
+  min-height: 7rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  border-radius: 0.8rem;
+  padding: 1.2rem;
+  color: white;
+  font-size: clamp(1.25rem, 4vw, 2rem);
+  font-weight: 950;
+  box-shadow: var(--shadow);
+}
+
+.touch-action span {
+  font-size: 2.4rem;
+}
+
+.touch-action.whatsapp {
+  background: linear-gradient(135deg, #168b55, var(--forest));
+}
+
+.touch-action.email {
+  background: linear-gradient(135deg, var(--lagoon), var(--forest));
+}
+
+.minimal-contact-form {
+  gap: 1rem;
+}
+
+.faq-groups {
+  grid-template-columns: 1fr;
+  width: min(58rem, 100%);
+}
+
+.faq-group {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.faq-group h2 {
+  margin-bottom: 0;
+}
+
+.virtual-tour-shell {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 5vw, 3rem);
+}
+
+.scene-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  width: min(76rem, 100%);
+  margin: 0 auto;
+}
+
+.scene-picker button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.55rem 0.85rem;
+  background: white;
+  color: var(--forest);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.scene-picker button.active {
+  background: var(--forest);
+  color: white;
+}
+
+.virtual-canvas-wrap,
+.virtual-fallback {
+  position: relative;
+  width: min(76rem, 100%);
+  min-height: min(70svh, 42rem);
+  overflow: hidden;
+  margin: 0 auto;
+  border-radius: 0.85rem;
+  background: var(--forest-2);
+  color: white;
+  box-shadow: var(--shadow);
+}
+
+.virtual-fallback {
+  display: grid;
+  place-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.virtual-overlay {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  left: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.3rem;
+}
+
+.partner-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 0.52fr);
+  gap: clamp(1rem, 4vw, 2rem);
+  align-items: stretch;
+}
+
+.partner-action-card {
+  display: grid;
+  align-content: center;
+  gap: 0.85rem;
+  border: 1px solid rgba(24, 77, 60, 0.18);
+  border-radius: 0.65rem;
+  padding: clamp(1.1rem, 3vw, 2rem);
+  background:
+    linear-gradient(135deg, rgba(24, 77, 60, 0.92), rgba(15, 140, 136, 0.86)),
+    var(--forest);
+  color: white;
+  box-shadow: var(--shadow);
+}
+
+.partner-action-card .eyebrow,
+.partner-action-card p {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.partner-application {
+  border-top: 1px solid rgba(219, 228, 223, 0.9);
 }
 
 .destination-card img {
@@ -778,13 +1443,65 @@ textarea:focus {
   padding: clamp(2rem, 6vw, 5rem) 1rem;
   background:
     linear-gradient(90deg, rgba(251, 250, 246, 0.92), rgba(251, 250, 246, 0.7)),
-    url("https://images.unsplash.com/photo-1535941339077-2dd1c7963098?auto=format&fit=crop&w=1600&q=80") center / cover;
+    url("./assets/photos/kendwa-beach-nice-view-vertical-hero-page-bg.png") center / cover;
 }
 
 .auth-card {
   display: grid;
   width: min(31rem, 100%);
   gap: 0.85rem;
+}
+
+.auth-split {
+  display: grid;
+  width: min(66rem, 100%);
+  grid-template-columns: minmax(0, 1.05fr) minmax(22rem, 0.95fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.login-image-card {
+  position: relative;
+  min-height: 28rem;
+  overflow: hidden;
+  border-radius: 0.8rem;
+  color: white;
+  box-shadow: var(--shadow);
+}
+
+.login-image-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.login-image-card::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: linear-gradient(180deg, rgba(14, 50, 40, 0.1), rgba(14, 50, 40, 0.88));
+}
+
+.login-image-card > div {
+  position: absolute;
+  right: 1.2rem;
+  bottom: 1.2rem;
+  left: 1.2rem;
+  z-index: 1;
+}
+
+.login-image-card h2 {
+  margin-bottom: 0;
+  font-size: clamp(1.7rem, 4vw, 3rem);
+}
+
+.login-panel {
+  align-content: center;
+  width: 100%;
+}
+
+.login-panel h1 {
+  font-size: clamp(2rem, 4vw, 3.2rem);
 }
 
 .dashboard-side {
@@ -807,14 +1524,21 @@ textarea:focus {
 
 .admin-section {
   position: relative;
+  background:
+    linear-gradient(180deg, rgba(233, 244, 238, 0.7), rgba(251, 250, 246, 0.2));
 }
 
 .tab-row {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  width: min(76rem, 100%);
+  width: min(86rem, 100%);
   margin: 0 auto 1rem;
+  border: 1px solid rgba(219, 228, 223, 0.9);
+  border-radius: 0.7rem;
+  padding: 0.6rem;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 12px 32px rgba(22, 36, 30, 0.07);
 }
 
 .tab-row button {
@@ -829,11 +1553,14 @@ textarea:focus {
 }
 
 .admin-grid {
-  width: min(82rem, 100%);
+  width: min(86rem, 100%);
+  grid-template-columns: minmax(20rem, 0.45fr) minmax(0, 1fr);
   margin: 0 auto;
 }
 
 .admin-form {
+  position: sticky;
+  top: 5.5rem;
   max-height: 80vh;
   overflow: auto;
 }
@@ -854,7 +1581,8 @@ textarea:focus {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.9rem;
+  padding: 1rem;
+  border-left: 4px solid rgba(24, 77, 60, 0.22);
 }
 
 .admin-row > div {
@@ -944,10 +1672,12 @@ textarea:focus {
 
 .footer {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr;
+  grid-template-columns: 1.55fr repeat(4, minmax(0, 1fr));
   gap: 1rem;
   padding: clamp(2rem, 5vw, 4rem) clamp(1rem, 5vw, 5rem);
-  background: #111d18;
+  background:
+    linear-gradient(135deg, rgba(17, 29, 24, 0.98), rgba(24, 77, 60, 0.92)),
+    url("./assets/photos/Nungwi beach Zanzibar-fernweh.jpg") center / cover;
   color: white;
 }
 
@@ -955,6 +1685,12 @@ textarea:focus {
 .footer span,
 .footer a {
   color: rgba(255, 255, 255, 0.74);
+}
+
+.footer a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .footer div {
@@ -965,6 +1701,30 @@ textarea:focus {
 
 .footer h3 {
   margin-bottom: 0.2rem;
+}
+
+.footer-badges {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 0.4rem !important;
+}
+
+.footer-badges span {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  padding: 0.28rem 0.55rem;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.78rem;
+}
+
+.footer-bottom {
+  grid-column: 1 / -1;
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  padding-top: 1rem;
 }
 
 @media (max-width: 1160px) {
@@ -983,19 +1743,44 @@ textarea:focus {
 
   .card-grid,
   .tours-grid,
-  .steps-grid,
-  .feature-grid,
-  .filter-bar,
-  .detail-layout,
-  .two-column,
-  .dashboard-layout,
-  .admin-grid,
+  .media-grid,
+    .destination-story-grid,
+    .steps-grid,
+    .feature-grid,
+    .filter-bar,
+    .detail-layout,
+    .two-column,
+    .partner-intro,
+    .dashboard-layout,
+    .admin-grid,
+    .story-band,
+    .split-panel,
+    .auth-split,
+    .about-trust-layout,
+  .benefits-matrix,
+  .contact-action-layout,
+  .deal-feed,
+  .trust-anchor-row,
   .footer {
     grid-template-columns: 1fr 1fr;
   }
 
+  .masonry-gallery {
+    column-count: 2;
+  }
+
+  .destination-story-card.featured {
+    grid-column: span 2;
+    grid-template-columns: 1fr;
+  }
+
   .detail-side {
     position: static;
+  }
+
+  .admin-form {
+    position: static;
+    max-height: none;
   }
 
   .section-heading.split,
@@ -1045,21 +1830,65 @@ textarea:focus {
     padding-top: 4rem;
   }
 
+  .fast-hero {
+    height: 40svh;
+    max-height: 40svh;
+    min-height: 18rem;
+  }
+
+  .destination-detail-hero {
+    min-height: 30svh;
+    max-height: 30svh;
+  }
+
   .hero-stats,
   .card-grid,
   .tours-grid,
-  .destination-grid,
-  .steps-grid,
-  .feature-grid,
-  .filter-bar,
-  .detail-layout,
-  .two-column,
-  .dashboard-layout,
-  .admin-grid,
-  .form-grid,
-  .image-gallery,
-  .footer {
+    .media-grid,
+    .destination-grid,
+    .destination-story-grid,
+    .steps-grid,
+    .feature-grid,
+    .filter-bar,
+    .detail-layout,
+    .two-column,
+    .partner-intro,
+    .dashboard-layout,
+    .admin-grid,
+    .story-band,
+    .split-panel,
+    .auth-split,
+    .about-trust-layout,
+    .benefits-matrix,
+    .contact-action-layout,
+    .deal-feed,
+    .form-grid,
+    .image-gallery,
+    .trust-anchor-row,
+    .footer {
     grid-template-columns: 1fr;
+  }
+
+  .masonry-gallery {
+    column-count: 1;
+  }
+
+  .gallery-overlay {
+    position: static;
+    opacity: 1;
+    background: var(--forest);
+  }
+
+  .sticky-booking-bar {
+    right: 0.65rem;
+    bottom: 0.65rem;
+    left: 0.65rem;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .destination-story-card.featured {
+    grid-column: auto;
   }
 
   .hero-stats span {
@@ -1075,5 +1904,9 @@ textarea:focus {
   .testimonial-card {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .login-image-card {
+    min-height: 17rem;
   }
 }

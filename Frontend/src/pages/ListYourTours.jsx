@@ -1,68 +1,52 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
+import useAuth from "../hooks/useAuth";
 import { createTourCompanyApplication } from "../services/applicationService";
 
-const initialForm = {
-  contactName: "",
-  contactRole: "",
-  email: "",
-  phone: "",
-  whatsapp: "",
-  companyName: "",
-  registrationNumber: "",
-  licenseNumber: "",
-  taxNumber: "",
-  website: "",
-  bookingURL: "",
-  headquarters: "",
-  operatingRegions: "",
-  tourCategories: "",
-  yearsOperating: "",
-  hasInHouseGuides: false,
-  guideCount: "",
-  guideLanguages: "",
-  insuranceProvider: "",
-  emergencyProcess: "",
-  cancellationPolicy: "",
-  paymentMethods: "",
-  commissionExpectation: "",
-  notes: ""
-};
+const steps = [
+  { key: "companyName", label: "Company Name", placeholder: "Example: Kilimanjaro Coast Adventures" },
+  { key: "tourTypes", label: "Tour Types Offered", placeholder: "Safari, Kilimanjaro, Zanzibar beach, culture..." },
+  { key: "email", label: "Contact Email", placeholder: "partnerships@example.com" }
+];
 
-const initialTours = [
-  { title: "", destination: "", duration: "", estimatedPriceEUR: "", bookingURL: "" },
-  { title: "", destination: "", duration: "", estimatedPriceEUR: "", bookingURL: "" },
-  { title: "", destination: "", duration: "", estimatedPriceEUR: "", bookingURL: "" }
+const benefits = [
+  ["High Traffic", "Reach travellers already searching for Tanzania and Zanzibar routes."],
+  ["Fair Commissions", "Agree referral percentages before any tour goes public."],
+  ["Marketing Exposure", "Show routes with vivid destination storytelling and local imagery."],
+  ["Zero Sign-Up Fees", "Apply first, talk terms, then post only after approval."]
 ];
 
 export default function ListYourTours() {
-  const [form, setForm] = useState(initialForm);
-  const [proposedTours, setProposedTours] = useState(initialTours);
+  const { user } = useAuth();
+  const [stepIndex, setStepIndex] = useState(0);
+  const [form, setForm] = useState({ companyName: "", tourTypes: "", email: "" });
   const [status, setStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const isTourCompany = user?.role === "tour_company";
+  const currentStep = steps[stepIndex];
+  const canGoNext = form[currentStep.key]?.trim();
 
-  function update(field, value) {
-    setForm((current) => ({ ...current, [field]: value }));
+  function update(value) {
+    setForm((current) => ({ ...current, [currentStep.key]: value }));
   }
 
-  function updateTour(index, field, value) {
-    setProposedTours((current) =>
-      current.map((tour, tourIndex) => (tourIndex === index ? { ...tour, [field]: value } : tour))
-    );
-  }
-
-  async function handleSubmit(event) {
-    event.preventDefault();
+  async function submitApplication() {
     setSubmitting(true);
     setStatus("");
 
     try {
       await createTourCompanyApplication({
-        ...form,
-        proposedTours: proposedTours.filter((tour) => tour.title || tour.destination || tour.bookingURL)
+        companyName: form.companyName,
+        contactName: form.companyName,
+        email: form.email,
+        headquarters: "To be discussed",
+        operatingRegions: form.tourTypes,
+        tourCategories: form.tourTypes,
+        commissionExpectation: "Open to discussion"
       });
-      setStatus("Application sent. FernwehSafari will review it and contact you for a call or WhatsApp discussion.");
-      setForm(initialForm);
-      setProposedTours(initialTours);
+      setStatus("Application received. FernwehSafari will contact you to review fit and commission terms.");
+      setForm({ companyName: "", tourTypes: "", email: "" });
+      setStepIndex(0);
     } catch (error) {
       setStatus(error.message);
     } finally {
@@ -70,208 +54,101 @@ export default function ListYourTours() {
     }
   }
 
+  function handleSubmit(event) {
+    event.preventDefault();
+
+    if (stepIndex < steps.length - 1) {
+      setStepIndex((current) => current + 1);
+      return;
+    }
+
+    submitApplication();
+  }
+
   return (
     <>
-      <section className="page-hero compact-hero">
-        <p className="eyebrow">List your tours</p>
-        <h1>Apply to feature your Tanzania and Zanzibar tours.</h1>
-      </section>
-      <section className="section two-column">
+      <section className="partner-pitch-hero">
         <div>
-          <p className="lead">
-            FernwehSafari reviews tour companies before giving posting access. The details below help protect
-            travellers, operators and FernwehSafari before any commission agreement or listed tour goes live.
+          <p className="eyebrow">Partner & referral program</p>
+          <h1>List Your Tanzanian Tours With Us.</h1>
+          <p>
+            FernwehSafari helps trusted operators turn local routes into clear, visual discovery pages for travellers
+            planning from Europe.
           </p>
-          <div className="feature-grid">
-            <article>
-              <h2>Review</h2>
-              <p>FernwehSafari checks company, contact, safety, route and booking information.</p>
-            </article>
-            <article>
-              <h2>Call</h2>
-              <p>The team may contact you by email, call or WhatsApp to discuss quality and commission terms.</p>
-            </article>
-            <article>
-              <h2>Access</h2>
-              <p>Approved companies receive tour company access and can post tours for admin review.</p>
-            </article>
+          <div className="hero-actions">
+            <Link className="button primary" to={isTourCompany ? "/dashboard" : "/login"}>
+              {isTourCompany ? "List tours" : "Login as partner"}
+            </Link>
+            {!isTourCompany && (
+              <a className="button secondary light" href="#partner-application">
+                Become a partner
+              </a>
+            )}
           </div>
         </div>
-        <form className="panel-form" onSubmit={handleSubmit}>
-          <h2>Applicant details</h2>
-          <div className="form-grid">
-            <label className="field">
-              <span>Contact name</span>
-              <input value={form.contactName} onChange={(event) => update("contactName", event.target.value)} required />
-            </label>
-            <label className="field">
-              <span>Role in company</span>
-              <input value={form.contactRole} onChange={(event) => update("contactRole", event.target.value)} />
-            </label>
-            <label className="field">
-              <span>Email</span>
-              <input type="email" value={form.email} onChange={(event) => update("email", event.target.value)} required />
-            </label>
-            <label className="field">
-              <span>Phone</span>
-              <input value={form.phone} onChange={(event) => update("phone", event.target.value)} />
-            </label>
-            <label className="field">
-              <span>WhatsApp</span>
-              <input value={form.whatsapp} onChange={(event) => update("whatsapp", event.target.value)} />
-            </label>
-          </div>
+      </section>
 
-          <h2>Company details</h2>
-          <label className="field">
-            <span>Company name</span>
-            <input value={form.companyName} onChange={(event) => update("companyName", event.target.value)} required />
-          </label>
-          <div className="form-grid">
-            <label className="field">
-              <span>Registration number</span>
-              <input value={form.registrationNumber} onChange={(event) => update("registrationNumber", event.target.value)} />
-            </label>
-            <label className="field">
-              <span>Tour operator licence</span>
-              <input value={form.licenseNumber} onChange={(event) => update("licenseNumber", event.target.value)} />
-            </label>
-            <label className="field">
-              <span>Tax number</span>
-              <input value={form.taxNumber} onChange={(event) => update("taxNumber", event.target.value)} />
-            </label>
-            <label className="field">
-              <span>Headquarters / city</span>
-              <input value={form.headquarters} onChange={(event) => update("headquarters", event.target.value)} required />
-            </label>
-          </div>
-          <div className="form-grid">
-            <label className="field">
-              <span>Website</span>
-              <input value={form.website} onChange={(event) => update("website", event.target.value)} />
-            </label>
-            <label className="field">
-              <span>Primary booking URL</span>
-              <input value={form.bookingURL} onChange={(event) => update("bookingURL", event.target.value)} />
-            </label>
-          </div>
-
-          <h2>Operations</h2>
-          <label className="field">
-            <span>Operating regions</span>
-            <input
-              value={form.operatingRegions}
-              onChange={(event) => update("operatingRegions", event.target.value)}
-              placeholder="Ngorongoro, Arusha, Kilimanjaro, Zanzibar..."
-              required
-            />
-          </label>
-          <label className="field">
-            <span>Tour categories</span>
-            <input
-              value={form.tourCategories}
-              onChange={(event) => update("tourCategories", event.target.value)}
-              placeholder="Safari, beach, mountain, cultural..."
-              required
-            />
-          </label>
-          <div className="form-grid">
-            <label className="field">
-              <span>Years operating</span>
-              <input value={form.yearsOperating} onChange={(event) => update("yearsOperating", event.target.value)} />
-            </label>
-            <label className="field">
-              <span>Payment methods</span>
-              <input value={form.paymentMethods} onChange={(event) => update("paymentMethods", event.target.value)} />
-            </label>
-          </div>
-          <label className="checkbox-inline">
-            <input
-              type="checkbox"
-              checked={form.hasInHouseGuides}
-              onChange={(event) => update("hasInHouseGuides", event.target.checked)}
-            />
-            Company has in-house tour guides
-          </label>
-          <div className="form-grid">
-            <label className="field">
-              <span>Guide count</span>
-              <input value={form.guideCount} onChange={(event) => update("guideCount", event.target.value)} />
-            </label>
-            <label className="field">
-              <span>Guide languages</span>
-              <input value={form.guideLanguages} onChange={(event) => update("guideLanguages", event.target.value)} />
-            </label>
-          </div>
-
-          <h2>Safety and terms</h2>
-          <label className="field">
-            <span>Insurance provider / coverage</span>
-            <input value={form.insuranceProvider} onChange={(event) => update("insuranceProvider", event.target.value)} />
-          </label>
-          <label className="field">
-            <span>Emergency process</span>
-            <textarea value={form.emergencyProcess} onChange={(event) => update("emergencyProcess", event.target.value)} rows="3" />
-          </label>
-          <label className="field">
-            <span>Cancellation policy</span>
-            <textarea value={form.cancellationPolicy} onChange={(event) => update("cancellationPolicy", event.target.value)} rows="3" />
-          </label>
-          <label className="field">
-            <span>Commission expectation</span>
-            <input
-              value={form.commissionExpectation}
-              onChange={(event) => update("commissionExpectation", event.target.value)}
-              placeholder="Example: open to discussion, 10%, 15%..."
-            />
-          </label>
-
-          <h2>Example tours</h2>
-          {proposedTours.map((tour, index) => (
-            <div className="side-panel compact-panel" key={index}>
-              <strong>Tour {index + 1}</strong>
-              <label className="field">
-                <span>Title</span>
-                <input value={tour.title} onChange={(event) => updateTour(index, "title", event.target.value)} />
-              </label>
-              <div className="form-grid">
-                <label className="field">
-                  <span>Destination</span>
-                  <input value={tour.destination} onChange={(event) => updateTour(index, "destination", event.target.value)} />
-                </label>
-                <label className="field">
-                  <span>Duration</span>
-                  <input value={tour.duration} onChange={(event) => updateTour(index, "duration", event.target.value)} />
-                </label>
-                <label className="field">
-                  <span>Estimated price EUR</span>
-                  <input
-                    value={tour.estimatedPriceEUR}
-                    onChange={(event) => updateTour(index, "estimatedPriceEUR", event.target.value)}
-                  />
-                </label>
-                <label className="field">
-                  <span>Existing booking URL</span>
-                  <input value={tour.bookingURL} onChange={(event) => updateTour(index, "bookingURL", event.target.value)} />
-                </label>
-              </div>
-            </div>
+      <section className="section">
+        <div className="benefits-matrix">
+          {benefits.map(([title, text]) => (
+            <article key={title}>
+              <h2>{title}</h2>
+              <p>{text}</p>
+            </article>
           ))}
+        </div>
+      </section>
 
-          <label className="field">
-            <span>Additional notes</span>
-            <textarea
-              value={form.notes}
-              onChange={(event) => update("notes", event.target.value)}
-              placeholder="Tell us anything important about your routes, licences, vehicles, guide standards or preferred commission discussion."
-              rows="5"
-            />
-          </label>
-          <button className="button primary" type="submit" disabled={submitting}>
-            {submitting ? "Sending..." : "Submit application"}
-          </button>
-          {status && <p className="form-note">{status}</p>}
-        </form>
+      <section className="section partner-intro" id="partner-application">
+        <div>
+          <p className="eyebrow">Simple onboarding</p>
+          <h2>Three quick details start the conversation.</h2>
+          <p className="lead">
+            After the lead form, FernwehSafari reviews the company, schedules a call or WhatsApp discussion, and only
+            approved tour companies receive dashboard access to post listings for staff review.
+          </p>
+        </div>
+        {isTourCompany ? (
+          <div className="partner-action-card">
+            <p className="eyebrow">Approved company</p>
+            <h2>Your listing flow is in the dashboard.</h2>
+            <p>Add route details, prices, images and referral booking URLs for FernwehSafari staff approval.</p>
+            <Link className="button primary" to="/dashboard">
+              List tours
+            </Link>
+          </div>
+        ) : (
+          <form className="partner-step-form" onSubmit={handleSubmit}>
+            <div className="step-progress">
+              {steps.map((step, index) => (
+                <span className={index <= stepIndex ? "active" : ""} key={step.key}>
+                  {index + 1}
+                </span>
+              ))}
+            </div>
+            <label className="field">
+              <span>{currentStep.label}</span>
+              <input
+                type={currentStep.key === "email" ? "email" : "text"}
+                value={form[currentStep.key]}
+                onChange={(event) => update(event.target.value)}
+                placeholder={currentStep.placeholder}
+                required
+              />
+            </label>
+            <div className="button-row">
+              {stepIndex > 0 && (
+                <button className="button secondary" type="button" onClick={() => setStepIndex((current) => current - 1)}>
+                  Back
+                </button>
+              )}
+              <button className="button primary" type="submit" disabled={!canGoNext || submitting}>
+                {submitting ? "Sending..." : stepIndex === steps.length - 1 ? "Submit partner lead" : "Continue"}
+              </button>
+            </div>
+            {status && <p className="form-note">{status}</p>}
+          </form>
+        )}
       </section>
     </>
   );

@@ -3,11 +3,13 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import EnquiryForm from "../components/EnquiryForm";
 import ImageGallery from "../components/ImageGallery";
 import Spinner from "../components/Spinner";
+import fallbackTourImage from "../assets/photos/ngorongoro-wide-with-tourists.jpg";
 import useAuth from "../hooks/useAuth";
 import { createGuideApplication, createGuideBooking } from "../services/guideService";
 import { createReferral } from "../services/referralService";
 import { getTour } from "../services/tourService";
 import { eur } from "../utils/formatters";
+import { destinationStories } from "../utils/staticContent";
 
 export default function TourDetail() {
   const { slug } = useParams();
@@ -148,13 +150,23 @@ export default function TourDetail() {
     );
   }
 
+  const destinationStory =
+    destinationStories.find((story) => tour.location?.toLowerCase().includes(story.name.toLowerCase().split(" ")[0])) ||
+    destinationStories.find((story) => story.category === tour.category) ||
+    destinationStories[0];
+  const heroImage = tour.images?.[0] || destinationStory?.image || fallbackTourImage;
+  const compactDescription = (tour.shortDescription || tour.description || destinationStory.description || "")
+    .split(" ")
+    .slice(0, 46)
+    .join(" ");
+
   return (
     <>
-      <section className="detail-hero" style={{ backgroundImage: `url(${tour.images?.[0] || ""})` }}>
+      <section className="detail-hero destination-detail-hero" style={{ backgroundImage: `url(${heroImage})` }}>
         <div>
           <p className="eyebrow">{tour.category}</p>
           <h1>{tour.title}</h1>
-          <p>{tour.shortDescription}</p>
+          <p>{destinationStory?.hook || tour.shortDescription}</p>
           <div className="button-row">
             <button className="button primary" type="button" onClick={handleReferral}>
               Continue to booking
@@ -167,12 +179,28 @@ export default function TourDetail() {
       </section>
       <section className="section detail-layout">
         <article className="detail-main">
-          <div className="tour-facts">
-            <span>{tour.location}</span>
-            <span>{tour.duration}</span>
-            <strong>{eur.format(tour.priceEUR)}</strong>
+          <div className="quick-facts-matrix">
+            <span>
+              <strong>Best Time</strong>
+              {destinationStory?.bestTime || "Jun-Oct"}
+            </span>
+            <span>
+              <strong>Vibe</strong>
+              {destinationStory?.vibe || tour.category}
+            </span>
+            <span>
+              <strong>Price Level</strong>
+              {destinationStory?.priceLevel || "$$"}
+            </span>
+            <span>
+              <strong>Entry Fee</strong>
+              {destinationStory?.entryFee || "Ask operator"}
+            </span>
           </div>
-          <p className="lead">{tour.description}</p>
+          <div className="content-block">
+            <p>📍 {compactDescription}</p>
+            <p>🧭 Duration: {tour.duration}. Route base: {tour.location}. Listed from {eur.format(tour.priceEUR)}.</p>
+          </div>
           <ImageGallery images={tour.images} />
           <h2>Highlights</h2>
           <ul className="check-list">
@@ -368,6 +396,15 @@ export default function TourDetail() {
           {message && <p className="form-note">{message}</p>}
         </aside>
       </section>
+      <div className="sticky-booking-bar">
+        <span>
+          <strong>{tour.title}</strong>
+          <small>{eur.format(tour.priceEUR)} · referral booking link</small>
+        </span>
+        <button className="button primary compact" type="button" onClick={handleReferral}>
+          Book real tour
+        </button>
+      </div>
     </>
   );
 }

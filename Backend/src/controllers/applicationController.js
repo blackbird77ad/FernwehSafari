@@ -21,11 +21,30 @@ function parseList(value) {
 
 function normalizeApplicationPayload(body) {
   return {
-    ...body,
+    contactName: body.contactName,
+    contactRole: body.contactRole,
+    email: body.email,
+    phone: body.phone,
+    whatsapp: body.whatsapp,
+    companyName: body.companyName,
+    registrationNumber: body.registrationNumber,
+    licenseNumber: body.licenseNumber,
+    taxNumber: body.taxNumber,
+    website: body.website,
+    bookingURL: body.bookingURL,
+    headquarters: body.headquarters,
     operatingRegions: parseList(body.operatingRegions),
     tourCategories: parseList(body.tourCategories),
+    yearsOperating: body.yearsOperating,
+    hasInHouseGuides: body.hasInHouseGuides === true || body.hasInHouseGuides === "true",
+    guideCount: body.guideCount,
     guideLanguages: parseList(body.guideLanguages),
-    proposedTours: Array.isArray(body.proposedTours) ? body.proposedTours : []
+    insuranceProvider: body.insuranceProvider,
+    emergencyProcess: body.emergencyProcess,
+    cancellationPolicy: body.cancellationPolicy,
+    paymentMethods: body.paymentMethods,
+    commissionExpectation: body.commissionExpectation,
+    proposedTours: []
   };
 }
 
@@ -105,9 +124,7 @@ const createCompanyApplication = asyncHandler(async (req, res) => {
     `WhatsApp: ${application.whatsapp || "Not provided"}`,
     `Location: ${application.headquarters}`,
     `Regions: ${application.operatingRegions.join(", ") || "Not provided"}`,
-    `Has in-house guides: ${application.hasInHouseGuides ? "Yes" : "No"}`,
-    "",
-    application.notes || "No additional notes."
+    `Has in-house guides: ${application.hasInHouseGuides ? "Yes" : "No"}`
   ]);
 
   await notifyUser(application.email, "FernwehSafari received your tour company application", [

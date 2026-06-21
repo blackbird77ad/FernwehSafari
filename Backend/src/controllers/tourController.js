@@ -66,12 +66,12 @@ function buildTourQuery(query, includeInactive = false) {
   return filters;
 }
 
-function canManageTours(user) {
-  return user?.role === "admin" || user?.role === "tour_company";
+function isStaff(user) {
+  return user?.role === "admin" || user?.role === "moderator";
 }
 
-function isAdmin(user) {
-  return user?.role === "admin";
+function canManageTours(user) {
+  return isStaff(user) || user?.role === "tour_company";
 }
 
 async function getOwnedPartner(userId) {
@@ -79,7 +79,7 @@ async function getOwnedPartner(userId) {
 }
 
 async function ensureCanManageTour(req, tour) {
-  if (isAdmin(req.user)) {
+  if (isStaff(req.user)) {
     return;
   }
 
@@ -94,7 +94,7 @@ async function ensureCanManageTour(req, tour) {
 
 const listTours = asyncHandler(async (req, res) => {
   const includeInactive =
-    (req.user?.role === "admin" || req.query.mine === "true") && req.query.includeInactive === "true";
+    (isStaff(req.user) || req.query.mine === "true") && req.query.includeInactive === "true";
   const filters = buildTourQuery(req.query, includeInactive);
 
   if (req.query.mine === "true") {
@@ -121,13 +121,6 @@ const getTourBySlug = asyncHandler(async (req, res) => {
   if (!tour) {
     throw new ApiError(404, "Tour not found.");
   }
-
-  await notifyOwner(`Tour updated: ${tour.title}`, [
-    `Tour: ${tour.title}`,
-    `Updated by: ${req.user.name} (${req.user.email})`,
-    `Role: ${req.user.role}`,
-    `Status: ${tour.isActive ? "Active" : "Pending admin review"}`
-  ]);
 
   sendResponse(res, 200, { tour });
 });
@@ -162,7 +155,7 @@ const createTour = asyncHandler(async (req, res) => {
     `Tour: ${tour.title}`,
     `Posted by: ${req.user.name} (${req.user.email})`,
     `Role: ${req.user.role}`,
-    `Status: ${tour.isActive ? "Active" : "Pending admin review"}`,
+    `Status: ${tour.isActive ? "Active" : "Pending staff review"}`,
     `Location: ${tour.location}`,
     `Price EUR: ${tour.priceEUR}`
   ]);
@@ -181,7 +174,7 @@ const updateTour = asyncHandler(async (req, res) => {
 
   const payload = { ...req.body };
 
-  if (!isAdmin(req.user)) {
+  if (!isStaff(req.user)) {
     delete payload.partner;
     delete payload.owner;
     delete payload.featured;
@@ -200,6 +193,13 @@ const updateTour = asyncHandler(async (req, res) => {
   if (!tour) {
     throw new ApiError(404, "Tour not found.");
   }
+
+  await notifyOwner(`Tour updated: ${tour.title}`, [
+    `Tour: ${tour.title}`,
+    `Updated by: ${req.user.name} (${req.user.email})`,
+    `Role: ${req.user.role}`,
+    `Status: ${tour.isActive ? "Active" : "Pending staff review"}`
+  ]);
 
   sendResponse(res, 200, { tour });
 });

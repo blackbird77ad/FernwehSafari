@@ -3,7 +3,7 @@ import useAuth from "../hooks/useAuth";
 import Spinner from "./Spinner";
 
 export default function AdminRoute({ children }) {
-  const { isAdmin, isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, isStaff, loading } = useAuth();
 
   if (loading) {
     return <Spinner label="Checking permissions" />;
@@ -13,7 +13,7 @@ export default function AdminRoute({ children }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!isAdmin) {
+  if (!isStaff) {
     return <Navigate to="/dashboard" replace />;
   }
 

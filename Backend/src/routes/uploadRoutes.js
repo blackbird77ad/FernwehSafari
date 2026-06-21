@@ -4,7 +4,7 @@ const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const { uploadImage } = require("../controllers/uploadController");
 const { cloudinary, isCloudinaryConfigured } = require("../lib/cloudinary");
 const { auth } = require("../middleware/auth");
-const adminOnly = require("../middleware/adminOnly");
+const staffOnly = require("../middleware/staffOnly");
 
 const router = express.Router();
 const storage = isCloudinaryConfigured
@@ -18,6 +18,6 @@ const storage = isCloudinaryConfigured
   : multer.memoryStorage();
 const upload = multer({ storage });
 
-router.post("/", auth, adminOnly, upload.single("image"), uploadImage);
+router.post("/", auth, staffOnly, upload.single("image"), uploadImage);
 
 module.exports = router;

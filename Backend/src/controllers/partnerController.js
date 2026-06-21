@@ -3,8 +3,12 @@ const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/sendResponse");
 const TourPartner = require("../models/TourPartner");
 
+function isStaff(user) {
+  return user?.role === "admin" || user?.role === "moderator";
+}
+
 const listPartners = asyncHandler(async (req, res) => {
-  const filters = req.user?.role === "admin" && req.query.includeInactive === "true" ? {} : { isActive: true };
+  const filters = isStaff(req.user) && req.query.includeInactive === "true" ? {} : { isActive: true };
   const partners = await TourPartner.find(filters).sort({ name: 1 });
   sendResponse(res, 200, { partners });
 });

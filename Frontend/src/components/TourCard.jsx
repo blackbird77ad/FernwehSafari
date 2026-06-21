@@ -1,12 +1,18 @@
 import { Link } from "react-router-dom";
+import fallbackTourImage from "../assets/photos/ngorongoro-wide-with-tourists.jpg";
 import { eur } from "../utils/formatters";
 
 export default function TourCard({ tour }) {
-  const image = tour.images?.[0] || "https://images.unsplash.com/photo-1516426122078-c23e76319801?auto=format&fit=crop&w=900&q=80";
+  const image = tour.images?.[0] || fallbackTourImage;
 
   return (
-    <article className="tour-card">
-      <img src={image} alt={`${tour.title} preview`} loading="lazy" />
+    <article className="tour-card relative overflow-hidden">
+      <div className="relative">
+        <img src={image} alt={`${tour.title} preview`} loading="lazy" />
+        <strong className="absolute right-3 top-3 rounded-full bg-fernweh-gold px-3 py-1 text-sm font-black text-fernweh-deep shadow">
+          {eur.format(tour.priceEUR)}
+        </strong>
+      </div>
       <div className="card-body">
         <div className="pill-row">
           <span>{tour.category}</span>
@@ -21,7 +27,7 @@ export default function TourCard({ tour }) {
           <strong>{eur.format(tour.priceEUR)}</strong>
         </div>
         <Link className="button compact" to={`/tours/${tour.slug}`}>
-          View tour
+          View deal
         </Link>
       </div>
     </article>

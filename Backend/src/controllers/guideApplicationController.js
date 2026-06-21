@@ -17,12 +17,12 @@ function parseList(value) {
     .filter(Boolean);
 }
 
-function isAdmin(user) {
-  return user?.role === "admin";
+function isStaff(user) {
+  return user?.role === "admin" || user?.role === "moderator";
 }
 
 function canReviewForCompany(user, tour) {
-  return isAdmin(user) || (user?.role === "tour_company" && String(tour.owner) === String(user._id));
+  return isStaff(user) || (user?.role === "tour_company" && String(tour.owner) === String(user._id));
 }
 
 async function getApplication(id) {
@@ -132,7 +132,7 @@ const companyDecision = asyncHandler(async (req, res) => {
   const tour = await Tour.findById(application.tour._id).populate("partner");
 
   if (!canReviewForCompany(req.user, tour)) {
-    throw new ApiError(403, "Only the tour company owner or admin can review this application.");
+    throw new ApiError(403, "Only the tour company owner or FernwehSafari staff can review this application.");
   }
 
   const approved = req.body.decision === "approved";
@@ -146,7 +146,7 @@ const companyDecision = asyncHandler(async (req, res) => {
     `Hello ${application.guideName},`,
     "",
     approved
-      ? `The tour company approved your guide application for ${tour.title}. FernwehSafari admin will now confirm it.`
+      ? `The tour company approved your guide application for ${tour.title}. FernwehSafari staff will now confirm it.`
       : `The tour company did not approve your guide application for ${tour.title}.`,
     application.companyReviewNotes || "",
     "",
@@ -158,7 +158,7 @@ const companyDecision = asyncHandler(async (req, res) => {
       `Tour: ${tour.title}`,
       `Guide: ${application.guideName}`,
       `Company notes: ${application.companyReviewNotes || "No notes."}`,
-      "Admin confirmation is required before this guide is published on the tour."
+      "FernwehSafari staff confirmation is required before this guide is published on the tour."
     ]);
   }
 
@@ -167,8 +167,8 @@ const companyDecision = asyncHandler(async (req, res) => {
 });
 
 const adminDecision = asyncHandler(async (req, res) => {
-  if (!isAdmin(req.user)) {
-    throw new ApiError(403, "Admin access required.");
+  if (!isStaff(req.user)) {
+    throw new ApiError(403, "Admin or moderator access required.");
   }
 
   const application = await getApplication(req.params.id);
@@ -176,7 +176,7 @@ const adminDecision = asyncHandler(async (req, res) => {
   const approved = req.body.decision === "approved";
 
   if (approved && application.status !== "company_approved") {
-    throw new ApiError(422, "The tour company must approve this guide before admin confirmation.");
+    throw new ApiError(422, "The tour company must approve this guide before FernwehSafari staff confirmation.");
   }
 
   application.status = approved ? "admin_approved" : "admin_rejected";
@@ -291,7 +291,7 @@ const updateGuideBookingStatus = asyncHandler(async (req, res) => {
   }
 
   const canUpdate =
-    isAdmin(req.user) ||
+    isStaff(req.user) ||
     String(booking.guide) === String(req.user._id) ||
     (req.user.role === "tour_company" && String(booking.tour.owner) === String(req.user._id));
 

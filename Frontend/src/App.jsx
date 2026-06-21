@@ -1,8 +1,10 @@
-import { Routes, Route } from "react-router-dom";
+import { lazy, Suspense } from "react";
+import { Navigate, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
+import Spinner from "./components/Spinner";
 import About from "./pages/About";
 import Admin from "./pages/Admin";
 import Contact from "./pages/Contact";
@@ -18,6 +20,8 @@ import Testimonials from "./pages/Testimonials";
 import TourDetail from "./pages/TourDetail";
 import Tours from "./pages/Tours";
 
+const VirtualTour = lazy(() => import("./pages/VirtualTour"));
+
 export default function App() {
   return (
     <div className="app-shell">
@@ -32,7 +36,16 @@ export default function App() {
           <Route path="/testimonials" element={<Testimonials />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/contact" element={<Contact />} />
-          <Route path="/list-your-tours" element={<ListYourTours />} />
+          <Route path="/partner" element={<ListYourTours />} />
+          <Route path="/list-your-tours" element={<Navigate to="/partner" replace />} />
+          <Route
+            path="/virtual-tour"
+            element={
+              <Suspense fallback={<div className="section"><Spinner label="Loading virtual tour" /></div>}>
+                <VirtualTour />
+              </Suspense>
+            }
+          />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route

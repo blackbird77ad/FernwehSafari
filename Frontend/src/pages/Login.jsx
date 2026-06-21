@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import loginImage from "../assets/photos/kendwa-beach-tourist.png";
 import useAuth from "../hooks/useAuth";
 
 export default function Login() {
@@ -27,35 +28,44 @@ export default function Login() {
 
   return (
     <section className="auth-page">
-      <form className="auth-card" onSubmit={handleSubmit}>
-        <p className="eyebrow">Login</p>
-        <h1>Access your saved tours and enquiries.</h1>
-        <label className="field">
-          <span>Email</span>
-          <input
-            type="email"
-            value={form.email}
-            onChange={(event) => setForm({ ...form, email: event.target.value })}
-            required
-          />
-        </label>
-        <label className="field">
-          <span>Password</span>
-          <input
-            type="password"
-            value={form.password}
-            onChange={(event) => setForm({ ...form, password: event.target.value })}
-            required
-          />
-        </label>
-        <button className="button primary" type="submit" disabled={submitting}>
-          {submitting ? "Logging in..." : "Login"}
-        </button>
-        {error && <p className="form-note error">{error}</p>}
-        <p>
-          No account yet? <Link to="/register">Register</Link>
-        </p>
-      </form>
+      <div className="auth-split">
+        <div className="login-image-card">
+          <img src={loginImage} alt="Traveller enjoying Zanzibar beach" />
+          <div>
+            <p className="eyebrow">Welcome back</p>
+            <h2>Return to your saved routes and partner tools.</h2>
+          </div>
+        </div>
+        <form className="auth-card login-panel" onSubmit={handleSubmit}>
+          <p className="eyebrow">Login</p>
+          <h1>Access your dashboard.</h1>
+          <label className="field">
+            <span>Email</span>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(event) => setForm({ ...form, email: event.target.value })}
+              required
+            />
+          </label>
+          <label className="field">
+            <span>Password</span>
+            <input
+              type="password"
+              value={form.password}
+              onChange={(event) => setForm({ ...form, password: event.target.value })}
+              required
+            />
+          </label>
+          <button className="button primary" type="submit" disabled={submitting}>
+            {submitting ? "Logging in..." : "Login"}
+          </button>
+          {error && <p className="form-note error">{error}</p>}
+          <p>
+            No account yet? <Link to="/register">Register</Link>
+          </p>
+        </form>
+      </div>
     </section>
   );
 }

@@ -119,10 +119,10 @@ export default function Dashboard() {
     try {
       if (editingTourId) {
         await updateTour(editingTourId, serializeTourForm());
-        setMessage("Tour updated and sent for admin review.");
+        setMessage("Tour updated and sent for staff review.");
       } else {
         await createTour(serializeTourForm());
-        setMessage("Tour posted and sent for admin review.");
+        setMessage("Tour posted and sent for staff review.");
       }
 
       setTourForm(emptyCompanyTour);
@@ -272,7 +272,7 @@ export default function Dashboard() {
                     <div>
                       <strong>{tour.title}</strong>
                       <span>
-                        {tour.isActive ? "Active" : "Pending admin review"} - {tour.location} - {eur.format(tour.priceEUR)}
+                        {tour.isActive ? "Active" : "Pending staff review"} - {tour.location} - {eur.format(tour.priceEUR)}
                       </span>
                     </div>
                     <div className="button-row">

@@ -71,6 +71,38 @@ Default URLs:
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:5000/api`
 
+## Render Backend Deployment
+
+Render does not read `Backend/.env` from your computer, and this repo intentionally ignores real `.env` files. Add the backend variables in the Render service dashboard under **Environment**.
+
+Required:
+
+```text
+MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/fernweh-safari?retryWrites=true&w=majority
+JWT_SECRET=<long-random-production-secret>
+CLIENT_URL=<your-frontend-url>
+```
+
+Optional, depending on enabled features:
+
+```text
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+RESEND_API_KEY=
+MONGO_DNS_SERVERS=
+```
+
+For Render, the backend service should use:
+
+```text
+Root Directory: Backend
+Build Command: npm install
+Start Command: npm start
+```
+
+If MongoDB Atlas rejects the connection after `MONGO_URI` is set, add Render's outbound access to Atlas Network Access, or allow access from `0.0.0.0/0` if that matches your security policy.
+
 ## Demo Admin
 
 The seed script creates:

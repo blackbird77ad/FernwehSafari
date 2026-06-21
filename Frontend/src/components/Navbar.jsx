@@ -5,17 +5,17 @@ import useAuth from "../hooks/useAuth";
 const links = [
   { to: "/", label: "Home" },
   { to: "/tours", label: "Tours" },
-  { to: "/about", label: "About" },
   { to: "/gallery", label: "Gallery" },
-  { to: "/faq", label: "FAQ" },
-  { to: "/contact", label: "Contact" },
-  { to: "/list-your-tours", label: "List your tours" }
+  { to: "/about", label: "About" },
+  { to: "/partner", label: "Partner" },
+  { to: "/contact", label: "Contact" }
 ];
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
-  const { isAdmin, isAuthenticated, logout, user } = useAuth();
+  const { isAuthenticated, isStaff, logout, user } = useAuth();
   const navigate = useNavigate();
+  const isTourCompany = user?.role === "tour_company";
 
   function handleLogout() {
     logout();
@@ -27,7 +27,10 @@ export default function Navbar() {
     <header className="navbar">
       <Link className="brand" to="/" onClick={() => setOpen(false)}>
         <span className="brand-mark">FS</span>
-        <span>FernwehSafari</span>
+        <span>
+          FernwehSafari
+          <small>Tanzania & Zanzibar</small>
+        </span>
       </Link>
       <button className="menu-button" type="button" onClick={() => setOpen((value) => !value)}>
         <span>{open ? "Close" : "Menu"}</span>
@@ -43,7 +46,12 @@ export default function Navbar() {
             <NavLink to="/dashboard" onClick={() => setOpen(false)}>
               Dashboard
             </NavLink>
-            {isAdmin && (
+            {isTourCompany && (
+              <NavLink className="nav-soft" to="/dashboard" onClick={() => setOpen(false)}>
+                List tours
+              </NavLink>
+            )}
+            {isStaff && (
               <NavLink to="/admin" onClick={() => setOpen(false)}>
                 Admin
               </NavLink>
@@ -53,9 +61,11 @@ export default function Navbar() {
             </button>
           </>
         ) : (
-          <Link className="nav-cta" to="/login" onClick={() => setOpen(false)}>
-            Login
-          </Link>
+          <>
+            <Link className="nav-cta" to="/login" onClick={() => setOpen(false)}>
+              Login
+            </Link>
+          </>
         )}
       </nav>
     </header>
