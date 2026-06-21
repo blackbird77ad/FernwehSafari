@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import registerImage from "../assets/photos/Nungwi beach Zanzibar-homepage.jpg";
 import useAuth from "../hooks/useAuth";
 
 export default function Register() {
@@ -30,39 +31,59 @@ export default function Register() {
 
   return (
     <section className="auth-page">
-      <form className="auth-card" onSubmit={handleSubmit}>
-        <p className="eyebrow">Register</p>
-        <h1>Create a FernwehSafari traveller account.</h1>
-        <label className="field">
-          <span>Name</span>
-          <input value={form.name} onChange={(event) => update("name", event.target.value)} required />
-        </label>
-        <label className="field">
-          <span>Email</span>
-          <input type="email" value={form.email} onChange={(event) => update("email", event.target.value)} required />
-        </label>
-        <label className="field">
-          <span>Password</span>
-          <input
-            type="password"
-            minLength="8"
-            value={form.password}
-            onChange={(event) => update("password", event.target.value)}
-            required
-          />
-        </label>
-        <label className="field">
-          <span>Country</span>
-          <input value={form.country} onChange={(event) => update("country", event.target.value)} />
-        </label>
-        <button className="button primary" type="submit" disabled={submitting}>
-          {submitting ? "Creating account..." : "Register"}
-        </button>
-        {error && <p className="form-note error">{error}</p>}
-        <p>
-          Already have an account? <Link to="/login">Login</Link>
-        </p>
-      </form>
+      <div className="auth-split register-split">
+        <div className="login-image-card register-image-card">
+          <img src={registerImage} alt="Nungwi beach in Zanzibar at golden hour" />
+          <div>
+            <p className="eyebrow">Plan with confidence</p>
+            <h2>Save Tanzania and Zanzibar tours before you book.</h2>
+            <div className="auth-trust-list">
+              <span>Verified local operators</span>
+              <span>Referral-safe booking flow</span>
+              <span>Partner tools after approval</span>
+            </div>
+          </div>
+        </div>
+        <form className="auth-card login-panel register-panel" onSubmit={handleSubmit}>
+          <p className="eyebrow">Traveller registration</p>
+          <h1>Create your FernwehSafari account.</h1>
+          <p className="form-note">
+            Traveller accounts can save tours and request guides. Tour companies should apply through{" "}
+            <Link to="/partner">Partner</Link>.
+          </p>
+          <div className="form-grid register-form-grid">
+            <label className="field">
+              <span>Name</span>
+              <input value={form.name} onChange={(event) => update("name", event.target.value)} required />
+            </label>
+            <label className="field">
+              <span>Country</span>
+              <input value={form.country} onChange={(event) => update("country", event.target.value)} />
+            </label>
+          </div>
+          <label className="field">
+            <span>Email</span>
+            <input type="email" value={form.email} onChange={(event) => update("email", event.target.value)} required />
+          </label>
+          <label className="field">
+            <span>Password</span>
+            <input
+              type="password"
+              minLength="8"
+              value={form.password}
+              onChange={(event) => update("password", event.target.value)}
+              required
+            />
+          </label>
+          <button className="button primary" type="submit" disabled={submitting}>
+            {submitting ? "Creating account..." : "Create traveller account"}
+          </button>
+          {error && <p className="form-note error">{error}</p>}
+          <p>
+            Already have an account? <Link to="/login">Login</Link>
+          </p>
+        </form>
+      </div>
     </section>
   );
 }

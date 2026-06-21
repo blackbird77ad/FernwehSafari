@@ -5,18 +5,19 @@ export default {
     extend: {
       colors: {
         fernweh: {
-          forest: "#184d3c",
-          deep: "#0e3228",
-          leaf: "#4f8a4c",
-          lagoon: "#0f8c88",
-          clay: "#b85f39",
-          gold: "#e2b34e",
-          sand: "#f2dfb6",
-          paper: "#fbfaf6"
+          white: "#ffffff",
+          forest: "#1e3f20",
+          deep: "#132914",
+          leaf: "#2f5d31",
+          ochre: "#dda15e",
+          gold: "#dda15e",
+          charcoal: "#252525",
+          sand: "#f7f4ef",
+          paper: "#ffffff"
         }
       },
       boxShadow: {
-        safari: "0 22px 60px rgba(20, 37, 31, 0.14)"
+        safari: "0 22px 60px rgba(37, 37, 37, 0.12)"
       }
     }
   },

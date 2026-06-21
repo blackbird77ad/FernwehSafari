@@ -246,17 +246,17 @@ async function seed() {
     }
   ]);
 
-  const passwordHash = await bcrypt.hash("AdminPass123", 12);
+  const passwordHash = await bcrypt.hash("Fern2341", 12);
   await User.create({
-    name: "Fernweh Admin",
-    email: "admin@fernwehsafari.com",
+    name: "Blackbird Admin",
+    email: "blackbird77ad@gmail.com",
     passwordHash,
     role: "admin",
     country: "Germany"
   });
 
   console.log("Seeded partners, tours and demo admin.");
-  console.log("Demo admin: admin@fernwehsafari.com / AdminPass123");
+  console.log("Demo admin: blackbird77ad@gmail.com / Fern2341");
   process.exit(0);
 }
 

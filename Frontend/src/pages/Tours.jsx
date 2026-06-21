@@ -43,7 +43,7 @@ export default function Tours() {
 
   return (
     <>
-      <section className="page-hero compact-hero">
+      <section className="page-hero compact-hero tours-hero">
         <p className="eyebrow">Tour listings</p>
         <h1>Tanzania safari, Kilimanjaro and Zanzibar tours for European travellers.</h1>
       </section>

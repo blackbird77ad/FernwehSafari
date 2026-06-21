@@ -7,7 +7,7 @@ export default function Testimonials() {
 
   return (
     <>
-      <section className="page-hero compact-hero">
+      <section className="page-hero compact-hero testimonials-hero">
         <p className="eyebrow">Testimonials</p>
         <h1>Traveller stories from Tanzania and Zanzibar routes.</h1>
       </section>

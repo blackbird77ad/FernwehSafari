@@ -1,21 +1,26 @@
 :root {
-  --ink: #17211d;
-  --muted: #5f6f68;
-  --paper: #fbfaf6;
-  --surface: #ffffff;
-  --line: #dbe4df;
-  --forest: #184d3c;
-  --forest-2: #0e3228;
-  --leaf: #4f8a4c;
-  --lagoon: #0f8c88;
-  --sand: #f2dfb6;
-  --clay: #b85f39;
-  --coral: #dc755a;
-  --gold: #e2b34e;
-  --sky: #bde7ee;
-  --mint: #e9f4ee;
+  --crisp-white: #ffffff;
+  --serengeti-leaf: #1e3f20;
+  --zanzibar-ochre: #dda15e;
+  --charcoal-night: #252525;
+  --swahili-sand: #f7f4ef;
+  --ink: var(--charcoal-night);
+  --muted: #615d55;
+  --paper: var(--crisp-white);
+  --surface: var(--swahili-sand);
+  --line: #e6dfd5;
+  --forest: var(--serengeti-leaf);
+  --forest-2: #132914;
+  --leaf: #2f5d31;
+  --lagoon: #3b6b3d;
+  --sand: var(--swahili-sand);
+  --clay: #a76734;
+  --coral: #bd7042;
+  --gold: var(--zanzibar-ochre);
+  --sky: #edf4ea;
+  --mint: #eef4ea;
   --danger: #9e352b;
-  --shadow: 0 22px 60px rgba(20, 37, 31, 0.14);
+  --shadow: 0 22px 60px rgba(37, 37, 37, 0.12);
   color: var(--ink);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
@@ -34,8 +39,8 @@ body {
   margin: 0;
   min-width: 320px;
   background:
-    radial-gradient(circle at top left, rgba(226, 179, 78, 0.2), transparent 28rem),
-    radial-gradient(circle at top right, rgba(15, 140, 136, 0.15), transparent 24rem),
+    radial-gradient(circle at top left, rgba(221, 161, 94, 0.14), transparent 28rem),
+    radial-gradient(circle at top right, rgba(30, 63, 32, 0.08), transparent 24rem),
     var(--paper);
 }
 
@@ -102,7 +107,7 @@ h3 {
   gap: 1rem;
   padding: 0.85rem clamp(1rem, 4vw, 3rem);
   border-bottom: 1px solid rgba(219, 228, 223, 0.92);
-  background: rgba(251, 250, 246, 0.93);
+  background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(14px);
 }
 
@@ -162,11 +167,17 @@ h3 {
   color: var(--forest);
 }
 
-.nav-cta {
+.nav-links a.nav-cta,
+.nav-links a.nav-cta.active,
+.nav-links a.nav-cta:hover {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 0.45rem;
   padding: 0.55rem 0.8rem;
-  background: linear-gradient(135deg, var(--forest), var(--lagoon));
-  color: white !important;
+  background: var(--gold);
+  color: var(--ink) !important;
+  box-shadow: 0 0.75rem 1.6rem rgba(221, 161, 94, 0.24);
 }
 
 .nav-soft {
@@ -201,10 +212,27 @@ h3 {
 }
 
 .fast-hero {
+  position: relative;
+  height: min(58vh, 34rem);
+  min-height: 24rem;
+  max-height: 34rem;
+  overflow: hidden;
+  background: var(--forest-2);
+  color: white;
   isolation: isolate;
 }
 
+.home-hero-bg {
+  background-position: center;
+  background-size: cover;
+}
+
 .hero-carousel {
+  display: flex;
+  height: 100%;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
   scrollbar-width: none;
 }
 
@@ -212,8 +240,75 @@ h3 {
   display: none;
 }
 
+.hero-slide {
+  position: relative;
+  flex: 0 0 100%;
+  height: 100%;
+  scroll-snap-align: center;
+}
+
+.hero-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero-slide-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(8, 18, 14, 0.86), rgba(8, 18, 14, 0.46), rgba(8, 18, 14, 0.12));
+}
+
+.fast-hero-content-wrap {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: end;
+  padding: clamp(1.25rem, 5vw, 3.25rem);
+  pointer-events: none;
+}
+
+.fast-hero-content {
+  width: min(49rem, 100%);
+}
+
+.fast-hero-content h1 {
+  margin-bottom: 0.5rem;
+  font-size: clamp(2.45rem, 7vw, 5.4rem);
+  line-height: 0.96;
+}
+
+.fast-hero-copy {
+  width: min(38rem, 100%);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: clamp(1rem, 2vw, 1.25rem);
+}
+
+.fast-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.15rem;
+  pointer-events: auto;
+}
+
 .instant-filter {
   position: sticky;
+  top: 4.1rem;
+  z-index: 40;
+  border-block: 1px solid rgba(30, 63, 32, 0.1);
+  padding: 0.75rem clamp(1rem, 4vw, 3rem);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0.7rem 1.5rem rgba(14, 50, 40, 0.06);
+  backdrop-filter: blur(12px);
+}
+
+.instant-filter-inner {
+  display: grid;
+  width: min(64rem, 100%);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0 auto;
 }
 
 .fast-grid-section {
@@ -264,7 +359,7 @@ h3 {
 
 .quick-split-card.coast {
   background:
-    linear-gradient(135deg, rgba(15, 140, 136, 0.88), rgba(14, 50, 40, 0.68)),
+    linear-gradient(135deg, rgba(30, 63, 32, 0.84), rgba(221, 161, 94, 0.54)),
     url("./assets/photos/Kendwa-Beach-Zanzibar.jpg") center / cover;
 }
 
@@ -319,18 +414,90 @@ h3 {
 
 .page-hero,
 .detail-hero {
-  display: grid;
+  display: flex;
   min-height: 48svh;
-  align-items: end;
-  padding: clamp(4rem, 10vw, 8rem) clamp(1rem, 5vw, 5rem) clamp(2rem, 5vw, 4rem);
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: clamp(4.75rem, 8vw, 7rem) clamp(1rem, 5vw, 5rem) clamp(1.6rem, 4vw, 3rem);
   color: white;
   background:
     linear-gradient(90deg, rgba(14, 40, 32, 0.92), rgba(14, 40, 32, 0.66), rgba(14, 40, 32, 0.2)),
     url("./assets/photos/Aerial-View-Stone-Town-Zanzibar.jpg") center / cover;
 }
 
+.page-hero h1,
+.detail-hero h1 {
+  width: min(58rem, 100%);
+  margin-bottom: 0;
+  font-size: clamp(2.35rem, 5.8vw, 5rem);
+  line-height: 1;
+  text-wrap: balance;
+}
+
+.page-hero p:not(.eyebrow),
+.detail-hero p:not(.eyebrow) {
+  width: min(42rem, 100%);
+  color: rgba(255, 255, 255, 0.86);
+}
+
 .destination-detail-hero {
-  min-height: min(42svh, 28rem);
+  height: min(58vh, 34rem);
+  min-height: 24rem;
+  max-height: 34rem;
+}
+
+.tours-hero {
+  background:
+    linear-gradient(90deg, rgba(19, 41, 20, 0.94), rgba(30, 63, 32, 0.66), rgba(30, 63, 32, 0.18)),
+    url("./assets/photos/Mikumi national park-sun-safari-pretty-long-beak-bird-.jpg") center / cover;
+}
+
+.about-hero {
+  background:
+    linear-gradient(90deg, rgba(19, 41, 20, 0.94), rgba(30, 63, 32, 0.62), rgba(30, 63, 32, 0.18)),
+    url("./assets/photos/Aerial-View-Stone-Town-Zanzibar.jpg") center / cover;
+}
+
+.gallery-hero {
+  background:
+    linear-gradient(90deg, rgba(19, 41, 20, 0.92), rgba(30, 63, 32, 0.58), rgba(30, 63, 32, 0.16)),
+    url("./assets/photos/Old fort Zanzibar-tourist-gallery.webp") center / cover;
+}
+
+.contact-hero {
+  background:
+    linear-gradient(90deg, rgba(19, 41, 20, 0.9), rgba(30, 63, 32, 0.56), rgba(30, 63, 32, 0.16)),
+    url("./assets/photos/prison-island-from-above.webp") center / cover;
+}
+
+.faq-hero {
+  background:
+    linear-gradient(90deg, rgba(19, 41, 20, 0.94), rgba(30, 63, 32, 0.64), rgba(30, 63, 32, 0.18)),
+    url("./assets/photos/Jozani forest Zanzibar-footbridge.jpg") center / cover;
+}
+
+.testimonials-hero {
+  background:
+    linear-gradient(90deg, rgba(19, 41, 20, 0.9), rgba(30, 63, 32, 0.54), rgba(30, 63, 32, 0.14)),
+    url("./assets/photos/Nungwi beach Zanzibar-fernweh.jpg") center / cover;
+}
+
+.dashboard-hero {
+  background:
+    linear-gradient(90deg, rgba(19, 41, 20, 0.94), rgba(30, 63, 32, 0.64), rgba(30, 63, 32, 0.18)),
+    url("./assets/photos/lake-manyara-national-park-tourist-gallery.jpg") center / cover;
+}
+
+.virtual-tour-hero {
+  background:
+    linear-gradient(90deg, rgba(19, 41, 20, 0.92), rgba(30, 63, 32, 0.56), rgba(30, 63, 32, 0.14)),
+    url("./assets/photos/Mnemba island tour-hero-page-bg.jpg") center / cover;
+}
+
+.not-found-hero {
+  background:
+    linear-gradient(90deg, rgba(19, 41, 20, 0.94), rgba(30, 63, 32, 0.62), rgba(30, 63, 32, 0.18)),
+    url("./assets/photos/Isimila in iringa -tall-rock.jpg") center / cover;
 }
 
 .quick-facts-matrix {
@@ -384,7 +551,7 @@ h3 {
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 0.75rem;
   padding: 0.8rem 0.9rem;
-  background: linear-gradient(135deg, rgba(24, 77, 60, 0.96), rgba(15, 140, 136, 0.96));
+  background: linear-gradient(135deg, rgba(30, 63, 32, 0.98), rgba(19, 41, 20, 0.94));
   color: white;
   box-shadow: var(--shadow);
 }
@@ -401,7 +568,7 @@ h3 {
 
 .partner-hero {
   background:
-    linear-gradient(90deg, rgba(9, 31, 24, 0.92), rgba(24, 77, 60, 0.62), rgba(24, 77, 60, 0.14)),
+    linear-gradient(90deg, rgba(19, 41, 20, 0.92), rgba(30, 63, 32, 0.62), rgba(30, 63, 32, 0.14)),
     url("./assets/photos/mount-kilimanjaro-tourist-gallery.jpg") center / cover;
 }
 
@@ -412,7 +579,9 @@ h3 {
 }
 
 .compact-hero {
-  min-height: 34svh;
+  height: min(58vh, 34rem);
+  min-height: 24rem;
+  max-height: 34rem;
 }
 
 .detail-hero {
@@ -423,6 +592,16 @@ h3 {
 .detail-hero > div,
 .page-hero > * {
   width: min(54rem, 100%);
+}
+
+.detail-hero > div {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.page-hero > .button {
+  width: fit-content;
+  margin-top: 1rem;
 }
 
 .eyebrow {
@@ -454,7 +633,7 @@ h3 {
 }
 
 .muted-band {
-  background: #eff6f5;
+  background: var(--mint);
 }
 
 .section-heading {
@@ -513,8 +692,8 @@ h3 {
 }
 
 .button.primary {
-  background: linear-gradient(135deg, var(--clay), var(--gold));
-  color: white;
+  background: var(--gold);
+  color: var(--ink);
 }
 
 .button.secondary {
@@ -701,6 +880,7 @@ h3 {
 
 .destination-story-card {
   display: grid;
+  min-width: 0;
   overflow: hidden;
   border: 1px solid rgba(219, 228, 223, 0.9);
   border-radius: 0.65rem;
@@ -733,7 +913,9 @@ h3 {
 
 .destination-story-body {
   display: grid;
+  grid-template-rows: auto 1fr auto;
   gap: 0.9rem;
+  min-width: 0;
   padding: clamp(1rem, 2vw, 1.25rem);
 }
 
@@ -748,16 +930,23 @@ h3 {
 .place-meta {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 0.45rem;
 }
 
 .place-meta span {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
   border-radius: 999px;
   padding: 0.28rem 0.58rem;
-  background: rgba(15, 140, 136, 0.1);
+  background: rgba(30, 63, 32, 0.1);
   color: var(--forest);
   font-size: 0.73rem;
   font-weight: 900;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
 .story-card-actions {
@@ -801,11 +990,29 @@ h3 {
   overflow: hidden;
 }
 
+.tour-card-image {
+  position: relative;
+  overflow: hidden;
+}
+
 .tour-card img {
   width: 100%;
   aspect-ratio: 16 / 10;
   object-fit: cover;
   background: var(--sky);
+}
+
+.tour-price-badge {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  background: var(--gold);
+  color: var(--forest-2);
+  font-size: 0.9rem;
+  font-weight: 950;
+  box-shadow: 0 0.6rem 1.4rem rgba(14, 50, 40, 0.16);
 }
 
 .card-body {
@@ -873,7 +1080,7 @@ h3 {
   align-items: end;
   padding: clamp(4rem, 10vw, 8rem) clamp(1rem, 5vw, 5rem) clamp(2rem, 5vw, 4rem);
   background:
-    linear-gradient(90deg, rgba(9, 31, 24, 0.94), rgba(24, 77, 60, 0.72), rgba(24, 77, 60, 0.18)),
+    linear-gradient(90deg, rgba(19, 41, 20, 0.94), rgba(30, 63, 32, 0.72), rgba(30, 63, 32, 0.18)),
     url("./assets/photos/mount-kilimanjaro-tourist-gallery.jpg") center / cover;
   color: white;
 }
@@ -992,7 +1199,7 @@ h3 {
 }
 
 .touch-action.whatsapp {
-  background: linear-gradient(135deg, #168b55, var(--forest));
+  background: linear-gradient(135deg, var(--leaf), var(--forest));
 }
 
 .touch-action.email {
@@ -1096,11 +1303,11 @@ h3 {
   display: grid;
   align-content: center;
   gap: 0.85rem;
-  border: 1px solid rgba(24, 77, 60, 0.18);
+  border: 1px solid rgba(30, 63, 32, 0.18);
   border-radius: 0.65rem;
   padding: clamp(1.1rem, 3vw, 2rem);
   background:
-    linear-gradient(135deg, rgba(24, 77, 60, 0.92), rgba(15, 140, 136, 0.86)),
+    linear-gradient(135deg, rgba(30, 63, 32, 0.94), rgba(19, 41, 20, 0.88)),
     var(--forest);
   color: white;
   box-shadow: var(--shadow);
@@ -1240,7 +1447,7 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--forest);
-  box-shadow: 0 0 0 3px rgba(24, 77, 60, 0.14);
+  box-shadow: 0 0 0 3px rgba(30, 63, 32, 0.14);
 }
 
 .empty-state {
@@ -1369,7 +1576,7 @@ textarea:focus {
   gap: 0.85rem;
   border: 1px solid var(--line);
   border-radius: 0.5rem;
-  background: #f7faf8;
+  background: var(--sand);
 }
 
 .form-grid {
@@ -1442,7 +1649,7 @@ textarea:focus {
   place-items: center;
   padding: clamp(2rem, 6vw, 5rem) 1rem;
   background:
-    linear-gradient(90deg, rgba(251, 250, 246, 0.92), rgba(251, 250, 246, 0.7)),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.92), rgba(247, 244, 239, 0.72)),
     url("./assets/photos/kendwa-beach-nice-view-vertical-hero-page-bg.png") center / cover;
 }
 
@@ -1504,6 +1711,41 @@ textarea:focus {
   font-size: clamp(2rem, 4vw, 3.2rem);
 }
 
+.register-image-card::after {
+  background:
+    linear-gradient(180deg, rgba(14, 50, 40, 0.06), rgba(14, 50, 40, 0.9)),
+    linear-gradient(90deg, rgba(196, 93, 42, 0.18), transparent 50%);
+}
+
+.register-panel {
+  gap: 0.75rem;
+}
+
+.register-panel h1 {
+  margin-bottom: 0.1rem;
+}
+
+.register-form-grid {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+}
+
+.auth-trust-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 1rem;
+}
+
+.auth-trust-list span {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  padding: 0.42rem 0.6rem;
+  background: rgba(255, 255, 255, 0.13);
+  color: white;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
 .dashboard-side {
   display: grid;
   gap: 1rem;
@@ -1525,7 +1767,279 @@ textarea:focus {
 .admin-section {
   position: relative;
   background:
-    linear-gradient(180deg, rgba(233, 244, 238, 0.7), rgba(251, 250, 246, 0.2));
+    linear-gradient(180deg, rgba(247, 244, 239, 0.82), rgba(255, 255, 255, 0.32));
+}
+
+.admin-app-shell,
+.admin-main {
+  min-height: 100vh;
+  background: var(--sand);
+}
+
+.admin-console {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: 18rem minmax(0, 1fr);
+  background:
+    radial-gradient(circle at top right, rgba(235, 180, 68, 0.2), transparent 28rem),
+    var(--sand);
+}
+
+.admin-sidebar {
+  position: sticky;
+  top: 0;
+  display: grid;
+  height: 100vh;
+  align-content: start;
+  gap: 1rem;
+  overflow: auto;
+  padding: 1rem;
+  background: linear-gradient(180deg, var(--forest-2), var(--forest));
+  color: white;
+}
+
+.admin-brand,
+.admin-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-brand {
+  color: white;
+  font-weight: 950;
+}
+
+.admin-brand small,
+.admin-identity small,
+.admin-sidebar-card span {
+  display: block;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
+.admin-identity {
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 0.65rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.admin-avatar {
+  display: grid;
+  width: 2.3rem;
+  height: 2.3rem;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--gold);
+  color: var(--forest-2);
+  font-weight: 950;
+}
+
+.admin-console-nav {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-console-nav button {
+  display: grid;
+  grid-template-columns: 1.7rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  padding: 0.68rem 0.7rem;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+  text-align: left;
+}
+
+.admin-console-nav button.active,
+.admin-console-nav button:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+}
+
+.admin-sidebar-card {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 0.7rem;
+  padding: 0.9rem;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.admin-sidebar-card strong {
+  display: block;
+  color: white;
+  font-size: 1.55rem;
+}
+
+.admin-logout-button {
+  width: 100%;
+}
+
+.admin-workspace {
+  min-width: 0;
+  padding: 1rem clamp(1rem, 2vw, 1.5rem) 2rem;
+}
+
+.admin-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgba(219, 228, 223, 0.92);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.93);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 1rem 2.5rem rgba(14, 50, 40, 0.08);
+}
+
+.admin-topbar h1 {
+  margin: 0.15rem 0 0;
+  font-size: clamp(1.9rem, 3vw, 3rem);
+}
+
+.admin-topbar span {
+  color: var(--muted);
+  font-weight: 780;
+}
+
+.admin-workspace-content {
+  display: grid;
+  gap: 1rem;
+  padding-top: 1rem;
+}
+
+.admin-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.admin-kpi-grid.compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-kpi-card {
+  border: 1px solid rgba(219, 228, 223, 0.9);
+  border-radius: 0.65rem;
+  padding: 1rem;
+  background: white;
+  box-shadow: 0 0.8rem 2rem rgba(14, 50, 40, 0.06);
+}
+
+.admin-kpi-card h2 {
+  margin: 0;
+  color: var(--forest);
+  font-size: clamp(1.5rem, 2.4vw, 2.2rem);
+}
+
+.admin-analytics-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.85rem;
+}
+
+.commission-meter {
+  overflow: hidden;
+  height: 0.62rem;
+  border-radius: 999px;
+  background: #e6dfd5;
+}
+
+.commission-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--clay), var(--gold));
+}
+
+.admin-metric-row,
+.role-stat-list button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.65rem;
+  margin-top: 0.65rem;
+}
+
+.role-stat-list button {
+  width: 100%;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 850;
+  text-align: left;
+}
+
+.role-stat-list button.active,
+.role-stat-list button:hover {
+  color: var(--forest);
+}
+
+.admin-toolbar {
+  display: grid;
+  grid-template-columns: minmax(16rem, 1fr) minmax(11rem, 0.35fr) auto minmax(13rem, auto);
+  gap: 0.75rem;
+  align-items: end;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  padding: 0.8rem;
+  background: white;
+}
+
+.referral-row {
+  align-items: flex-start;
+}
+
+.referral-row > div:first-child {
+  flex: 1 1 20rem;
+}
+
+.commission-edit-grid {
+  display: grid;
+  flex: 1.4 1 30rem;
+  grid-template-columns: repeat(3, minmax(7.5rem, 1fr));
+  gap: 0.55rem;
+}
+
+.commission-edit-grid .button {
+  align-self: end;
+}
+
+.tracking-reconcile-form {
+  background: white;
+}
+
+.postback-box {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.55rem;
+  padding: 0.75rem;
+  background: var(--sand);
+}
+
+.postback-box code {
+  overflow-wrap: anywhere;
+  border-radius: 0.35rem;
+  padding: 0.42rem 0.5rem;
+  background: white;
+  color: var(--ink);
+  font-size: 0.78rem;
 }
 
 .tab-row {
@@ -1582,7 +2096,7 @@ textarea:focus {
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem;
-  border-left: 4px solid rgba(24, 77, 60, 0.22);
+  border-left: 4px solid rgba(30, 63, 32, 0.22);
 }
 
 .admin-row > div {
@@ -1594,6 +2108,47 @@ textarea:focus {
 .admin-row p {
   margin: 0.35rem 0 0;
   color: var(--muted);
+}
+
+.inline-role-select {
+  display: grid;
+  gap: 0.2rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.inline-role-select select {
+  font-size: 0.9rem;
+}
+
+.role-preview-header,
+.role-profile-card {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.role-preview-header .field {
+  min-width: min(24rem, 100%);
+}
+
+.role-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(0.8rem, 2vw, 1rem);
+}
+
+.role-preview-card h2 {
+  margin-bottom: 0.25rem;
+  color: var(--forest);
+}
+
+.mini-list {
+  display: grid;
+  gap: 0.1rem;
+  margin-top: 0.85rem;
 }
 
 .checkbox-row {
@@ -1676,7 +2231,7 @@ textarea:focus {
   gap: 1rem;
   padding: clamp(2rem, 5vw, 4rem) clamp(1rem, 5vw, 5rem);
   background:
-    linear-gradient(135deg, rgba(17, 29, 24, 0.98), rgba(24, 77, 60, 0.92)),
+    linear-gradient(135deg, rgba(37, 37, 37, 0.98), rgba(30, 63, 32, 0.92)),
     url("./assets/photos/Nungwi beach Zanzibar-fernweh.jpg") center / cover;
   color: white;
 }
@@ -1731,6 +2286,20 @@ textarea:focus {
   .tours-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .admin-console {
+    grid-template-columns: 15.5rem minmax(0, 1fr);
+  }
+
+  .admin-kpi-grid,
+  .admin-kpi-grid.compact,
+  .admin-analytics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .commission-edit-grid {
+    grid-template-columns: repeat(2, minmax(7.5rem, 1fr));
+  }
 }
 
 @media (max-width: 900px) {
@@ -1783,6 +2352,28 @@ textarea:focus {
     max-height: none;
   }
 
+  .admin-console {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-sidebar {
+    position: static;
+    height: auto;
+  }
+
+  .admin-console-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .section-heading.split,
   .cta-band {
     align-items: flex-start;
@@ -1827,18 +2418,39 @@ textarea:focus {
   .page-hero,
   .detail-hero {
     min-height: auto;
-    padding-top: 4rem;
+    padding: 3.75rem 1rem 1.35rem;
   }
 
-  .fast-hero {
+  .fast-hero,
+  .compact-hero,
+  .destination-detail-hero {
     height: 40svh;
     max-height: 40svh;
     min-height: 18rem;
   }
 
-  .destination-detail-hero {
-    min-height: 30svh;
-    max-height: 30svh;
+  .fast-hero-content h1 {
+    font-size: clamp(2.35rem, 13vw, 3.8rem);
+  }
+
+  .page-hero h1,
+  .detail-hero h1 {
+    font-size: clamp(1.9rem, 9.6vw, 3.15rem);
+    line-height: 1.04;
+  }
+
+  .page-hero .eyebrow,
+  .detail-hero .eyebrow {
+    margin-bottom: 0.45rem;
+  }
+
+  .instant-filter {
+    top: 0;
+    position: relative;
+  }
+
+  .instant-filter-inner {
+    grid-template-columns: 1fr;
   }
 
   .hero-stats,
@@ -1865,6 +2477,11 @@ textarea:focus {
     .form-grid,
     .image-gallery,
     .trust-anchor-row,
+    .admin-kpi-grid,
+    .admin-kpi-grid.compact,
+    .admin-analytics-grid,
+    .admin-toolbar,
+    .commission-edit-grid,
     .footer {
     grid-template-columns: 1fr;
   }
@@ -1904,6 +2521,16 @@ textarea:focus {
   .testimonial-card {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .role-preview-header,
+  .role-profile-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .role-preview-grid {
+    grid-template-columns: 1fr;
   }
 
   .login-image-card {

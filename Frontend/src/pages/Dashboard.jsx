@@ -183,7 +183,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <section className="page-hero compact-hero">
+      <section className="page-hero compact-hero dashboard-hero">
         <p className="eyebrow">Dashboard</p>
         <h1>Welcome, {user?.name}.</h1>
       </section>

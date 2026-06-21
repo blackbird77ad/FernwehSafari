@@ -1,3 +1,4 @@
+const crypto = require("node:crypto");
 const mongoose = require("mongoose");
 
 const tourPartnerSchema = new mongoose.Schema(
@@ -31,6 +32,22 @@ const tourPartnerSchema = new mongoose.Schema(
     },
     logo: {
       type: String,
+      trim: true
+    },
+    commissionRatePercent: {
+      type: Number,
+      min: [0, "Commission rate must be positive."],
+      max: [100, "Commission rate cannot exceed 100%."],
+      default: 0
+    },
+    commissionTerms: {
+      type: String,
+      trim: true
+    },
+    postbackSecret: {
+      type: String,
+      default: () => crypto.randomBytes(24).toString("hex"),
+      select: false,
       trim: true
     },
     ownerUser: {

@@ -43,6 +43,9 @@ async function ensureRoleCanChange(targetUser, nextRole, actingUserId) {
 const listUsers = asyncHandler(async (req, res) => {
   const filters = {};
   const search = req.query.search?.trim();
+  const page = Math.max(Number(req.query.page) || 1, 1);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 500);
+  const skip = (page - 1) * limit;
 
   if (req.query.role) {
     ensureValidRole(req.query.role);
@@ -57,12 +60,33 @@ const listUsers = asyncHandler(async (req, res) => {
     ];
   }
 
-  const users = await User.find(filters)
-    .select("-passwordHash")
-    .populate("savedTours")
-    .sort({ createdAt: -1 });
+  const [users, total, roleCounts] = await Promise.all([
+    User.find(filters)
+      .select("-passwordHash")
+      .populate("savedTours")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    User.countDocuments(filters),
+    User.aggregate([{ $group: { _id: "$role", count: { $sum: 1 } } }])
+  ]);
 
-  sendResponse(res, 200, { users: users.map(serializeAdminUser), roles: User.USER_ROLES });
+  const countsByRole = roleCounts.reduce((counts, item) => {
+    counts[item._id] = item.count;
+    return counts;
+  }, {});
+
+  sendResponse(res, 200, {
+    users: users.map(serializeAdminUser),
+    roles: User.USER_ROLES,
+    roleCounts: countsByRole,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.max(Math.ceil(total / limit), 1)
+    }
+  });
 });
 
 const createUser = asyncHandler(async (req, res) => {

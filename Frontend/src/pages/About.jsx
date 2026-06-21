@@ -11,7 +11,7 @@ export default function About() {
 
   return (
     <>
-      <section className="page-hero compact-hero">
+      <section className="page-hero compact-hero about-hero">
         <p className="eyebrow">About FernwehSafari</p>
         <h1>Trust infrastructure for Tanzania and Zanzibar tour discovery.</h1>
       </section>

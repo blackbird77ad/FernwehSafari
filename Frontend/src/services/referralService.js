@@ -12,6 +12,10 @@ export function getMyReferrals() {
   return api.get("/referrals/me");
 }
 
-export function markReferralConverted(id) {
-  return api.patch(`/referrals/${id}`);
+export function markReferralConverted(id, payload = {}) {
+  return api.patch(`/referrals/${id}`, payload);
+}
+
+export function reconcileReferralByTrackingCode(trackingCode, payload = {}) {
+  return api.patch(`/referrals/tracking/${encodeURIComponent(trackingCode)}`, payload);
 }

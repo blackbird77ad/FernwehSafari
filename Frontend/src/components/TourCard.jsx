@@ -6,10 +6,10 @@ export default function TourCard({ tour }) {
   const image = tour.images?.[0] || fallbackTourImage;
 
   return (
-    <article className="tour-card relative overflow-hidden">
-      <div className="relative">
+    <article className="tour-card">
+      <div className="tour-card-image">
         <img src={image} alt={`${tour.title} preview`} loading="lazy" />
-        <strong className="absolute right-3 top-3 rounded-full bg-fernweh-gold px-3 py-1 text-sm font-black text-fernweh-deep shadow">
+        <strong className="tour-price-badge">
           {eur.format(tour.priceEUR)}
         </strong>
       </div>
@@ -26,7 +26,7 @@ export default function TourCard({ tour }) {
           <span>{tour.location}</span>
           <strong>{eur.format(tour.priceEUR)}</strong>
         </div>
-        <Link className="button compact" to={`/tours/${tour.slug}`}>
+        <Link className="button secondary compact" to={`/tours/${tour.slug}`}>
           View deal
         </Link>
       </div>

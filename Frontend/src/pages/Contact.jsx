@@ -3,7 +3,7 @@ import { createEnquiry } from "../services/enquiryService";
 import { destinationStories } from "../utils/staticContent";
 
 export default function Contact() {
-  const [form, setForm] = useState({ name: "", email: "", destination: "" });
+  const [form, setForm] = useState({ name: "", email: "", destination: "", message: "" });
   const [status, setStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -20,10 +20,10 @@ export default function Contact() {
       await createEnquiry({
         name: form.name,
         email: form.email,
-        message: `Destination of interest: ${form.destination}`
+        message: `Destination of interest: ${form.destination}\n\n${form.message}`
       });
       setStatus("Thanks. FernwehSafari will follow up with the right next step.");
-      setForm({ name: "", email: "", destination: "" });
+      setForm({ name: "", email: "", destination: "", message: "" });
     } catch (error) {
       setStatus(error.message);
     } finally {
@@ -33,7 +33,7 @@ export default function Contact() {
 
   return (
     <>
-      <section className="page-hero compact-hero">
+      <section className="page-hero compact-hero contact-hero">
         <p className="eyebrow">Contact</p>
         <h1>Fast touchpoints for Tanzania and Zanzibar travel questions.</h1>
       </section>
@@ -67,6 +67,16 @@ export default function Contact() {
                 </option>
               ))}
             </select>
+          </label>
+          <label className="field">
+            <span>Message</span>
+            <textarea
+              value={form.message}
+              onChange={(event) => update("message", event.target.value)}
+              placeholder="Tell us your dates, group size, travel style, budget range or the question you want FernwehSafari to answer."
+              rows="5"
+              required
+            />
           </label>
           <button className="button primary" type="submit" disabled={submitting}>
             {submitting ? "Sending..." : "Send enquiry"}

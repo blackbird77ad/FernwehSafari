@@ -23,7 +23,7 @@ export default function VirtualTour() {
 
   return (
     <>
-      <section className="page-hero compact-hero">
+      <section className="page-hero compact-hero virtual-tour-hero">
         <p className="eyebrow">Virtual tour</p>
         <h1>Preview the feeling, then book the real journey.</h1>
       </section>

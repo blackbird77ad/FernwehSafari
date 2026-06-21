@@ -125,6 +125,11 @@ const tourSchema = new mongoose.Schema(
       type: String,
       trim: true
     },
+    commissionRatePercent: {
+      type: Number,
+      min: [0, "Commission rate must be positive."],
+      max: [100, "Commission rate cannot exceed 100%."]
+    },
     featured: {
       type: Boolean,
       default: false

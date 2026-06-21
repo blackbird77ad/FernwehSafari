@@ -32,7 +32,7 @@ export default function FAQ() {
 
   return (
     <>
-      <section className="page-hero compact-hero">
+      <section className="page-hero compact-hero faq-hero">
         <p className="eyebrow">FAQ</p>
         <h1>Fast answers before you choose a route.</h1>
       </section>

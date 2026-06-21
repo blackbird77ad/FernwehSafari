@@ -77,6 +77,7 @@ async function approveCompanyApplication(application, adminUser, reviewNotes) {
     contactEmail: application.email,
     contactPhone: application.whatsapp || application.phone,
     description: application.notes || `${application.companyName} tour company profile.`,
+    commissionTerms: application.commissionExpectation,
     ownerUser: user._id,
     application: application._id,
     isActive: true

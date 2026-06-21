@@ -47,7 +47,7 @@ export default function TourDetail() {
 
     try {
       const response = await createReferral({ tourId: tour._id });
-      window.open(response.data.bookingURL, "_blank", "noopener,noreferrer");
+      window.location.assign(response.data.bookingURL);
     } catch (error) {
       setMessage(error.message);
     }

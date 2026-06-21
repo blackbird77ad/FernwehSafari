@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Navigate, Routes, Route } from "react-router-dom";
+import { Navigate, Routes, Route, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -23,10 +23,13 @@ import Tours from "./pages/Tours";
 const VirtualTour = lazy(() => import("./pages/VirtualTour"));
 
 export default function App() {
+  const location = useLocation();
+  const isAdminWorkspace = location.pathname.startsWith("/admin");
+
   return (
-    <div className="app-shell">
-      <Navbar />
-      <main>
+    <div className={isAdminWorkspace ? "app-shell admin-app-shell" : "app-shell"}>
+      {!isAdminWorkspace && <Navbar />}
+      <main className={isAdminWorkspace ? "admin-main" : ""}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/tours" element={<Tours />} />
@@ -67,7 +70,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
-      <Footer />
+      {!isAdminWorkspace && <Footer />}
     </div>
   );
 }

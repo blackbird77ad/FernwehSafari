@@ -26,8 +26,8 @@ export default function Home() {
   return (
     <>
       <HeroSection />
-      <section className="instant-filter sticky top-[4.2rem] z-40 border-y border-fernweh-forest/10 bg-white/95 px-4 py-3 shadow-sm backdrop-blur md:px-12">
-        <div className="mx-auto grid max-w-5xl grid-cols-2 gap-3">
+      <section className="instant-filter">
+        <div className="instant-filter-inner">
           <label className="field">
             <span>Select Destination</span>
             <select

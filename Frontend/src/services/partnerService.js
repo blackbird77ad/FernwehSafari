@@ -12,6 +12,10 @@ export function updatePartner(id, payload) {
   return api.put(`/partners/${id}`, payload);
 }
 
+export function rotatePartnerPostbackSecret(id) {
+  return api.patch(`/partners/${id}/postback-secret`);
+}
+
 export function deletePartner(id) {
   return api.delete(`/partners/${id}`);
 }
