@@ -226,6 +226,7 @@ export default function Admin() {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [users, setUsers] = useState([]);
@@ -1098,18 +1099,36 @@ export default function Admin() {
     navigate("/");
   }
 
+  function handleTabChange(tab) {
+    setActiveTab(tab);
+    setSidebarOpen(false);
+  }
+
   const activeMeta = tabMeta[activeTab] || { icon: "⚙️", title: activeTab, description: "Manage FernwehSafari." };
 
   return (
-    <section className="admin-console">
+    <section className={sidebarOpen ? "admin-console sidebar-open" : "admin-console sidebar-collapsed"}>
       <aside className="admin-sidebar">
-        <Link className="admin-brand" to="/">
-          <span className="brand-mark">FS</span>
-          <span>
-            FernwehSafari
-            <small>Production CRM</small>
-          </span>
-        </Link>
+        <div className="admin-sidebar-head">
+          <Link className="admin-brand" to="/">
+            <span className="brand-mark">FS</span>
+            <span>
+              FernwehSafari
+              <small>Production CRM</small>
+            </span>
+          </Link>
+          <button
+            className="admin-sidebar-toggle sidebar-inner-toggle"
+            type="button"
+            aria-label={sidebarOpen ? "Close admin sidebar" : "Open admin sidebar"}
+            aria-expanded={sidebarOpen}
+            onClick={() => setSidebarOpen((current) => !current)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        </div>
         <div className="admin-identity">
           <span className="admin-avatar">{user?.name?.slice(0, 1) || "A"}</span>
           <div>
@@ -1123,7 +1142,7 @@ export default function Admin() {
               className={activeTab === tab ? "active" : ""}
               key={tab}
               type="button"
-              onClick={() => setActiveTab(tab)}
+              onClick={() => handleTabChange(tab)}
             >
               <span>{tabMeta[tab]?.icon || "•"}</span>
               <strong>{tabMeta[tab]?.title || tab}</strong>
@@ -1139,17 +1158,33 @@ export default function Admin() {
           Logout
         </button>
       </aside>
+      {sidebarOpen && (
+        <button
+          className="admin-sidebar-backdrop"
+          type="button"
+          aria-label="Close admin sidebar"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
       <section className="admin-workspace">
         <header className="admin-topbar">
+          <button
+            className="admin-sidebar-toggle"
+            type="button"
+            aria-label={sidebarOpen ? "Close admin sidebar" : "Open admin sidebar"}
+            aria-expanded={sidebarOpen}
+            onClick={() => setSidebarOpen((current) => !current)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
           <div>
             <p className="eyebrow">{activeMeta.icon} Admin workspace</p>
             <h1>{activeMeta.title}</h1>
             <span>{activeMeta.description}</span>
           </div>
           <div className="button-row">
-            <Link className="button secondary compact" to="/dashboard">
-              Open role dashboard
-            </Link>
             <Link className="button primary compact" to="/">
               View public site
             </Link>

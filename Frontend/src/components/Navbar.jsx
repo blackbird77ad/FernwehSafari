@@ -43,17 +43,18 @@ export default function Navbar() {
         ))}
         {isAuthenticated ? (
           <>
-            <NavLink to="/dashboard" onClick={() => setOpen(false)}>
-              Dashboard
-            </NavLink>
+            {isStaff ? (
+              <NavLink to="/admin" onClick={() => setOpen(false)}>
+                CRM
+              </NavLink>
+            ) : (
+              <NavLink to="/dashboard" onClick={() => setOpen(false)}>
+                Dashboard
+              </NavLink>
+            )}
             {isTourCompany && (
               <NavLink className="nav-soft" to="/dashboard" onClick={() => setOpen(false)}>
                 List tours
-              </NavLink>
-            )}
-            {isStaff && (
-              <NavLink to="/admin" onClick={() => setOpen(false)}>
-                Admin
               </NavLink>
             )}
             <button className="text-button" type="button" onClick={handleLogout}>

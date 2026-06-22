@@ -19,12 +19,16 @@ import Register from "./pages/Register";
 import Testimonials from "./pages/Testimonials";
 import TourDetail from "./pages/TourDetail";
 import Tours from "./pages/Tours";
+import useAuth from "./hooks/useAuth";
 
 const VirtualTour = lazy(() => import("./pages/VirtualTour"));
 
 export default function App() {
   const location = useLocation();
-  const isAdminWorkspace = location.pathname.startsWith("/admin");
+  const { isStaff, loading, token } = useAuth();
+  const isDashboardPath = location.pathname === "/dashboard";
+  const isStaffDashboard = isDashboardPath && (isStaff || (loading && token));
+  const isAdminWorkspace = location.pathname.startsWith("/admin") || isStaffDashboard;
 
   return (
     <div className={isAdminWorkspace ? "app-shell admin-app-shell" : "app-shell"}>
@@ -55,7 +59,7 @@ export default function App() {
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <Dashboard />
+                <DashboardEntry />
               </ProtectedRoute>
             }
           />
@@ -73,4 +77,14 @@ export default function App() {
       {!isAdminWorkspace && <Footer />}
     </div>
   );
+}
+
+function DashboardEntry() {
+  const { isStaff } = useAuth();
+
+  if (isStaff) {
+    return <Navigate to="/admin" replace />;
+  }
+
+  return <Dashboard />;
 }

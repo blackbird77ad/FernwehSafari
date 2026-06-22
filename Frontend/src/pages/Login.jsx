@@ -17,8 +17,11 @@ export default function Login() {
     setError("");
 
     try {
-      await login(form);
-      navigate(location.state?.from || "/dashboard", { replace: true });
+      const loggedInUser = await login(form);
+      const isStaff = loggedInUser?.role === "admin" || loggedInUser?.role === "moderator";
+      const requestedPath = getRedirectPath(location.state?.from);
+
+      navigate(isStaff ? "/admin" : requestedPath || "/dashboard", { replace: true });
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -68,4 +71,16 @@ export default function Login() {
       </div>
     </section>
   );
+}
+
+function getRedirectPath(from) {
+  if (!from) {
+    return "";
+  }
+
+  if (typeof from === "string") {
+    return from;
+  }
+
+  return `${from.pathname || ""}${from.search || ""}${from.hash || ""}` || "";
 }
