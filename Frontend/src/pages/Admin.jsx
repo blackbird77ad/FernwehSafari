@@ -741,8 +741,7 @@ export default function Admin() {
       highlights: tourForm.highlights
         .split("\n")
         .map((item) => item.trim())
-        .filter(Boolean),
-      itinerary: []
+        .filter(Boolean)
     };
 
     if (!isAdmin) {

@@ -41,6 +41,8 @@ export default function Navbar() {
       <button
         className="menu-button"
         type="button"
+        aria-expanded={open}
+        aria-controls="primary-navigation"
         onClick={() => {
           setOpen((value) => !value);
           setAccountOpen(false);
@@ -48,7 +50,7 @@ export default function Navbar() {
       >
         <span>{open ? "Close" : "Menu"}</span>
       </button>
-      <nav className={open ? "nav-links open" : "nav-links"} aria-label="Primary navigation">
+      <nav id="primary-navigation" className={open ? "nav-links open" : "nav-links"} aria-label="Primary navigation">
         {links.map((link) => (
           <NavLink key={link.to} to={link.to} onClick={closeMenus}>
             {link.label}

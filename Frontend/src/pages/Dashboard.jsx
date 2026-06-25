@@ -59,8 +59,7 @@ export default function Dashboard() {
       highlights: tourForm.highlights
         .split("\n")
         .map((item) => item.trim())
-        .filter(Boolean),
-      itinerary: []
+        .filter(Boolean)
     };
   }
 

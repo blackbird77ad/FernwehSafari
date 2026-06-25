@@ -7,7 +7,7 @@ export default function ScrollToTop() {
   useEffect(() => {
     if (hash) {
       window.requestAnimationFrame(() => {
-        document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView({ block: "start" });
+        document.getElementById(getHashId(hash))?.scrollIntoView({ block: "start" });
       });
       return;
     }
@@ -16,4 +16,12 @@ export default function ScrollToTop() {
   }, [hash, pathname, search]);
 
   return null;
+}
+
+function getHashId(hash) {
+  try {
+    return decodeURIComponent(hash.slice(1));
+  } catch {
+    return hash.slice(1);
+  }
 }

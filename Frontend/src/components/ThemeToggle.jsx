@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 const storageKey = "travellex_theme";
+const themeChangeEvent = "travellex-theme-change";
 
 function getSystemTheme() {
   if (typeof window === "undefined" || !window.matchMedia) {
@@ -43,10 +44,31 @@ export default function ThemeToggle({ compact = false }) {
     applyTheme(theme);
   }, [theme]);
 
+  useEffect(() => {
+    function syncTheme(event) {
+      setTheme(event.detail?.theme || getInitialTheme());
+    }
+
+    function syncStorage(event) {
+      if (event.key === storageKey) {
+        setTheme(event.newValue || getSystemTheme());
+      }
+    }
+
+    window.addEventListener(themeChangeEvent, syncTheme);
+    window.addEventListener("storage", syncStorage);
+
+    return () => {
+      window.removeEventListener(themeChangeEvent, syncTheme);
+      window.removeEventListener("storage", syncStorage);
+    };
+  }, []);
+
   function toggleTheme() {
     const nextTheme = isDark ? "light" : "dark";
     setTheme(nextTheme);
     applyTheme(nextTheme, true);
+    window.dispatchEvent(new CustomEvent(themeChangeEvent, { detail: { theme: nextTheme } }));
   }
 
   return (
