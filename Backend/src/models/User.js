@@ -34,6 +34,21 @@ const userSchema = new mongoose.Schema(
     country: {
       type: String,
       trim: true
+    },
+    emailVerified: {
+      type: Boolean,
+      default: true
+    },
+    emailVerifiedAt: {
+      type: Date
+    },
+    emailVerificationTokenHash: {
+      type: String,
+      select: false
+    },
+    emailVerificationExpiresAt: {
+      type: Date,
+      select: false
     }
   },
   { timestamps: true }

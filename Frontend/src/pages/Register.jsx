@@ -21,8 +21,15 @@ export default function Register() {
     setError("");
 
     try {
-      await register(form);
-      navigate("/dashboard", { replace: true });
+      const response = await register(form);
+      navigate("/verify-email", {
+        replace: true,
+        state: {
+          email: response.email || form.email,
+          message: response.verificationEmailMessage,
+          sent: response.verificationEmailSent
+        }
+      });
     } catch (requestError) {
       setError(requestError.message);
     } finally {

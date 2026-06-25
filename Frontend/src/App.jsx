@@ -20,6 +20,7 @@ import Register from "./pages/Register";
 import Testimonials from "./pages/Testimonials";
 import TourDetail from "./pages/TourDetail";
 import Tours from "./pages/Tours";
+import VerifyEmail from "./pages/VerifyEmail";
 import useAuth from "./hooks/useAuth";
 
 const VirtualTour = lazy(() => import("./pages/VirtualTour"));
@@ -57,6 +58,7 @@ export default function App() {
           />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route
             path="/dashboard"
             element={

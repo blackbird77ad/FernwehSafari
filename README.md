@@ -71,6 +71,7 @@ Default URLs:
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:5000/api`
 - Production domain: `https://travellex.tours`
+- Cloudflare Pages host: `https://fernwehsafari.pages.dev`
 
 ## Render Backend Deployment
 
@@ -82,6 +83,7 @@ Required:
 MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/travellex?retryWrites=true&w=majority
 JWT_SECRET=<long-random-production-secret>
 CLIENT_URL=https://travellex.tours
+CLIENT_ORIGINS=https://travellex.tours,https://www.travellex.tours,https://fernwehsafari.pages.dev
 ```
 
 Optional, depending on enabled features:

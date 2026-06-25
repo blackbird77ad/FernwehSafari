@@ -77,6 +77,19 @@ export function AuthProvider({ children }) {
   const register = useCallback(
     async (payload) => {
       const response = await authService.register(payload);
+
+      if (response.data.token) {
+        persistSession(response.data);
+      }
+
+      return response.data;
+    },
+    [persistSession]
+  );
+
+  const verifyEmail = useCallback(
+    async (token) => {
+      const response = await authService.verifyEmail(token);
       persistSession(response.data);
       return response.data.user;
     },
@@ -114,9 +127,10 @@ export function AuthProvider({ children }) {
       removeSavedTour,
       saveTour,
       token,
-      user
+      user,
+      verifyEmail
     }),
-    [loading, login, logout, refreshUser, register, removeSavedTour, saveTour, token, user]
+    [loading, login, logout, refreshUser, register, removeSavedTour, saveTour, token, user, verifyEmail]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

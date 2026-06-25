@@ -64,6 +64,11 @@ export default function Login() {
             {submitting ? "Logging in..." : "Login"}
           </button>
           {error && <p className="form-note error">{error}</p>}
+          {error.toLowerCase().includes("verify") && (
+            <p>
+              Need a new link? <Link to="/verify-email" state={{ email: form.email }}>Resend confirmation</Link>
+            </p>
+          )}
           <p>
             No account yet? <Link to="/register">Register</Link>
           </p>

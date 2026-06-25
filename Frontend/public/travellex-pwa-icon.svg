@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Travellex</title>
+  <desc id="desc">Travellex navy app icon with white route mark.</desc>
+  <rect width="512" height="512" rx="108" fill="#0b1320"/>
+  <path d="M122 154h268" stroke="#ffffff" stroke-width="46" stroke-linecap="round"/>
+  <path d="M156 154v205" stroke="#ffffff" stroke-width="46" stroke-linecap="round"/>
+  <path d="M246 154v205" stroke="#ffffff" stroke-width="46" stroke-linecap="round"/>
+  <path d="M356 154 242 359" stroke="#ffffff" stroke-width="46" stroke-linecap="round"/>
+  <circle cx="385" cy="350" r="30" fill="#c8a24a"/>
+</svg>

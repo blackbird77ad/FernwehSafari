@@ -51,15 +51,22 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
   min-width: 320px;
+  overflow-x: hidden;
   background: var(--paper);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+#root,
+main {
+  min-width: 0;
 }
 
 :root[data-theme="dark"] .navbar,
@@ -146,6 +153,12 @@ body {
 
 :root[data-theme="dark"] .nav-soft {
   color: var(--ink) !important;
+}
+
+:root[data-theme="dark"] .menu-button {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
 }
 
 :root[data-theme="dark"] .postback-box code,
@@ -2530,6 +2543,26 @@ textarea:focus {
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
 }
 
+.verify-email-page {
+  align-items: center;
+  justify-content: center;
+}
+
+.verify-email-card {
+  display: grid;
+  gap: 0.9rem;
+  width: min(36rem, 100%);
+  margin: 0 auto;
+}
+
+.verify-email-card .panel-form {
+  background: var(--surface);
+}
+
+.verify-email-card a {
+  overflow-wrap: anywhere;
+}
+
 .auth-trust-list {
   display: flex;
   flex-wrap: wrap;
@@ -3731,17 +3764,37 @@ textarea:focus {
     align-items: stretch;
     flex-direction: column;
     gap: 0.25rem;
-    padding-top: 0.5rem;
   }
 
   .nav-links.open {
     display: flex;
+    border: 1px solid var(--line);
+    border-radius: 0.7rem;
+    padding: 0.75rem;
+    background: var(--paper);
+    box-shadow: 0 16px 42px rgba(11, 19, 32, 0.1);
+  }
+
+  :root[data-theme="dark"] .nav-links.open {
+    border-color: rgba(215, 221, 227, 0.16);
+    background: #0b1320;
+    box-shadow: 0 16px 42px rgba(0, 0, 0, 0.34);
   }
 
   .nav-links a,
   .nav-links button {
     padding: 0.6rem 0;
     text-align: left;
+  }
+
+  :root[data-theme="dark"] .nav-links a,
+  :root[data-theme="dark"] .nav-links button {
+    color: var(--ink);
+  }
+
+  :root[data-theme="dark"] .nav-links a:hover,
+  :root[data-theme="dark"] .nav-links button:hover {
+    color: var(--gold);
   }
 
   .account-menu-wrap,
@@ -3995,5 +4048,38 @@ textarea:focus {
 
   .login-image-card {
     min-height: 17rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .navbar {
+    gap: 0.55rem;
+    padding-inline: 0.75rem;
+  }
+
+  .brand-logo {
+    width: 8rem;
+    height: 2.45rem;
+  }
+
+  .button,
+  .theme-toggle,
+  .menu-button,
+  .account-menu-button {
+    max-width: 100%;
+  }
+
+  .section,
+  .booking-session-page,
+  .booking-session-shell {
+    padding-inline: 0.75rem;
+  }
+
+  .virtual-canvas-wrap,
+  .virtual-fallback,
+  .scene-picker,
+  .scene-picker button {
+    width: calc(100vw - 1.5rem);
+    max-width: calc(100vw - 1.5rem);
   }
 }

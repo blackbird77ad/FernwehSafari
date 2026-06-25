@@ -13,16 +13,27 @@ const userRoutes = require("./routes/userRoutes");
 const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
-const allowedOrigins = [
+const configuredOrigins = [
   process.env.CLIENT_URL,
+  ...(process.env.CLIENT_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+];
+const allowedOrigins = [
+  ...configuredOrigins,
+  "https://travellex.tours",
+  "https://www.travellex.tours",
+  "https://fernwehsafari.pages.dev",
   "http://localhost:5173",
   "http://127.0.0.1:5173"
 ].filter(Boolean);
+const uniqueAllowedOrigins = [...new Set(allowedOrigins)];
 
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || uniqueAllowedOrigins.includes(origin)) {
         callback(null, true);
         return;
       }

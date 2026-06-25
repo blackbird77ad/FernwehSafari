@@ -32,6 +32,7 @@ test("users default to traveller role and expose CRM roles", async () => {
   await legacyUser.validate();
 
   assert.equal(user.role, "traveller");
+  assert.equal(user.emailVerified, true);
   assert.equal(legacyUser.role, "traveller");
   assert.deepEqual(User.USER_ROLES, ["traveller", "tour_company", "tour_guide", "moderator", "admin"]);
 });

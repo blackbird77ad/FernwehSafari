@@ -8,6 +8,14 @@ export function register(payload) {
   return api.post("/auth/register", payload);
 }
 
+export function verifyEmail(token) {
+  return api.post("/auth/verify-email", { token });
+}
+
+export function resendVerification(email) {
+  return api.post("/auth/resend-verification", { email });
+}
+
 export function getMe() {
   return api.get("/auth/me");
 }
