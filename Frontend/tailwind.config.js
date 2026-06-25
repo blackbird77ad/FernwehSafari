@@ -4,20 +4,21 @@ export default {
   theme: {
     extend: {
       colors: {
-        fernweh: {
+        travellex: {
           white: "#ffffff",
-          forest: "#1e3f20",
-          deep: "#132914",
-          leaf: "#2f5d31",
-          ochre: "#dda15e",
-          gold: "#dda15e",
-          charcoal: "#252525",
-          sand: "#f7f4ef",
+          forest: "#0b1320",
+          deep: "#070d16",
+          leaf: "#047857",
+          lagoon: "#0e7490",
+          copper: "#b87333",
+          gold: "#c8a24a",
+          charcoal: "#15171a",
+          sand: "#f5f7f8",
           paper: "#ffffff"
         }
       },
       boxShadow: {
-        safari: "0 22px 60px rgba(37, 37, 37, 0.12)"
+        safari: "0 22px 60px rgba(11, 19, 32, 0.12)"
       }
     }
   },

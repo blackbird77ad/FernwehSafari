@@ -92,7 +92,7 @@ async function seed() {
     {
       title: "Ngorongoro, Manyara and Kilimanjaro Safari",
       description:
-        "A compact northern Tanzania route for European travellers who want crater wildlife, Lake Manyara scenery and Kilimanjaro-area culture in one clear itinerary.",
+        "A compact northern Tanzania route for travellers who want crater wildlife, Lake Manyara scenery and Kilimanjaro-area culture in one clear itinerary.",
       shortDescription: "Five days through Ngorongoro, Lake Manyara and Kilimanjaro foothills.",
       priceEUR: 2190,
       duration: "5 days / 4 nights",
@@ -215,7 +215,7 @@ async function seed() {
     {
       title: "Tanzania Safari and Zanzibar Signature Combination",
       description:
-        "The complete FernwehSafari sample route: northern Tanzania safari highlights, Kilimanjaro views and Zanzibar culture plus beach recovery.",
+        "The complete Travellex sample route: northern Tanzania safari highlights, Kilimanjaro views and Zanzibar culture plus beach recovery.",
       shortDescription: "Safari first, Zanzibar second: a complete Africa holiday plan.",
       priceEUR: 3490,
       duration: "10 days / 9 nights",

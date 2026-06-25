@@ -1,8 +1,8 @@
 {
-  "name": "fernweh-safari",
+  "name": "travellex",
   "version": "1.0.0",
   "private": true,
-  "description": "Africa-Europe travel referral platform for Tanzania and Zanzibar tours.",
+  "description": "Africa-focused travel referral platform for tours and adventure experiences.",
   "scripts": {
     "dev:backend": "npm --prefix Backend run dev",
     "dev:frontend": "npm --prefix Frontend run dev",

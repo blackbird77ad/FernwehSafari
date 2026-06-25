@@ -56,14 +56,30 @@ function buildTourQuery(query, includeInactive = false) {
   }
 
   if (query.search) {
+    const search = new RegExp(query.search, "i");
     filters.$or = [
-      { title: new RegExp(query.search, "i") },
-      { shortDescription: new RegExp(query.search, "i") },
-      { description: new RegExp(query.search, "i") }
+      { title: search },
+      { shortDescription: search },
+      { description: search },
+      { location: search },
+      { category: search },
+      { highlights: search }
     ];
   }
 
   return filters;
+}
+
+function buildTourSort(sort = "featured") {
+  const options = {
+    featured: { featured: -1, createdAt: -1 },
+    newest: { createdAt: -1 },
+    "price-asc": { priceEUR: 1, createdAt: -1 },
+    "price-desc": { priceEUR: -1, createdAt: -1 },
+    "title-asc": { title: 1 }
+  };
+
+  return options[sort] || options.featured;
 }
 
 function isStaff(user) {
@@ -72,6 +88,17 @@ function isStaff(user) {
 
 function canManageTours(user) {
   return isStaff(user) || user?.role === "tour_company";
+}
+
+function canManageTourVr(user) {
+  return user?.role === "admin";
+}
+
+function stripAdminOnlyTourFields(payload) {
+  delete payload.vrEnabled;
+  delete payload.vrMediaUrl;
+  delete payload.vrMediaType;
+  delete payload.vrCaption;
 }
 
 async function getOwnedPartner(userId) {
@@ -96,6 +123,7 @@ const listTours = asyncHandler(async (req, res) => {
   const includeInactive =
     (isStaff(req.user) || req.query.mine === "true") && req.query.includeInactive === "true";
   const filters = buildTourQuery(req.query, includeInactive);
+  const sort = buildTourSort(req.query.sort);
 
   if (req.query.mine === "true") {
     if (!req.user) {
@@ -108,7 +136,7 @@ const listTours = asyncHandler(async (req, res) => {
   const tours = await Tour.find(filters)
     .populate("partner")
     .populate("approvedGuides.guide", "name email country role")
-    .sort({ featured: -1, createdAt: -1 });
+    .sort(sort);
 
   sendResponse(res, 200, { tours });
 });
@@ -148,6 +176,10 @@ const createTour = asyncHandler(async (req, res) => {
     payload.featured = false;
   }
 
+  if (!canManageTourVr(req.user)) {
+    stripAdminOnlyTourFields(payload);
+  }
+
   const tour = await Tour.create(payload);
   await tour.populate("partner");
 
@@ -179,6 +211,10 @@ const updateTour = asyncHandler(async (req, res) => {
     delete payload.owner;
     delete payload.featured;
     payload.isActive = false;
+  }
+
+  if (!canManageTourVr(req.user)) {
+    stripAdminOnlyTourFields(payload);
   }
 
   if (payload.title && !payload.slug) {

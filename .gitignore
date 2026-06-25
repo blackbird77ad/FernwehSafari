@@ -76,6 +76,10 @@ coverage/
 .npm/
 .pnpm-store/
 .parcel-cache/
+playwright-report/
+test-results/
+Frontend/.chrome-profile*/
+Frontend/virtual-tour-*.png
 
 # Deployment/platform local state
 .vercel/

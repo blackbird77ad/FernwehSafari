@@ -12,6 +12,7 @@ export default function TourCard({ tour }) {
         <strong className="tour-price-badge">
           {eur.format(tour.priceEUR)}
         </strong>
+        {tour.vrEnabled && <span className="tour-vr-badge">VR</span>}
       </div>
       <div className="card-body">
         <div className="pill-row">
@@ -27,7 +28,7 @@ export default function TourCard({ tour }) {
           <strong>{eur.format(tour.priceEUR)}</strong>
         </div>
         <Link className="button secondary compact" to={`/tours/${tour.slug}`}>
-          View deal
+          View tour
         </Link>
       </div>
     </article>

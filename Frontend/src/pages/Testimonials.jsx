@@ -9,7 +9,7 @@ export default function Testimonials() {
     <>
       <section className="page-hero compact-hero testimonials-hero">
         <p className="eyebrow">Testimonials</p>
-        <h1>Traveller stories from Tanzania and Zanzibar routes.</h1>
+        <h1>Traveller stories from Africa routes.</h1>
       </section>
       <section className="section split-panel">
         <div>
@@ -17,7 +17,7 @@ export default function Testimonials() {
           <h2>Stories that help future travellers imagine the route.</h2>
         </div>
         <p className="lead">
-          FernwehSafari testimonials focus on the useful details: what helped people compare routes, what felt clear
+          Travellex testimonials focus on the useful details: what helped people compare routes, what felt clear
           before enquiry and which destinations made the journey memorable.
         </p>
       </section>
@@ -56,7 +56,7 @@ export default function Testimonials() {
           <p className="eyebrow">Share a memory</p>
           <h2>Your picture or video can help the next traveller choose.</h2>
           <p className="lead">
-            Submit a travel moment through the gallery. FernwehSafari reviews it first, then approved pictures or
+            Submit a travel moment through the gallery. Travellex reviews it first, then approved pictures or
             videos can appear with credit and destination context.
           </p>
           <Link className="button primary" to="/gallery">
@@ -74,7 +74,7 @@ export default function Testimonials() {
           <article className="step-card">
             <span>02</span>
             <h3>Staff review</h3>
-            <p>FernwehSafari checks media before it becomes public in the gallery.</p>
+            <p>Travellex checks media before it becomes public in the gallery.</p>
           </article>
           <article className="step-card">
             <span>03</span>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createEnquiry } from "../services/enquiryService";
-import { destinationStories } from "../utils/staticContent";
+import { destinationOptions } from "../utils/travelOptions";
 
 export default function Contact() {
   const [form, setForm] = useState({ name: "", email: "", destination: "", message: "" });
@@ -20,9 +20,10 @@ export default function Contact() {
       await createEnquiry({
         name: form.name,
         email: form.email,
-        message: `Destination of interest: ${form.destination}\n\n${form.message}`
+        destination: form.destination.trim(),
+        message: `Destination or route of interest: ${form.destination.trim()}\n\n${form.message}`
       });
-      setStatus("Thanks. FernwehSafari will follow up with the right next step.");
+      setStatus("Thanks. Travellex will follow up with the right next step.");
       setForm({ name: "", email: "", destination: "", message: "" });
     } catch (error) {
       setStatus(error.message);
@@ -35,7 +36,7 @@ export default function Contact() {
     <>
       <section className="page-hero compact-hero contact-hero">
         <p className="eyebrow">Contact</p>
-        <h1>Fast touchpoints for Tanzania and Zanzibar travel questions.</h1>
+        <h1>Fast touchpoints for Africa travel questions.</h1>
       </section>
       <section className="section contact-action-layout">
         <a className="touch-action whatsapp" href="https://wa.me/4917676062927" target="_blank" rel="noreferrer">
@@ -58,22 +59,26 @@ export default function Contact() {
             <input type="email" value={form.email} onChange={(event) => update("email", event.target.value)} required />
           </label>
           <label className="field">
-            <span>Destination of Interest</span>
-            <select value={form.destination} onChange={(event) => update("destination", event.target.value)} required>
-              <option value="">Select destination</option>
-              {destinationStories.map((story) => (
-                <option key={story.name} value={story.name}>
-                  {story.name}
-                </option>
+            <span>Destination / Route in Africa</span>
+            <input
+              list="africa-destination-options"
+              value={form.destination}
+              onChange={(event) => update("destination", event.target.value)}
+              placeholder="Type any country, city, route or experience in Africa"
+              required
+            />
+            <datalist id="africa-destination-options">
+              {destinationOptions.map((destination) => (
+                <option key={destination} value={destination} />
               ))}
-            </select>
+            </datalist>
           </label>
           <label className="field">
             <span>Message</span>
             <textarea
               value={form.message}
               onChange={(event) => update("message", event.target.value)}
-              placeholder="Tell us your dates, group size, travel style, budget range or the question you want FernwehSafari to answer."
+              placeholder="Tell us your dates, group size, travel style, budget range or the question you want Travellex to answer."
               rows="5"
               required
             />

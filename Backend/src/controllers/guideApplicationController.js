@@ -132,7 +132,7 @@ const companyDecision = asyncHandler(async (req, res) => {
   const tour = await Tour.findById(application.tour._id).populate("partner");
 
   if (!canReviewForCompany(req.user, tour)) {
-    throw new ApiError(403, "Only the tour company owner or FernwehSafari staff can review this application.");
+    throw new ApiError(403, "Only the tour company owner or Travellex staff can review this application.");
   }
 
   const approved = req.body.decision === "approved";
@@ -146,11 +146,11 @@ const companyDecision = asyncHandler(async (req, res) => {
     `Hello ${application.guideName},`,
     "",
     approved
-      ? `The tour company approved your guide application for ${tour.title}. FernwehSafari staff will now confirm it.`
+      ? `The tour company approved your guide application for ${tour.title}. Travellex staff will now confirm it.`
       : `The tour company did not approve your guide application for ${tour.title}.`,
     application.companyReviewNotes || "",
     "",
-    "FernwehSafari"
+    "Travellex"
   ]);
 
   if (approved) {
@@ -158,7 +158,7 @@ const companyDecision = asyncHandler(async (req, res) => {
       `Tour: ${tour.title}`,
       `Guide: ${application.guideName}`,
       `Company notes: ${application.companyReviewNotes || "No notes."}`,
-      "FernwehSafari staff confirmation is required before this guide is published on the tour."
+      "Travellex staff confirmation is required before this guide is published on the tour."
     ]);
   }
 
@@ -176,7 +176,7 @@ const adminDecision = asyncHandler(async (req, res) => {
   const approved = req.body.decision === "approved";
 
   if (approved && application.status !== "company_approved") {
-    throw new ApiError(422, "The tour company must approve this guide before FernwehSafari staff confirmation.");
+    throw new ApiError(422, "The tour company must approve this guide before Travellex staff confirmation.");
   }
 
   application.status = approved ? "admin_approved" : "admin_rejected";
@@ -201,15 +201,15 @@ const adminDecision = asyncHandler(async (req, res) => {
     await tour.save();
   }
 
-  await notifyUser(application.email, `FernwehSafari guide application ${approved ? "approved" : "rejected"}`, [
+  await notifyUser(application.email, `Travellex guide application ${approved ? "approved" : "rejected"}`, [
     `Hello ${application.guideName},`,
     "",
     approved
-      ? `FernwehSafari approved you as a guide option for ${tour.title}. Your day rate can now appear on the tour.`
-      : `FernwehSafari did not approve your guide application for ${tour.title}.`,
+      ? `Travellex approved you as a guide option for ${tour.title}. Your day rate can now appear on the tour.`
+      : `Travellex did not approve your guide application for ${tour.title}.`,
     application.adminReviewNotes || "",
     "",
-    "FernwehSafari"
+    "Travellex"
   ]);
 
   await application.populate(["tour", "guide", "companyReviewedBy", "adminReviewedBy"]);

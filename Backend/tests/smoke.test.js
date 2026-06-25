@@ -46,7 +46,7 @@ test("health endpoint responds with the standard success envelope", async () => 
 
     assert.equal(response.status, 200);
     assert.equal(payload.success, true);
-    assert.equal(payload.data.service, "fernweh-safari-api");
+    assert.equal(payload.data.service, "travellex-api");
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

@@ -34,16 +34,20 @@ export default function Gallery() {
     mediaType: "image",
     url: story.image,
     location: story.name,
-    tags: story.tags,
+    tags: ["Africa", ...(story.tags || []), story.tags?.includes("Zanzibar") ? "Coast" : ""].filter(Boolean),
     tourLink: story.link,
-    creditName: "FernwehSafari"
+    creditName: "Travellex"
   }));
   const backendMedia = media.map((item) => ({
     ...item,
     tags: inferGalleryTags(item),
     tourLink: `/tours?location=${encodeURIComponent(item.location || "")}`
   }));
-  const galleryItems = [...gallerySeedMedia, ...backendMedia, ...(backendMedia.length ? [] : fallbackMedia)];
+  const seededMedia = gallerySeedMedia.map((item) => ({
+    ...item,
+    tags: ["Africa", ...(item.tags || []), item.tags?.includes("Zanzibar") ? "Coast" : ""].filter(Boolean)
+  }));
+  const galleryItems = [...seededMedia, ...backendMedia, ...(backendMedia.length ? [] : fallbackMedia)];
   const visibleItems =
     activeTag === "All" ? galleryItems : galleryItems.filter((item) => item.tags?.includes(activeTag));
 
@@ -68,7 +72,7 @@ export default function Gallery() {
       setStatus(
         canPublishDirectly
           ? "Media published to the gallery."
-          : "Experience shared. FernwehSafari will review it before it appears in the gallery."
+          : "Experience shared. Travellex will review it before it appears in the gallery."
       );
       setForm(emptySubmission);
       const response = await getGalleryMedia();
@@ -90,12 +94,12 @@ export default function Gallery() {
         <div className="section-heading split">
           <div>
             <p className="eyebrow">Curated media</p>
-            <h2>Approved pictures and videos from FernwehSafari routes.</h2>
+            <h2>Approved pictures and videos from Travellex routes.</h2>
           </div>
           <span className="section-badge">{galleryItems.length} moments</span>
         </div>
         <div className="gallery-tabs">
-          {["All", "Zanzibar", "Safari", "Historical", "Wildlife"].map((tag) => (
+          {["All", "Africa", "Safari", "Coast", "Historical", "Wildlife"].map((tag) => (
             <button className={activeTag === tag ? "active" : ""} key={tag} type="button" onClick={() => setActiveTag(tag)}>
               #{tag}
             </button>
@@ -123,7 +127,7 @@ export default function Gallery() {
                   <p className="eyebrow">{item.location || "Travel moment"}</p>
                   <h3>{item.title}</h3>
                   <p>{item.description}</p>
-                  <span>{item.creditName ? `Shared by ${item.creditName}` : "FernwehSafari curated"}</span>
+                  <span>{item.creditName ? `Shared by ${item.creditName}` : "Travellex curated"}</span>
                 </div>
               </article>
             ))}
@@ -133,7 +137,7 @@ export default function Gallery() {
       <section className="section tinted">
         <div className="section-heading">
           <p className="eyebrow">Share your experience</p>
-          <h2>Send a picture or video from a Tanzania or Zanzibar journey.</h2>
+          <h2>Send a picture or video from an Africa journey.</h2>
           <p className="lead">
             Travellers, tour companies and guides can submit media for review. Admins and moderators can publish
             directly; all other submissions wait for approval before appearing publicly.
@@ -197,13 +201,13 @@ export default function Gallery() {
       <section className="section">
         <div className="section-heading">
           <p className="eyebrow">Gallery standards</p>
-          <h2>What FernwehSafari approves.</h2>
+          <h2>What Travellex approves.</h2>
         </div>
         <div className="steps-grid">
           <article className="step-card">
             <span>01</span>
             <h3>Clear and relevant</h3>
-            <p>Scenes should show real safari, mountain, cultural or coastal experiences connected to Tanzania or Zanzibar.</p>
+            <p>Scenes should show real safari, mountain, cultural or coastal experiences connected to Africa travel.</p>
           </article>
           <article className="step-card">
             <span>02</span>
@@ -227,6 +231,7 @@ function inferGalleryTags(item) {
 
   if (text.includes("zanzibar") || text.includes("paje") || text.includes("nungwi") || text.includes("kendwa") || text.includes("stone")) {
     tags.push("Zanzibar");
+    tags.push("Coast");
   }
 
   if (text.includes("safari") || text.includes("ngorongoro") || text.includes("manyara") || text.includes("mikumi")) {
@@ -241,5 +246,5 @@ function inferGalleryTags(item) {
     tags.push("Wildlife");
   }
 
-  return tags.length ? tags : ["Zanzibar"];
+  return tags.length ? ["Africa", ...tags] : ["Africa"];
 }

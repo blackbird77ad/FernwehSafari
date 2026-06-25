@@ -32,16 +32,16 @@ function appendTrackingParams(rawUrl, trackingCode, tour) {
 
   try {
     const url = new URL(rawUrl);
-    url.searchParams.set("fernweh_ref", trackingCode);
-    url.searchParams.set("fernweh_tour", String(tour._id));
-    url.searchParams.set("fernweh_partner", String(tour.partner?._id || tour.partner));
-    url.searchParams.set("utm_source", "fernweh_safari");
+    url.searchParams.set("travellex_ref", trackingCode);
+    url.searchParams.set("travellex_tour", String(tour._id));
+    url.searchParams.set("travellex_partner", String(tour.partner?._id || tour.partner));
+    url.searchParams.set("utm_source", "travellex");
     url.searchParams.set("utm_medium", "referral");
     url.searchParams.set("utm_campaign", tour.slug || tour.title || "tour");
     return url.toString();
   } catch (error) {
     const separator = rawUrl.includes("?") ? "&" : "?";
-    return `${rawUrl}${separator}fernweh_ref=${encodeURIComponent(trackingCode)}`;
+    return `${rawUrl}${separator}travellex_ref=${encodeURIComponent(trackingCode)}`;
   }
 }
 
@@ -51,9 +51,11 @@ function resolveCommissionRate(tour) {
 
 function normalizeTrackingCode(req) {
   return (
+    req.body.travellex_ref ||
     req.body.fernweh_ref ||
     req.body.trackingCode ||
     req.body.referralCode ||
+    req.query.travellex_ref ||
     req.query.fernweh_ref ||
     req.query.trackingCode ||
     req.params.trackingCode ||
@@ -111,6 +113,11 @@ const createReferral = asyncHandler(async (req, res) => {
   const trackingCode = crypto.randomUUID();
   const commissionRatePercent = resolveCommissionRate(tour);
   const baseBookingURL = tour.referralLink || tour.partner.bookingURL;
+
+  if (!baseBookingURL) {
+    throw new ApiError(422, "This tour does not have a booking URL configured yet.");
+  }
+
   const bookingURL = appendTrackingParams(baseBookingURL, trackingCode, tour);
   const estimatedCommissionEUR = roundMoney((toNumber(tour.priceEUR) * commissionRatePercent) / 100);
 
@@ -129,8 +136,50 @@ const createReferral = asyncHandler(async (req, res) => {
 
   sendResponse(res, 201, {
     referral,
-    bookingURL
+    bookingPath: `/booking/${trackingCode}`
   });
+});
+
+const getBookingSession = asyncHandler(async (req, res) => {
+  const trackingCode = normalizeTrackingCode(req);
+
+  if (!trackingCode) {
+    throw new ApiError(422, "Tracking code is required.");
+  }
+
+  const referral = await Referral.findOne({ trackingCode }).populate(["tour", "partner"]);
+
+  if (!referral) {
+    throw new ApiError(404, "Booking session not found.");
+  }
+
+  sendResponse(res, 200, {
+    referral: {
+      _id: referral._id,
+      trackingCode: referral.trackingCode,
+      status: referral.status,
+      converted: referral.converted,
+      clickedAt: referral.clickedAt,
+      tour: referral.tour,
+      partner: referral.partner
+    }
+  });
+});
+
+const openBookingSession = asyncHandler(async (req, res) => {
+  const trackingCode = normalizeTrackingCode(req);
+
+  if (!trackingCode) {
+    throw new ApiError(422, "Tracking code is required.");
+  }
+
+  const referral = await Referral.findOne({ trackingCode });
+
+  if (!referral?.outboundUrl) {
+    throw new ApiError(404, "Booking session not found.");
+  }
+
+  res.redirect(302, referral.outboundUrl);
 });
 
 const listMyReferrals = asyncHandler(async (req, res) => {
@@ -183,7 +232,7 @@ const receivePartnerPostback = asyncHandler(async (req, res) => {
   const trackingCode = normalizeTrackingCode(req);
 
   if (!trackingCode) {
-    throw new ApiError(422, "fernweh_ref or trackingCode is required.");
+    throw new ApiError(422, "travellex_ref or trackingCode is required.");
   }
 
   const referral = await Referral.findOne({ trackingCode })
@@ -195,7 +244,11 @@ const receivePartnerPostback = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Referral tracking code not found.");
   }
 
-  const providedSecret = req.get("x-fernweh-partner-secret") || req.body.partnerSecret || req.query.partnerSecret;
+  const providedSecret =
+    req.get("x-travellex-partner-secret") ||
+    req.get("x-fernweh-partner-secret") ||
+    req.body.partnerSecret ||
+    req.query.partnerSecret;
   const partnerSecret = referral.partner?.postbackSecret;
   const globalSecret = process.env.REFERRAL_POSTBACK_SECRET;
   const isAuthorized =
@@ -216,9 +269,11 @@ const receivePartnerPostback = asyncHandler(async (req, res) => {
 
 module.exports = {
   createReferral,
+  getBookingSession,
   listMyReferrals,
   listReferrals,
   markConverted,
+  openBookingSession,
   receivePartnerPostback,
   reconcileByTrackingCode
 };

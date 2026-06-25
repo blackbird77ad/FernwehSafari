@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import PasswordInput from "../components/PasswordInput";
 import registerImage from "../assets/photos/Nungwi beach Zanzibar-homepage.jpg";
 import useAuth from "../hooks/useAuth";
 
@@ -36,7 +37,7 @@ export default function Register() {
           <img src={registerImage} alt="Nungwi beach in Zanzibar at golden hour" />
           <div>
             <p className="eyebrow">Plan with confidence</p>
-            <h2>Save Tanzania and Zanzibar tours before you book.</h2>
+            <h2>Save Africa tours and adventures before you book.</h2>
             <div className="auth-trust-list">
               <span>Verified local operators</span>
               <span>Referral-safe booking flow</span>
@@ -46,7 +47,7 @@ export default function Register() {
         </div>
         <form className="auth-card login-panel register-panel" onSubmit={handleSubmit}>
           <p className="eyebrow">Traveller registration</p>
-          <h1>Create your FernwehSafari account.</h1>
+          <h1>Create your Travellex account.</h1>
           <p className="form-note">
             Traveller accounts can save tours and request guides. Tour companies should apply through{" "}
             <Link to="/partner">Partner</Link>.
@@ -67,12 +68,11 @@ export default function Register() {
           </label>
           <label className="field">
             <span>Password</span>
-            <input
-              type="password"
+            <PasswordInput
+              autoComplete="new-password"
               minLength="8"
               value={form.password}
               onChange={(event) => update("password", event.target.value)}
-              required
             />
           </label>
           <button className="button primary" type="submit" disabled={submitting}>

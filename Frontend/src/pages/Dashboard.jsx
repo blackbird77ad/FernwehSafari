@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import PaginatedList from "../components/PaginatedList";
 import Spinner from "../components/Spinner";
 import TourCard from "../components/TourCard";
 import useAuth from "../hooks/useAuth";
@@ -13,6 +14,7 @@ import {
 import { getMyReferrals } from "../services/referralService";
 import { createTour, deleteTour, getTours, updateTour } from "../services/tourService";
 import { eur, formatDate } from "../utils/formatters";
+import { activityOptions } from "../utils/travelOptions";
 
 const emptyCompanyTour = {
   title: "",
@@ -190,7 +192,7 @@ export default function Dashboard() {
       <section className="section dashboard-layout">
         <div className="dashboard-main">
           {isTourCompany && (
-            <section className="side-panel">
+            <section className="side-panel" id="company-tours">
               <p className="eyebrow">Tour company tools</p>
               <h2>{editingTourId ? "Edit tour" : "Post a tour"}</h2>
               <form className="panel-form" onSubmit={handleCompanyTourSubmit}>
@@ -228,11 +230,11 @@ export default function Dashboard() {
                   <label className="field">
                     <span>Category</span>
                     <select value={tourForm.category} onChange={(event) => updateTourField("category", event.target.value)}>
-                      <option>Safari</option>
-                      <option>Beach</option>
-                      <option>Cultural</option>
-                      <option>Mountain</option>
-                      <option>Combination</option>
+                      {activityOptions.map((activity) => (
+                        <option key={activity} value={activity}>
+                          {activity}
+                        </option>
+                      ))}
                     </select>
                   </label>
                 </div>
@@ -266,8 +268,8 @@ export default function Dashboard() {
                   )}
                 </div>
               </form>
-              <div className="admin-list">
-                {companyTours.map((tour) => (
+              <PaginatedList className="admin-list" items={companyTours} label="tours" emptyText="No company tours yet.">
+                {(tour) => (
                   <article className="admin-row" key={tour._id}>
                     <div>
                       <strong>{tour.title}</strong>
@@ -284,11 +286,11 @@ export default function Dashboard() {
                       </button>
                     </div>
                   </article>
-                ))}
-              </div>
+                )}
+              </PaginatedList>
               <h2>Guide applications for your tours</h2>
-              <div className="admin-list">
-                {guideApplications.map((application) => (
+              <PaginatedList className="admin-list" items={guideApplications} label="guide applications" emptyText="No guide applications yet.">
+                {(application) => (
                   <article className="admin-row" key={application._id}>
                     <div>
                       <strong>{application.guideName}</strong>
@@ -317,12 +319,11 @@ export default function Dashboard() {
                       </button>
                     </div>
                   </article>
-                ))}
-                {!guideApplications.length && <p>No guide applications yet.</p>}
-              </div>
+                )}
+              </PaginatedList>
               <h2>Guide booking requests</h2>
-              <div className="admin-list">
-                {guideBookings.map((booking) => (
+              <PaginatedList className="admin-list" items={guideBookings} label="guide bookings" emptyText="No guide booking requests yet.">
+                {(booking) => (
                   <article className="admin-row" key={booking._id}>
                     <div>
                       <strong>{booking.tour?.title}</strong>
@@ -337,8 +338,8 @@ export default function Dashboard() {
                       <option value="closed">closed</option>
                     </select>
                   </article>
-                ))}
-              </div>
+                )}
+              </PaginatedList>
             </section>
           )}
 
@@ -346,17 +347,16 @@ export default function Dashboard() {
             <section className="side-panel">
               <p className="eyebrow">Tour guide tools</p>
               <h2>Your guide applications and requests.</h2>
-              <div className="admin-list">
-                {guideApplications.map((application) => (
+              <PaginatedList className="admin-list" items={guideApplications} label="guide applications" emptyText="No guide applications yet. Open a tour page to apply.">
+                {(application) => (
                   <article className="mini-row" key={application._id}>
                     <strong>{application.tour?.title}</strong>
                     <span>{application.status} - {formatDate(application.createdAt)}</span>
                   </article>
-                ))}
-                {!guideApplications.length && <p>No guide applications yet. Open a tour page to apply.</p>}
-              </div>
-              <div className="admin-list">
-                {guideBookings.map((booking) => (
+                )}
+              </PaginatedList>
+              <PaginatedList className="admin-list" items={guideBookings} label="guide bookings" emptyText="No guide booking requests yet.">
+                {(booking) => (
                   <article className="admin-row" key={booking._id}>
                     <div>
                       <strong>{booking.tour?.title}</strong>
@@ -371,26 +371,26 @@ export default function Dashboard() {
                       <option value="closed">closed</option>
                     </select>
                   </article>
-                ))}
-              </div>
+                )}
+              </PaginatedList>
             </section>
           )}
 
-          <div className="section-heading small-heading">
+          <div className="section-heading small-heading" id="saved-tours">
             <p className="eyebrow">Saved tours</p>
             <h2>Your shortlist.</h2>
           </div>
           {user?.savedTours?.length ? (
-            <div className="card-grid tours-grid">
-              {user.savedTours.map((tour) => (
+            <PaginatedList className="paginated-card-section" gridClassName="card-grid tours-grid" items={user.savedTours} label="saved tours">
+              {(tour) => (
                 <div className="stacked-card" key={tour._id}>
                   <TourCard tour={tour} />
                   <button className="button secondary" type="button" onClick={() => handleRemove(tour._id)}>
                     Remove
                   </button>
                 </div>
-              ))}
-            </div>
+              )}
+            </PaginatedList>
           ) : (
             <p className="empty-state">
               No saved tours yet. <Link to="/tours">Browse tours</Link>
@@ -398,6 +398,24 @@ export default function Dashboard() {
           )}
         </div>
         <aside className="dashboard-side">
+          <section className="side-panel" id="profile">
+            <p className="eyebrow">Profile</p>
+            <h2>{user?.name || "Travellex traveller"}</h2>
+            <div className="profile-summary-list">
+              <span>
+                <strong>Email</strong>
+                {user?.email || "Not provided"}
+              </span>
+              <span>
+                <strong>Country</strong>
+                {user?.country || "Not provided"}
+              </span>
+              <span>
+                <strong>Account type</strong>
+                {user?.role?.replace("_", " ") || "traveller"}
+              </span>
+            </div>
+          </section>
           {loading ? (
             <Spinner />
           ) : (

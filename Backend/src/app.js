@@ -38,7 +38,7 @@ app.get("/api/health", (req, res) => {
   res.json({
     success: true,
     data: {
-      service: "fernweh-safari-api",
+      service: "travellex-api",
       status: "ok",
       time: new Date().toISOString()
     }

@@ -11,7 +11,7 @@ function getClient() {
 }
 
 function tourLabel(enquiry) {
-  return enquiry.tour?.title || "General enquiry";
+  return enquiry.tour?.title || enquiry.destination || "General enquiry";
 }
 
 function enquiryLabel(enquiry) {
@@ -30,7 +30,7 @@ async function sendEmail({ to, subject, lines }) {
   }
 
   await resend.emails.send({
-    from: "FernwehSafari <onboarding@resend.dev>",
+    from: "Travellex <onboarding@resend.dev>",
     to,
     subject,
     text: normalizeLines(lines).join("\n")
@@ -66,22 +66,24 @@ async function sendEnquiryEmails(enquiry) {
 
   const tourName = tourLabel(enquiry);
   const label = enquiryLabel(enquiry);
+  const destination = enquiry.destination || enquiry.tour?.location || "Not provided";
   const partnerName = enquiry.partner?.name || "Not assigned";
   const partnerEmail = enquiry.partner?.contactEmail || "Not provided";
   const confirmationText =
     enquiry.type === "partner_application"
-      ? "FernwehSafari has received your tour listing application and will follow up to schedule a discussion."
-      : "FernwehSafari has received your travel request and will follow up with the best next step.";
+      ? "Travellex has received your tour listing application and will follow up to schedule a discussion."
+      : "Travellex has received your travel request and will follow up with the best next step.";
 
   await Promise.all([
     resend.emails.send({
-      from: "FernwehSafari <onboarding@resend.dev>",
+      from: "Travellex <onboarding@resend.dev>",
       to: ownerEmail,
-      subject: `New FernwehSafari enquiry: ${label}`,
+      subject: `New Travellex enquiry: ${label}`,
       text: [
         `Type: ${enquiry.type || "traveller"}`,
         `Name: ${enquiry.name}`,
         `Email: ${enquiry.email}`,
+        `Destination: ${destination}`,
         `Tour: ${tourName}`,
         `Partner: ${partnerName}`,
         `Partner email: ${partnerEmail}`,
@@ -90,17 +92,17 @@ async function sendEnquiryEmails(enquiry) {
       ].join("\n")
     }),
     resend.emails.send({
-      from: "FernwehSafari <onboarding@resend.dev>",
+      from: "Travellex <onboarding@resend.dev>",
       to: enquiry.email,
-      subject: `We received your FernwehSafari enquiry`,
+      subject: `We received your Travellex enquiry`,
       text: [
         `Hello ${enquiry.name},`,
         "",
-        `Thank you for contacting FernwehSafari about ${label}.`,
+        `Thank you for contacting Travellex about ${label}.`,
         confirmationText,
         "",
         "Warm regards,",
-        "FernwehSafari"
+        "Travellex"
       ].join("\n")
     })
   ]);

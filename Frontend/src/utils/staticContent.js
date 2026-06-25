@@ -332,7 +332,7 @@ export const gallerySeedMedia = [
     location: "Jozani Chwaka Bay Forest",
     tags: ["Zanzibar", "Wildlife"],
     tourLink: "/tours?location=Jozani",
-    creditName: "FernwehSafari"
+    creditName: "Travellex"
   },
   {
     _id: "seed-lake-manyara-tourist-gallery",
@@ -343,7 +343,7 @@ export const gallerySeedMedia = [
     location: "Lake Manyara National Park",
     tags: ["Safari", "Wildlife"],
     tourLink: "/tours?location=Manyara",
-    creditName: "FernwehSafari"
+    creditName: "Travellex"
   },
   {
     _id: "seed-manyara-elephant-gallery",
@@ -354,7 +354,7 @@ export const gallerySeedMedia = [
     location: "Lake Manyara National Park",
     tags: ["Safari", "Wildlife"],
     tourLink: "/tours?location=Manyara",
-    creditName: "FernwehSafari"
+    creditName: "Travellex"
   },
   {
     _id: "seed-kilimanjaro-tourist-gallery",
@@ -365,7 +365,7 @@ export const gallerySeedMedia = [
     location: "Mount Kilimanjaro",
     tags: ["Safari"],
     tourLink: "/tours?location=Kilimanjaro",
-    creditName: "FernwehSafari"
+    creditName: "Travellex"
   },
   {
     _id: "seed-old-fort-tourist-gallery",
@@ -376,7 +376,7 @@ export const gallerySeedMedia = [
     location: "Old Fort",
     tags: ["Zanzibar", "Historical"],
     tourLink: "/tours?location=Old Fort",
-    creditName: "FernwehSafari"
+    creditName: "Travellex"
   },
   {
     _id: "seed-ngorongoro-tour-gallery",
@@ -387,7 +387,7 @@ export const gallerySeedMedia = [
     location: "Ngorongoro Crater",
     tags: ["Safari", "Wildlife"],
     tourLink: "/tours?location=Ngorongoro",
-    creditName: "FernwehSafari"
+    creditName: "Travellex"
   },
   {
     _id: "seed-prison-island-gallery",
@@ -398,7 +398,7 @@ export const gallerySeedMedia = [
     location: "Prison Island",
     tags: ["Zanzibar", "Wildlife", "Historical"],
     tourLink: "/tours?location=Prison Island",
-    creditName: "FernwehSafari"
+    creditName: "Travellex"
   }
 ];
 
@@ -410,7 +410,7 @@ export const testimonials = [
     country: "Germany",
     tour: "Ngorongoro and Manyara Safari",
     rating: 5,
-    quote: "FernwehSafari helped us compare the crater, Lake Manyara and Zanzibar before choosing the route."
+    quote: "Travellex helped us compare the crater, Lake Manyara and Zanzibar before choosing the route."
   },
   {
     name: "Lukas Weber",
@@ -437,25 +437,25 @@ export const faqs = [
   {
     question: "Can I ask questions before booking?",
     answer:
-      "Yes. Submit an enquiry with your dates, group size, travel style and questions. FernwehSafari will follow up with next steps."
+      "Yes. Submit an enquiry with your dates, group size, travel style and questions. Travellex will follow up with next steps."
   },
   {
     question: "Which destinations can I ask about?",
     answer:
-      "You can enquire about Ngorongoro, Kilimanjaro, Lake Manyara, Mikumi, Isimila, Stone Town, Nungwi, Kendwa, Paje, Jozani Forest, Mnemba Island, Prison Island and other Tanzania or Zanzibar routes."
+      "You can ask about Africa tours and adventure routes. Current strongest coverage includes Ngorongoro, Kilimanjaro, Lake Manyara, Mikumi, Isimila, Stone Town, Nungwi, Kendwa, Paje, Jozani Forest, Mnemba Island and Prison Island."
   },
   {
     question: "Are prices shown in euros?",
-    answer: "Yes. Tour listing prices are displayed in EUR for European travellers."
+    answer: "Yes. Tour listing prices are currently displayed in EUR for easy international comparison."
   },
   {
-    question: "Is FernwehSafari based in Tanzania?",
+    question: "What is Travellex's destination focus?",
     answer:
-      "FernwehSafari is built for travellers planning from Europe, with a strong focus on Germany and nearby European markets."
+      "Travellex is Africa-focused, with Tanzania and Zanzibar as the strongest current destination base and room to grow into more African tour and adventure routes."
   },
   {
     question: "Can tour operators become partners?",
     answer:
-      "Yes. Tour operators can open the Partner page, log in if already approved, or apply to become a partner. FernwehSafari reviews the company profile before publishing access is given."
+      "Yes. Tour operators can open the Partner page, log in if already approved, or apply to become a partner. Travellex reviews the company profile before publishing access is given."
   }
 ];

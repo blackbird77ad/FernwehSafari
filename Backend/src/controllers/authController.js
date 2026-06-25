@@ -57,7 +57,7 @@ const register = asyncHandler(async (req, res) => {
     country
   });
 
-  await notifyOwner(`New FernwehSafari user registered: ${user.name}`, [
+  await notifyOwner(`New Travellex user registered: ${user.name}`, [
     `Name: ${user.name}`,
     `Email: ${user.email}`,
     `Role: ${normalizeRole(user.role)}`,

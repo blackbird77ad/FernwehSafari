@@ -5,34 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
       name="description"
-      content="Fernweh Safari pairs considered safari journeys with a simple trip planning and inquiry flow."
+      content="Travellex organizes Africa-focused tours and adventure travel with a simple trip planning and inquiry flow."
     >
+    <meta name="theme-color" content="#0b1320">
+    <link rel="icon" type="image/png" href="/src/assets/photos/Travellex-favicon.png">
+    <link rel="apple-touch-icon" href="/src/assets/photos/Travellex-favicon.png">
+    <script>
+      (function () {
+        try {
+          var storedTheme = localStorage.getItem("travellex_theme");
+          var systemTheme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          var theme = storedTheme || systemTheme;
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+        } catch (error) {
+          document.documentElement.dataset.theme = "light";
+          document.documentElement.style.colorScheme = "light";
+        }
+      })();
+    </script>
     <script>
       window.tailwind = window.tailwind || {};
       window.tailwind.config = {
         theme: {
           extend: {
             colors: {
-              fernweh: {
-                forest: "#184d3c",
-                deep: "#0e3228",
-                leaf: "#4f8a4c",
-                lagoon: "#0f8c88",
-                clay: "#b85f39",
-                gold: "#e2b34e",
-                sand: "#f2dfb6",
-                paper: "#fbfaf6"
+              travellex: {
+                forest: "#0b1320",
+                deep: "#070d16",
+                leaf: "#047857",
+                lagoon: "#0e7490",
+                clay: "#b87333",
+                gold: "#c8a24a",
+                sand: "#f5f7f8",
+                paper: "#ffffff"
               }
             },
             boxShadow: {
-              safari: "0 22px 60px rgba(20, 37, 31, 0.14)"
+              safari: "0 22px 60px rgba(11, 19, 32, 0.12)"
             }
           }
         }
       };
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <title>Fernweh Safari</title>
+    <title>Travellex</title>
   </head>
   <body>
     <div id="root"></div>

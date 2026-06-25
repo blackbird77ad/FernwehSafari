@@ -3,7 +3,7 @@ import { destinationStories } from "../utils/staticContent";
 const trustAnchors = [
   ["Verified Local Operators", "Companies are reviewed before routes appear publicly."],
   ["Secure Referral Architecture", "Travellers move from discovery to the original booking flow with clear handoff."],
-  ["On-the-Ground Experts", "Destination context is shaped around real Tanzania and Zanzibar travel patterns."]
+  ["On-the-Ground Experts", "Destination context is shaped around real Africa travel patterns, starting with Tanzania and Zanzibar."]
 ];
 
 export default function About() {
@@ -12,8 +12,8 @@ export default function About() {
   return (
     <>
       <section className="page-hero compact-hero about-hero">
-        <p className="eyebrow">About FernwehSafari</p>
-        <h1>Trust infrastructure for Tanzania and Zanzibar tour discovery.</h1>
+        <p className="eyebrow">About Travellex</p>
+        <h1>Trust infrastructure for Africa tour discovery.</h1>
       </section>
       <section className="section about-trust-layout">
         <div className="profile-orbit">
@@ -21,12 +21,12 @@ export default function About() {
         </div>
         <div>
           <p className="eyebrow">Mission</p>
-          <h2>A clearer bridge between European travellers and local routes.</h2>
+          <h2>A clearer bridge between travellers and local adventure routes.</h2>
           <p className="lead">
-            FernwehSafari helps travellers compare Tanzania safaris, Kilimanjaro routes, heritage walks and Zanzibar
-            coast experiences before they book. We keep the site visual and emotional, but every journey still needs
-            practical details, reviewed partners and a clean referral path. Good local operators deserve a better way
-            to be found without making travellers feel lost in too many tabs.
+            Travellex helps travellers compare Africa tours and adventure experiences before they book. Tanzania
+            safaris, Kilimanjaro routes, heritage walks and Zanzibar coast escapes are the current strongest focus,
+            but the platform is built for a wider travel map. We keep the site visual and emotional, while every
+            journey still gets practical details, reviewed partners and a clean referral path.
           </p>
         </div>
       </section>

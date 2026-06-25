@@ -7,6 +7,7 @@ import AdminRoute from "./components/AdminRoute";
 import Spinner from "./components/Spinner";
 import About from "./pages/About";
 import Admin from "./pages/Admin";
+import BookingSession from "./pages/BookingSession";
 import Contact from "./pages/Contact";
 import Dashboard from "./pages/Dashboard";
 import FAQ from "./pages/FAQ";
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/tours" element={<Tours />} />
           <Route path="/tours/:slug" element={<TourDetail />} />
+          <Route path="/booking/:trackingCode" element={<BookingSession />} />
           <Route path="/about" element={<About />} />
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/testimonials" element={<Testimonials />} />

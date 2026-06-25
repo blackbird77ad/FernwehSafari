@@ -17,9 +17,11 @@ export default [
         }
       },
       globals: {
+        CustomEvent: "readonly",
         document: "readonly",
         FormData: "readonly",
         localStorage: "readonly",
+        URLSearchParams: "readonly",
         window: "readonly"
       }
     },
@@ -36,6 +38,7 @@ export default [
       ...js.configs.recommended.rules,
       ...react.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
+      "react/no-unknown-property": ["error", { ignore: ["args", "attach", "map", "side"] }],
       "react/prop-types": "off",
       "react/react-in-jsx-scope": "off"
     }

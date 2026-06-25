@@ -25,6 +25,10 @@ const enquirySchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "TourPartner"
     },
+    destination: {
+      type: String,
+      trim: true
+    },
     message: {
       type: String,
       trim: true

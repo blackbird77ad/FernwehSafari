@@ -12,6 +12,15 @@ export function getMyReferrals() {
   return api.get("/referrals/me");
 }
 
+export function getBookingSession(trackingCode) {
+  return api.get(`/referrals/booking/${encodeURIComponent(trackingCode)}`);
+}
+
+export function getBookingFrameURL(trackingCode) {
+  const baseURL = api.defaults.baseURL || "";
+  return `${baseURL}/referrals/booking/${encodeURIComponent(trackingCode)}/open`;
+}
+
 export function markReferralConverted(id, payload = {}) {
   return api.patch(`/referrals/${id}`, payload);
 }

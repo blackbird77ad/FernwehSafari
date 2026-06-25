@@ -1,8 +1,8 @@
 {
-  "name": "fernweh-safari-backend",
+  "name": "travellex-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "Express API for the FernwehSafari referral platform.",
+  "description": "Express API for the Travellex referral platform.",
   "main": "index.js",
   "scripts": {
     "dev": "nodemon --exec \"node --use-system-ca\" index.js",

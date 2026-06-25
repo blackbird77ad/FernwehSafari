@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import EnquiryForm from "../components/EnquiryForm";
 import ImageGallery from "../components/ImageGallery";
@@ -11,12 +11,15 @@ import { getTour } from "../services/tourService";
 import { eur } from "../utils/formatters";
 import { destinationStories } from "../utils/staticContent";
 
+const VirtualTourCanvas = lazy(() => import("../components/VirtualTourCanvas"));
+
 export default function TourDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated, saveTour, user } = useAuth();
   const [tour, setTour] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [bookingLoading, setBookingLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [guideApplicationForm, setGuideApplicationForm] = useState({
     phone: "",
@@ -41,15 +44,28 @@ export default function TourDetail() {
   }, [slug]);
 
   async function handleReferral() {
-    if (!tour) {
+    if (!tour || bookingLoading) {
       return;
     }
 
+    setBookingLoading(true);
+
     try {
       const response = await createReferral({ tourId: tour._id });
-      window.location.assign(response.data.bookingURL);
+      const trackingCode = response.data.referral?.trackingCode;
+
+      if (!trackingCode) {
+        throw new Error("Travellex booking tracking could not be created.");
+      }
+
+      navigate(`/booking/${trackingCode}`, {
+        state: {
+          referral: response.data.referral
+        }
+      });
     } catch (error) {
       setMessage(error.message);
+      setBookingLoading(false);
     }
   }
 
@@ -99,7 +115,7 @@ export default function TourDetail() {
         ...guideApplicationForm,
         tourId: tour._id
       });
-      setMessage("Guide application sent. The tour company reviews first, then FernwehSafari confirms.");
+      setMessage("Guide application sent. The tour company reviews first, then Travellex confirms.");
       setGuideApplicationForm({
         phone: "",
         whatsapp: "",
@@ -159,6 +175,17 @@ export default function TourDetail() {
     .split(" ")
     .slice(0, 46)
     .join(" ");
+  const vrScene =
+    tour.vrEnabled && tour.vrMediaUrl
+      ? {
+          name: tour.title,
+          location: tour.location,
+          mood: tour.vrCaption || tour.shortDescription || "Admin-approved immersive preview.",
+          mediaType: tour.vrMediaType || "image",
+          mediaUrl: tour.vrMediaUrl,
+          image: tour.vrMediaUrl
+        }
+      : null;
 
   return (
     <>
@@ -168,12 +195,17 @@ export default function TourDetail() {
           <h1>{tour.title}</h1>
           <p>{destinationStory?.hook || tour.shortDescription}</p>
           <div className="button-row">
-            <button className="button primary" type="button" onClick={handleReferral}>
-              Continue to booking
+            <button className="button primary" type="button" onClick={handleReferral} disabled={bookingLoading}>
+              {bookingLoading ? "Starting..." : "Start Travellex booking"}
             </button>
             <button className="button secondary light" type="button" onClick={handleSave}>
               Save tour
             </button>
+            {vrScene && (
+              <a className="button secondary light" href="#tour-vr">
+                Enter VR preview
+              </a>
+            )}
           </div>
         </div>
       </section>
@@ -202,6 +234,20 @@ export default function TourDetail() {
             <p>🧭 Duration: {tour.duration}. Route base: {tour.location}. Listed from {eur.format(tour.priceEUR)}.</p>
           </div>
           <ImageGallery images={tour.images} />
+          {vrScene && (
+            <div className="tour-vr-preview" id="tour-vr">
+              <div className="section-heading split">
+                <div>
+                  <p className="eyebrow">VR preview</p>
+                  <h2>Step inside this tour</h2>
+                </div>
+                <p>Travellex admin-approved immersive media for this listing.</p>
+              </div>
+              <Suspense fallback={<Spinner label="Loading VR preview" />}>
+                <VirtualTourCanvas scene={vrScene} />
+              </Suspense>
+            </div>
+          )}
           <h2>Highlights</h2>
           <ul className="check-list">
             {tour.highlights?.map((highlight) => (
@@ -296,9 +342,9 @@ export default function TourDetail() {
         </article>
         <aside className="detail-side">
           <div className="side-panel">
-            <p className="eyebrow">Tour operator</p>
+            <p className="eyebrow">Travellex hosted</p>
             <h2>{tour.partner?.name}</h2>
-            <p>{tour.partner?.description}</p>
+            <p>{tour.partner?.description || "This tour is fulfilled by an approved Travellex operator."}</p>
             <span>{tour.partner?.location}</span>
           </div>
           <div className="side-panel">
@@ -399,10 +445,10 @@ export default function TourDetail() {
       <div className="sticky-booking-bar">
         <span>
           <strong>{tour.title}</strong>
-          <small>{eur.format(tour.priceEUR)} · referral booking link</small>
+          <small>{eur.format(tour.priceEUR)} · Travellex tracked booking</small>
         </span>
-        <button className="button primary compact" type="button" onClick={handleReferral}>
-          Book real tour
+        <button className="button primary compact" type="button" onClick={handleReferral} disabled={bookingLoading}>
+          {bookingLoading ? "Starting..." : "Book with Travellex"}
         </button>
       </div>
     </>

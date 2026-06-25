@@ -128,13 +128,13 @@ const reviewMedia = asyncHandler(async (req, res) => {
   const recipient = media.creditEmail || media.submittedBy?.email;
 
   if (recipient) {
-    await notifyUser(recipient, `FernwehSafari gallery submission ${status}`, [
+    await notifyUser(recipient, `Travellex gallery submission ${status}`, [
       `Hello ${media.creditName || media.submittedBy?.name || "traveller"},`,
       "",
       `Your gallery submission "${media.title}" is now ${status}.`,
       reviewNotes || "",
       "",
-      "FernwehSafari"
+      "Travellex"
     ]);
   }
 

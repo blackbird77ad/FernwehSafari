@@ -11,7 +11,7 @@ async function startServer() {
   await connectDB();
 
   app.listen(port, () => {
-    console.log(`FernwehSafari API running on http://localhost:${port}`);
+    console.log(`Travellex API running on http://localhost:${port}`);
   });
 }
 

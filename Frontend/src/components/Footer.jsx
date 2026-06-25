@@ -1,20 +1,18 @@
 import { Link } from "react-router-dom";
+import ThemeToggle from "./ThemeToggle";
+import travellexLogo from "../assets/photos/Travellex-logo-wordmark.png";
 
 export default function Footer() {
   return (
     <footer className="footer">
       <div>
         <Link className="brand" to="/">
-          <span className="brand-mark">FS</span>
-          <span>
-            FernwehSafari
-            <small>Tanzania & Zanzibar travel discovery</small>
-          </span>
+          <img className="brand-logo" src={travellexLogo} alt="Travellex" />
         </Link>
-        <p>Curated safari, Kilimanjaro, culture and coast routes for travellers planning from Europe.</p>
+        <p>Curated safari, mountain, culture, coast and adventure routes across Africa, with deep current coverage of Tanzania and Zanzibar.</p>
         <div className="footer-badges">
           <span>EUR pricing</span>
-          <span>Europe-ready</span>
+          <span>Trip-ready</span>
           <span>Operator reviewed</span>
         </div>
       </div>
@@ -29,9 +27,11 @@ export default function Footer() {
       </div>
       <div>
         <h3>Destinations</h3>
+        <Link to="/tours?location=Anywhere+in+Africa">Africa-wide</Link>
+        <Link to="/tours?location=Kenya+safari">Kenya safari</Link>
+        <Link to="/tours?location=Botswana+Okavango+Delta">Botswana</Link>
+        <Link to="/tours?location=Morocco+cultural+tour">Morocco</Link>
         <Link to="/tours?location=Ngorongoro">Ngorongoro</Link>
-        <Link to="/tours?location=Kilimanjaro">Kilimanjaro</Link>
-        <Link to="/tours?location=Stone Town">Stone Town</Link>
         <Link to="/tours?location=Nungwi">Zanzibar coast</Link>
       </div>
       <div>
@@ -66,9 +66,10 @@ export default function Footer() {
           <InstagramIcon />
           Instagram
         </a>
+        <ThemeToggle compact />
       </div>
       <div className="footer-bottom">
-        <span>&copy; {new Date().getFullYear()} FernwehSafari. All rights reserved.</span>
+        <span>&copy; {new Date().getFullYear()} Travellex. All rights reserved.</span>
         <a className="footer-credit-link" href="https://thebrandhelper.com/" target="_blank" rel="noreferrer">
           Built by <span>The Brand<span className="brand-helper-red">Helper</span></span>
         </a>

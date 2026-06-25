@@ -26,7 +26,7 @@ export default function EnquiryForm({ tour }) {
         ...form,
         tour: tour?._id
       });
-      setStatus("Enquiry sent. FernwehSafari will follow up with next steps.");
+      setStatus("Enquiry sent. Travellex will follow up with next steps.");
       setForm({
         name: isAuthenticated ? user?.name || "" : "",
         email: isAuthenticated ? user?.email || "" : "",

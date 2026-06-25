@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import PaginatedList, { DEFAULT_PAGE_SIZE } from "../components/PaginatedList";
 import Spinner from "../components/Spinner";
 import Toast from "../components/Toast";
+import travellexLogo from "../assets/photos/Travellex-logo-wordmark.png";
 import useAuth from "../hooks/useAuth";
+import { activityOptions } from "../utils/travelOptions";
 import {
   createPartner,
   deletePartner,
@@ -145,6 +148,10 @@ const emptyTour = {
   referralLink: "",
   commissionRatePercent: "",
   images: "",
+  vrEnabled: false,
+  vrMediaUrl: "",
+  vrMediaType: "image",
+  vrCaption: "",
   highlights: "",
   featured: false,
   isActive: true
@@ -247,7 +254,7 @@ export default function Admin() {
   const [previewUserId, setPreviewUserId] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const [userRoleFilter, setUserRoleFilter] = useState("all");
-  const [userPagination, setUserPagination] = useState({ page: 1, limit: 100, total: 0, totalPages: 1, roleCounts: {} });
+  const [userPagination, setUserPagination] = useState({ page: 1, limit: DEFAULT_PAGE_SIZE, total: 0, totalPages: 1, roleCounts: {} });
   const [referralForms, setReferralForms] = useState({});
   const [trackingReconcileForm, setTrackingReconcileForm] = useState(emptyTrackingReconcileForm);
   const [galleryForm, setGalleryForm] = useState(emptyGalleryMedia);
@@ -306,7 +313,7 @@ export default function Admin() {
     });
   }, [userRoleFilter, userSearch, users]);
 
-  const visibleUsers = useMemo(() => filteredUsers.slice(0, 100), [filteredUsers]);
+  const visibleUsers = useMemo(() => filteredUsers.slice(0, DEFAULT_PAGE_SIZE), [filteredUsers]);
 
   const usersByRole = useMemo(
     () =>
@@ -614,7 +621,7 @@ export default function Admin() {
 
       if (isAdmin) {
         const [userResponse, enquiryResponse, referralResponse, companyApplicationResponse] = await Promise.all([
-          getUsers({ limit: 100, page: 1 }),
+          getUsers({ limit: DEFAULT_PAGE_SIZE, page: 1 }),
           getEnquiries(),
           getReferrals(),
           getTourCompanyApplications()
@@ -622,7 +629,7 @@ export default function Admin() {
 
         setUsers(userResponse.data.users);
         setUserPagination({
-          ...(userResponse.data.pagination || { page: 1, limit: 100, total: userResponse.data.users.length, totalPages: 1 }),
+          ...(userResponse.data.pagination || { page: 1, limit: DEFAULT_PAGE_SIZE, total: userResponse.data.users.length, totalPages: 1 }),
           roleCounts: userResponse.data.roleCounts || {}
         });
         setEnquiries(enquiryResponse.data.enquiries);
@@ -630,7 +637,7 @@ export default function Admin() {
         setCompanyApplications(companyApplicationResponse.data.applications);
       } else {
         setUsers([]);
-        setUserPagination({ page: 1, limit: 100, total: 0, totalPages: 1, roleCounts: {} });
+        setUserPagination({ page: 1, limit: DEFAULT_PAGE_SIZE, total: 0, totalPages: 1, roleCounts: {} });
         setEnquiries([]);
         setReferrals([]);
         setCompanyApplications([]);
@@ -646,7 +653,7 @@ export default function Admin() {
     const search = overrides.search ?? userSearch;
     const role = overrides.role ?? userRoleFilter;
     const params = {
-      limit: userPagination.limit || 100,
+      limit: userPagination.limit || DEFAULT_PAGE_SIZE,
       page
     };
 
@@ -722,7 +729,7 @@ export default function Admin() {
   }
 
   function serializeTourForm() {
-    return {
+    const payload = {
       ...tourForm,
       priceEUR: Number(tourForm.priceEUR),
       commissionRatePercent:
@@ -737,6 +744,15 @@ export default function Admin() {
         .filter(Boolean),
       itinerary: []
     };
+
+    if (!isAdmin) {
+      delete payload.vrEnabled;
+      delete payload.vrMediaUrl;
+      delete payload.vrMediaType;
+      delete payload.vrCaption;
+    }
+
+    return payload;
   }
 
   async function handleTourSubmit(event) {
@@ -773,6 +789,10 @@ export default function Admin() {
       referralLink: tour.referralLink || "",
       commissionRatePercent: tour.commissionRatePercent ?? "",
       images: (tour.images || []).join("\n"),
+      vrEnabled: Boolean(tour.vrEnabled),
+      vrMediaUrl: tour.vrMediaUrl || "",
+      vrMediaType: tour.vrMediaType || "image",
+      vrCaption: tour.vrCaption || "",
       highlights: (tour.highlights || []).join("\n"),
       featured: Boolean(tour.featured),
       isActive: Boolean(tour.isActive)
@@ -1104,16 +1124,15 @@ export default function Admin() {
     setSidebarOpen(false);
   }
 
-  const activeMeta = tabMeta[activeTab] || { icon: "⚙️", title: activeTab, description: "Manage FernwehSafari." };
+  const activeMeta = tabMeta[activeTab] || { icon: "⚙️", title: activeTab, description: "Manage Travellex." };
 
   return (
     <section className={sidebarOpen ? "admin-console sidebar-open" : "admin-console sidebar-collapsed"}>
       <aside className="admin-sidebar">
         <div className="admin-sidebar-head">
           <Link className="admin-brand" to="/">
-            <span className="brand-mark">FS</span>
+            <img className="brand-logo admin-brand-logo" src={travellexLogo} alt="Travellex" />
             <span>
-              FernwehSafari
               <small>Production CRM</small>
             </span>
           </Link>
@@ -1265,7 +1284,7 @@ export default function Admin() {
                 </div>
                 <div className="side-panel">
                   <p className="eyebrow">Referral protection</p>
-                  <h2>Every partner handoff now carries a Fernweh tracking code.</h2>
+                  <h2>Every partner handoff now carries a Travellex tracking code.</h2>
                   <p>
                     Booking clicks receive a unique code before the traveller lands on the partner website. Use the
                     Referral Commissions tab to reconcile partner bookings, confirmed commission and payouts.
@@ -1501,8 +1520,8 @@ export default function Admin() {
               </div>
             )}
             {activeTab === "company applications" && (
-              <div className="admin-list full">
-                {companyApplications.map((application) => (
+              <PaginatedList className="admin-list full" items={companyApplications} label="company applications" emptyText="No company applications yet.">
+                {(application) => (
                   <article className="admin-row" key={application._id}>
                     <div>
                       <strong>{application.companyName}</strong>
@@ -1560,12 +1579,12 @@ export default function Admin() {
                       </button>
                     </div>
                   </article>
-                ))}
-              </div>
+                )}
+              </PaginatedList>
             )}
             {activeTab === "guide applications" && (
-              <div className="admin-list full">
-                {guideApplications.map((application) => (
+              <PaginatedList className="admin-list full" items={guideApplications} label="guide applications" emptyText="No guide applications yet.">
+                {(application) => (
                   <article className="admin-row" key={application._id}>
                     <div>
                       <strong>{application.guideName}</strong>
@@ -1609,12 +1628,12 @@ export default function Admin() {
                       </button>
                     </div>
                   </article>
-                ))}
-              </div>
+                )}
+              </PaginatedList>
             )}
             {activeTab === "guide bookings" && (
-              <div className="admin-list full">
-                {guideBookings.map((booking) => (
+              <PaginatedList className="admin-list full" items={guideBookings} label="guide bookings" emptyText="No guide bookings yet.">
+                {(booking) => (
                   <article className="admin-row" key={booking._id}>
                     <div>
                       <strong>{booking.tour?.title || "Tour"} guide request</strong>
@@ -1633,8 +1652,8 @@ export default function Admin() {
                       <option value="closed">closed</option>
                     </select>
                   </article>
-                ))}
-              </div>
+                )}
+              </PaginatedList>
             )}
             {activeTab === "gallery media" && (
               <div className="admin-grid">
@@ -1743,8 +1762,8 @@ export default function Admin() {
                     )}
                   </div>
                 </form>
-                <div className="admin-list">
-                  {galleryMedia.map((item) => (
+                <PaginatedList className="admin-list" items={galleryMedia} label="media items" emptyText="No gallery media yet.">
+                  {(item) => (
                     <article className="admin-row" key={item._id}>
                       <div>
                         <strong>{item.title}</strong>
@@ -1772,8 +1791,8 @@ export default function Admin() {
                         </button>
                       </div>
                     </article>
-                  ))}
-                </div>
+                  )}
+                </PaginatedList>
               </div>
             )}
             {activeTab === "tours" && (
@@ -1817,11 +1836,11 @@ export default function Admin() {
                     <label className="field">
                       <span>Category</span>
                       <select value={tourForm.category} onChange={(event) => updateTourField("category", event.target.value)}>
-                        <option>Safari</option>
-                        <option>Beach</option>
-                        <option>Cultural</option>
-                        <option>Mountain</option>
-                        <option>Combination</option>
+                        {activityOptions.map((activity) => (
+                          <option key={activity} value={activity}>
+                            {activity}
+                          </option>
+                        ))}
                       </select>
                     </label>
                   </div>
@@ -1855,6 +1874,44 @@ export default function Admin() {
                     <span>Image URLs, one per line</span>
                     <textarea value={tourForm.images} onChange={(event) => updateTourField("images", event.target.value)} />
                   </label>
+                  {isAdmin && (
+                    <div className="vr-admin-panel">
+                      <label className="checkbox-inline">
+                        <input
+                          type="checkbox"
+                          checked={tourForm.vrEnabled}
+                          onChange={(event) => updateTourField("vrEnabled", event.target.checked)}
+                        />
+                        Enable VR for this tour
+                      </label>
+                      <div className="form-grid">
+                        <label className="field">
+                          <span>VR media type</span>
+                          <select value={tourForm.vrMediaType} onChange={(event) => updateTourField("vrMediaType", event.target.value)}>
+                            <option value="image">360 image</option>
+                            <option value="video">360 video</option>
+                          </select>
+                        </label>
+                        <label className="field">
+                          <span>VR media URL</span>
+                          <input
+                            value={tourForm.vrMediaUrl}
+                            onChange={(event) => updateTourField("vrMediaUrl", event.target.value)}
+                            placeholder="Image or video URL"
+                          />
+                        </label>
+                      </div>
+                      <label className="field">
+                        <span>VR caption</span>
+                        <input
+                          value={tourForm.vrCaption}
+                          onChange={(event) => updateTourField("vrCaption", event.target.value)}
+                          placeholder="What the traveller is seeing"
+                        />
+                      </label>
+                      <p className="form-note">Only admins can enable VR. Partner media stays normal until Travellex approves it here.</p>
+                    </div>
+                  )}
                   <label className="field">
                     <span>Highlights, one per line</span>
                     <textarea value={tourForm.highlights} onChange={(event) => updateTourField("highlights", event.target.value)} />
@@ -1895,11 +1952,12 @@ export default function Admin() {
                     )}
                   </div>
                 </form>
-                <div className="admin-list">
-                  {tours.map((tour) => (
+                <PaginatedList className="admin-list" items={tours} label="tours" emptyText="No tours yet.">
+                  {(tour) => (
                     <article className="admin-row" key={tour._id}>
                       <div>
                         <strong>{tour.title}</strong>
+                        {tour.vrEnabled && <span className="tour-vr-admin-status">VR on</span>}
                         <span>
                           {tour.location} · {tour.category} · {eur.format(tour.priceEUR)}
                         </span>
@@ -1913,8 +1971,8 @@ export default function Admin() {
                         </button>
                       </div>
                     </article>
-                  ))}
-                </div>
+                  )}
+                </PaginatedList>
               </div>
             )}
             {activeTab === "partners" && (
@@ -1952,8 +2010,8 @@ export default function Admin() {
                     {editingPartnerId ? "Update partner" : "Create partner"}
                   </button>
                 </form>
-                <div className="admin-list">
-                  {partners.map((partner) => (
+                <PaginatedList className="admin-list" items={partners} label="partners" emptyText="No partners yet.">
+                  {(partner) => (
                     <article className="admin-row" key={partner._id}>
                       <div>
                         <strong>{partner.name}</strong>
@@ -1964,8 +2022,8 @@ export default function Admin() {
                         <div className="postback-box">
                           <p className="eyebrow">Partner postback setup</p>
                           <code>{`${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/referrals/postback`}</code>
-                          <code>{`x-fernweh-partner-secret: ${partner.postbackSecret || "Generate by rotating secret"}`}</code>
-                          <code>{`{"fernweh_ref":"TRACKING_CODE","bookingValueEUR":2000,"partnerBookingId":"BOOKING-123","status":"converted"}`}</code>
+                          <code>{`x-travellex-partner-secret: ${partner.postbackSecret || "Generate by rotating secret"}`}</code>
+                          <code>{`{"travellex_ref":"TRACKING_CODE","bookingValueEUR":2000,"partnerBookingId":"BOOKING-123","status":"converted"}`}</code>
                         </div>
                       </div>
                       <div className="button-row">
@@ -1980,13 +2038,13 @@ export default function Admin() {
                         </button>
                       </div>
                     </article>
-                  ))}
-                </div>
+                  )}
+                </PaginatedList>
               </div>
             )}
             {activeTab === "enquiries" && (
-              <div className="admin-list full">
-                {enquiries.map((enquiry) => (
+              <PaginatedList className="admin-list full" items={enquiries} label="enquiries" emptyText="No enquiries yet.">
+                {(enquiry) => (
                   <article className="admin-row" key={enquiry._id}>
                     <div>
                       <strong>{enquiry.name}</strong>
@@ -1995,6 +2053,7 @@ export default function Admin() {
                         {enquiry.type === "partner_application" ? "Tour listing application" : enquiry.tour?.title || "General"} -{" "}
                         {formatDate(enquiry.createdAt)}
                       </span>
+                      {enquiry.destination && <p>Destination: {enquiry.destination}</p>}
                       <p>{enquiry.message}</p>
                     </div>
                     <select value={enquiry.status} onChange={(event) => handleStatusChange(enquiry._id, event.target.value)}>
@@ -2004,8 +2063,8 @@ export default function Admin() {
                       <option value="closed">closed</option>
                     </select>
                   </article>
-                ))}
-              </div>
+                )}
+              </PaginatedList>
             )}
             {activeTab === "referrals" && (
               <div className="admin-list full">
@@ -2030,15 +2089,15 @@ export default function Admin() {
                 <form className="panel-form tracking-reconcile-form" onSubmit={handleTrackingReconcileSubmit}>
                   <div>
                     <p className="eyebrow">Partner booking report</p>
-                    <h2>Reconcile a booking by Fernweh tracking code.</h2>
+                    <h2>Reconcile a booking by Travellex tracking code.</h2>
                     <p>
-                      Use this when a partner sends a booking report with the traveller&apos;s <strong>fernweh_ref</strong>{" "}
+                      Use this when a partner sends a booking report with the traveller&apos;s <strong>travellex_ref</strong>{" "}
                       code from their own booking website.
                     </p>
                   </div>
                   <div className="commission-edit-grid">
                     <label className="field">
-                      <span>fernweh_ref / tracking code</span>
+                      <span>travellex_ref / tracking code</span>
                       <input
                         value={trackingReconcileForm.trackingCode}
                         onChange={(event) => updateTrackingReconcileField("trackingCode", event.target.value)}
@@ -2107,100 +2166,101 @@ export default function Admin() {
                     </button>
                   </div>
                 </form>
-                {referrals.map((referral) => (
-                  <article className="admin-row referral-row" key={referral._id}>
-                    <div>
-                      <strong>{referral.tour?.title || "Tour referral"}</strong>
-                      <span>
-                        {referral.partner?.name || "Partner"} - {formatDate(referral.clickedAt)} -{" "}
-                        {referral.status || (referral.converted ? "converted" : "clicked")}
-                      </span>
-                      <p>
-                        Code: <strong>{referral.trackingCode || "legacy-click"}</strong> - Traveller:{" "}
-                        {referral.user?.email || "guest / not logged in"}
-                      </p>
-                      <p>
-                        Estimated: {eur.format(referral.estimatedCommissionEUR || 0)} - Confirmed:{" "}
-                        {eur.format(referral.confirmedCommissionEUR || 0)} - Paid:{" "}
-                        {eur.format(referral.paidCommissionEUR || 0)}
-                      </p>
-                      {referral.outboundUrl && (
-                        <a href={referral.outboundUrl} target="_blank" rel="noreferrer">
-                          Open tracked partner URL
-                        </a>
-                      )}
-                    </div>
-                    <div className="commission-edit-grid">
-                      <label className="field">
-                        <span>Booking EUR</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={referralField(referral, "bookingValueEUR")}
-                          onChange={(event) => updateReferralField(referral._id, "bookingValueEUR", event.target.value)}
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Rate %</span>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={referralField(referral, "commissionRatePercent")}
-                          onChange={(event) => updateReferralField(referral._id, "commissionRatePercent", event.target.value)}
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Commission EUR</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={referralField(referral, "commissionEUR") || referral.confirmedCommissionEUR || ""}
-                          onChange={(event) => updateReferralField(referral._id, "commissionEUR", event.target.value)}
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Paid EUR</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={referralField(referral, "paidCommissionEUR")}
-                          onChange={(event) => updateReferralField(referral._id, "paidCommissionEUR", event.target.value)}
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Status</span>
-                        <select
-                          value={referralField(referral, "status") || referral.status || "clicked"}
-                          onChange={(event) => updateReferralField(referral._id, "status", event.target.value)}
-                        >
-                          {referralStatuses.map((status) => (
-                            <option key={status} value={status}>
-                              {status}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="field">
-                        <span>Notes</span>
-                        <input
-                          value={referralField(referral, "notes")}
-                          onChange={(event) => updateReferralField(referral._id, "notes", event.target.value)}
-                          placeholder="Partner invoice, booking id, payout note"
-                        />
-                      </label>
-                      <button className="button primary compact" type="button" onClick={() => handleReferralConversion(referral._id)}>
-                        Save commission
-                      </button>
-                    </div>
-                  </article>
-                ))}
-                {!referrals.length && <p className="empty-state">No referral clicks tracked yet.</p>}
+                <PaginatedList className="admin-list embedded" items={referrals} label="referrals" emptyText="No referral clicks tracked yet.">
+                  {(referral) => (
+                    <article className="admin-row referral-row" key={referral._id}>
+                      <div>
+                        <strong>{referral.tour?.title || "Tour referral"}</strong>
+                        <span>
+                          {referral.partner?.name || "Partner"} - {formatDate(referral.clickedAt)} -{" "}
+                          {referral.status || (referral.converted ? "converted" : "clicked")}
+                        </span>
+                        <p>
+                          Code: <strong>{referral.trackingCode || "legacy-click"}</strong> - Traveller:{" "}
+                          {referral.user?.email || "guest / not logged in"}
+                        </p>
+                        <p>
+                          Estimated: {eur.format(referral.estimatedCommissionEUR || 0)} - Confirmed:{" "}
+                          {eur.format(referral.confirmedCommissionEUR || 0)} - Paid:{" "}
+                          {eur.format(referral.paidCommissionEUR || 0)}
+                        </p>
+                        {referral.outboundUrl && (
+                          <a href={referral.outboundUrl} target="_blank" rel="noreferrer">
+                            Open tracked partner URL
+                          </a>
+                        )}
+                      </div>
+                      <div className="commission-edit-grid">
+                        <label className="field">
+                          <span>Booking EUR</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={referralField(referral, "bookingValueEUR")}
+                            onChange={(event) => updateReferralField(referral._id, "bookingValueEUR", event.target.value)}
+                          />
+                        </label>
+                        <label className="field">
+                          <span>Rate %</span>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={referralField(referral, "commissionRatePercent")}
+                            onChange={(event) => updateReferralField(referral._id, "commissionRatePercent", event.target.value)}
+                          />
+                        </label>
+                        <label className="field">
+                          <span>Commission EUR</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={referralField(referral, "commissionEUR") || referral.confirmedCommissionEUR || ""}
+                            onChange={(event) => updateReferralField(referral._id, "commissionEUR", event.target.value)}
+                          />
+                        </label>
+                        <label className="field">
+                          <span>Paid EUR</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={referralField(referral, "paidCommissionEUR")}
+                            onChange={(event) => updateReferralField(referral._id, "paidCommissionEUR", event.target.value)}
+                          />
+                        </label>
+                        <label className="field">
+                          <span>Status</span>
+                          <select
+                            value={referralField(referral, "status") || referral.status || "clicked"}
+                            onChange={(event) => updateReferralField(referral._id, "status", event.target.value)}
+                          >
+                            {referralStatuses.map((status) => (
+                              <option key={status} value={status}>
+                                {status}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="field">
+                          <span>Notes</span>
+                          <input
+                            value={referralField(referral, "notes")}
+                            onChange={(event) => updateReferralField(referral._id, "notes", event.target.value)}
+                            placeholder="Partner invoice, booking id, payout note"
+                          />
+                        </label>
+                        <button className="button primary compact" type="button" onClick={() => handleReferralConversion(referral._id)}>
+                          Save commission
+                        </button>
+                      </div>
+                    </article>
+                  )}
+                </PaginatedList>
               </div>
             )}
             {activeTab === "referrals-old" && (
-              <div className="admin-list full">
-                {referrals.map((referral) => (
+              <PaginatedList className="admin-list full" items={referrals} label="referrals" emptyText="No referral clicks tracked yet.">
+                {(referral) => (
                   <article className="admin-row" key={referral._id}>
                     <div>
                       <strong>{referral.tour?.title}</strong>
@@ -2215,8 +2275,8 @@ export default function Admin() {
                       </button>
                     )}
                   </article>
-                ))}
-              </div>
+                )}
+              </PaginatedList>
             )}
             {activeTab === "uploads" && (
               <div className="side-panel">

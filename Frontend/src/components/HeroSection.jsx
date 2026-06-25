@@ -7,10 +7,10 @@ export default function HeroSection() {
       <div className="hero-slide-overlay" />
       <div className="fast-hero-content-wrap">
         <div className="fast-hero-content">
-          <p className="eyebrow">Tanzania & Zanzibar tours</p>
-          <h1>Explore Tanzania & Zanzibar.</h1>
+          <p className="eyebrow">Africa tours marketplace</p>
+          <h1>Book Africa tours with Travellex.</h1>
           <p className="fast-hero-copy">
-            Safari plains, Kilimanjaro air, spice-island streets and warm Indian Ocean water in one quick gateway.
+            Compare safari, mountain, culture and coast journeys from trusted operators, then stay inside Travellex while your booking is tracked.
           </p>
           <div className="fast-hero-actions">
             <Link className="button primary" to="/tours">

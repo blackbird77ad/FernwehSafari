@@ -11,7 +11,7 @@ const storage = isCloudinaryConfigured
   ? new CloudinaryStorage({
       cloudinary,
       params: {
-        folder: "fernweh-safari/tours",
+        folder: "travellex/tours",
         allowed_formats: ["jpg", "jpeg", "png", "webp"]
       }
     })

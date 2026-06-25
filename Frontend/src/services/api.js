@@ -4,8 +4,28 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api"
 });
 
+const TOKEN_KEY = "travellex_token";
+const LEGACY_TOKEN_KEY = ["fernweh", "token"].join("_");
+
+function getStoredToken() {
+  const token = localStorage.getItem(TOKEN_KEY);
+
+  if (token) {
+    return token;
+  }
+
+  const legacyToken = localStorage.getItem(LEGACY_TOKEN_KEY);
+
+  if (legacyToken) {
+    localStorage.setItem(TOKEN_KEY, legacyToken);
+    localStorage.removeItem(LEGACY_TOKEN_KEY);
+  }
+
+  return legacyToken;
+}
+
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("fernweh_token");
+  const token = getStoredToken();
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;

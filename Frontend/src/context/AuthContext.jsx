@@ -4,19 +4,45 @@ import * as userService from "../services/userService";
 
 export const AuthContext = createContext(null);
 
+const TOKEN_KEY = "travellex_token";
+const LEGACY_TOKEN_KEY = ["fernweh", "token"].join("_");
+
+function getStoredToken() {
+  const token = localStorage.getItem(TOKEN_KEY);
+
+  if (token) {
+    return token;
+  }
+
+  const legacyToken = localStorage.getItem(LEGACY_TOKEN_KEY);
+
+  if (legacyToken) {
+    localStorage.setItem(TOKEN_KEY, legacyToken);
+    localStorage.removeItem(LEGACY_TOKEN_KEY);
+  }
+
+  return legacyToken;
+}
+
+function clearStoredToken() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(LEGACY_TOKEN_KEY);
+}
+
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem("fernweh_token"));
+  const [token, setToken] = useState(() => getStoredToken());
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(Boolean(token));
 
   const persistSession = useCallback((payload) => {
-    localStorage.setItem("fernweh_token", payload.token);
+    localStorage.setItem(TOKEN_KEY, payload.token);
+    localStorage.removeItem(LEGACY_TOKEN_KEY);
     setToken(payload.token);
     setUser(payload.user);
   }, []);
 
   const refreshUser = useCallback(async () => {
-    if (!localStorage.getItem("fernweh_token")) {
+    if (!getStoredToken()) {
       setLoading(false);
       return null;
     }
@@ -26,7 +52,7 @@ export function AuthProvider({ children }) {
       setUser(response.data.user);
       return response.data.user;
     } catch {
-      localStorage.removeItem("fernweh_token");
+      clearStoredToken();
       setToken(null);
       setUser(null);
       return null;
@@ -58,7 +84,7 @@ export function AuthProvider({ children }) {
   );
 
   const logout = useCallback(() => {
-    localStorage.removeItem("fernweh_token");
+    clearStoredToken();
     setToken(null);
     setUser(null);
   }, []);

@@ -49,7 +49,7 @@ function normalizeApplicationPayload(body) {
 }
 
 function temporaryPassword() {
-  return `Fernweh-${crypto.randomBytes(4).toString("hex")}`;
+  return `Travellex-${crypto.randomBytes(4).toString("hex")}`;
 }
 
 async function approveCompanyApplication(application, adminUser, reviewNotes) {
@@ -97,15 +97,15 @@ async function approveCompanyApplication(application, adminUser, reviewNotes) {
   application.partner = partner._id;
   await application.save();
 
-  await notifyUser(application.email, "FernwehSafari tour company application approved", [
+  await notifyUser(application.email, "Travellex tour company application approved", [
     `Hello ${application.contactName},`,
     "",
     "Your company application has been approved.",
-    "Your account now has tour company access and can post tours for FernwehSafari review.",
-    generatedPassword ? `Temporary password: ${generatedPassword}` : "Use your existing FernwehSafari login.",
+    "Your account now has tour company access and can post tours for Travellex review.",
+    generatedPassword ? `Temporary password: ${generatedPassword}` : "Use your existing Travellex login.",
     "",
     "Please update any temporary password after logging in.",
-    "FernwehSafari"
+    "Travellex"
   ]);
 
   return application;
@@ -128,13 +128,13 @@ const createCompanyApplication = asyncHandler(async (req, res) => {
     `Has in-house guides: ${application.hasInHouseGuides ? "Yes" : "No"}`
   ]);
 
-  await notifyUser(application.email, "FernwehSafari received your tour company application", [
+  await notifyUser(application.email, "Travellex received your tour company application", [
     `Hello ${application.contactName},`,
     "",
-    "FernwehSafari received your tour company listing application.",
+    "Travellex received your tour company listing application.",
     "The team will review your company details and contact you for a call or WhatsApp discussion before approval.",
     "",
-    "FernwehSafari"
+    "Travellex"
   ]);
 
   sendResponse(res, 201, { application });
@@ -178,13 +178,13 @@ const updateCompanyApplicationStatus = asyncHandler(async (req, res) => {
     await application.save();
 
     if (status === "rejected") {
-      await notifyUser(application.email, "FernwehSafari tour company application update", [
+      await notifyUser(application.email, "Travellex tour company application update", [
         `Hello ${application.contactName},`,
         "",
-        "After review, FernwehSafari cannot approve this listing application at the moment.",
+        "After review, Travellex cannot approve this listing application at the moment.",
         reviewNotes || "No additional reason was provided.",
         "",
-        "FernwehSafari"
+        "Travellex"
       ]);
     }
   }

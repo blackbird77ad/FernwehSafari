@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import PasswordInput from "../components/PasswordInput";
 import loginImage from "../assets/photos/kendwa-beach-tourist.png";
 import useAuth from "../hooks/useAuth";
 
@@ -53,11 +54,10 @@ export default function Login() {
           </label>
           <label className="field">
             <span>Password</span>
-            <input
-              type="password"
+            <PasswordInput
+              autoComplete="current-password"
               value={form.password}
               onChange={(event) => setForm({ ...form, password: event.target.value })}
-              required
             />
           </label>
           <button className="button primary" type="submit" disabled={submitting}>

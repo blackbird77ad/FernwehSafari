@@ -5,12 +5,12 @@ import { createTourCompanyApplication } from "../services/applicationService";
 
 const steps = [
   { key: "companyName", label: "Company Name", placeholder: "Example: Kilimanjaro Coast Adventures" },
-  { key: "tourTypes", label: "Tour Types Offered", placeholder: "Safari, Kilimanjaro, Zanzibar beach, culture..." },
+  { key: "tourTypes", label: "Tour Types Offered", placeholder: "Safari, mountain, beach, culture, adventure..." },
   { key: "email", label: "Contact Email", placeholder: "partnerships@example.com" }
 ];
 
 const benefits = [
-  ["High Traffic", "Reach travellers already searching for Tanzania and Zanzibar routes."],
+  ["High Traffic", "Reach travellers already searching for Africa tours, safari routes, coast trips and adventure travel."],
   ["Fair Commissions", "Agree referral percentages before any tour goes public."],
   ["Marketing Exposure", "Show routes with vivid destination storytelling and local imagery."],
   ["Zero Sign-Up Fees", "Apply first, talk terms, then post only after approval."]
@@ -44,7 +44,7 @@ export default function ListYourTours() {
         tourCategories: form.tourTypes,
         commissionExpectation: "Open to discussion"
       });
-      setStatus("Application received. FernwehSafari will contact you to review fit and commission terms.");
+      setStatus("Application received. Travellex will contact you to review fit and commission terms.");
       setForm({ companyName: "", tourTypes: "", email: "" });
       setStepIndex(0);
     } catch (error) {
@@ -70,10 +70,10 @@ export default function ListYourTours() {
       <section className="partner-pitch-hero">
         <div>
           <p className="eyebrow">Partner & referral program</p>
-          <h1>List Your Tanzanian Tours With Us.</h1>
+          <h1>List Your Africa Tours With Us.</h1>
           <p>
-            FernwehSafari helps trusted operators turn local routes into clear, visual discovery pages for travellers
-            planning from Europe.
+            Travellex helps trusted operators turn local routes into clear, visual discovery pages for travellers
+            planning Africa tours and adventure trips.
           </p>
           <div className="hero-actions">
             <Link className="button primary" to={isTourCompany ? "/dashboard" : "/login"}>
@@ -104,7 +104,7 @@ export default function ListYourTours() {
           <p className="eyebrow">Simple onboarding</p>
           <h2>Three quick details start the conversation.</h2>
           <p className="lead">
-            After the lead form, FernwehSafari reviews the company, schedules a call or WhatsApp discussion, and only
+            After the lead form, Travellex reviews the company, schedules a call or WhatsApp discussion, and only
             approved tour companies receive dashboard access to post listings for staff review.
           </p>
         </div>
@@ -112,7 +112,7 @@ export default function ListYourTours() {
           <div className="partner-action-card">
             <p className="eyebrow">Approved company</p>
             <h2>Your listing flow is in the dashboard.</h2>
-            <p>Add route details, prices, images and referral booking URLs for FernwehSafari staff approval.</p>
+            <p>Add route details, prices, images and referral booking URLs for Travellex staff approval.</p>
             <Link className="button primary" to="/dashboard">
               List tours
             </Link>

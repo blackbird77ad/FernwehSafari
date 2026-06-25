@@ -13,7 +13,8 @@ export default function Tours() {
     search: searchParams.get("search") || "",
     category: searchParams.get("category") || "",
     location: searchParams.get("location") || "",
-    maxPrice: searchParams.get("maxPrice") || ""
+    maxPrice: searchParams.get("maxPrice") || "",
+    sort: searchParams.get("sort") || "featured"
   });
   const [tours, setTours] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +26,8 @@ export default function Tours() {
       search: filters.search || undefined,
       category: filters.category || undefined,
       location: filters.location || undefined,
-      maxPrice: filters.maxPrice || undefined
+      maxPrice: filters.maxPrice || undefined,
+      sort: filters.sort || undefined
     }),
     [filters]
   );
@@ -45,7 +47,7 @@ export default function Tours() {
     <>
       <section className="page-hero compact-hero tours-hero">
         <p className="eyebrow">Tour listings</p>
-        <h1>Tanzania safari, Kilimanjaro and Zanzibar tours for European travellers.</h1>
+        <h1>Africa tours and adventures, starting with Tanzania and Zanzibar.</h1>
       </section>
       <section className="section split-panel">
         <div>
@@ -76,7 +78,7 @@ export default function Tours() {
       <section className="section tinted">
         <div className="section-heading">
           <p className="eyebrow">Route styles</p>
-          <h2>Ways to shape a Tanzania and Zanzibar journey.</h2>
+          <h2>Ways to shape an Africa adventure.</h2>
         </div>
         <div className="feature-grid">
           <article>
@@ -152,7 +154,7 @@ export default function Tours() {
       <section className="cta-band">
         <h2>Need help choosing between routes?</h2>
         <Link className="button primary" to="/contact">
-          Ask FernwehSafari
+          Ask Travellex
         </Link>
       </section>
     </>

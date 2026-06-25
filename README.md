@@ -1,6 +1,6 @@
-# FernwehSafari Website
+# Travellex Website
 
-FernwehSafari is a Tanzania and Zanzibar tour discovery site for European travellers. Customers browse curated tours, submit enquiries, and continue to the selected tour booking page when ready. Behind the scenes, listed tours are managed through operator partnerships and referral tracking.
+Travellex is an Africa-focused travel, tour and adventure platform. Customers browse curated routes, submit enquiries, and continue to the selected tour booking page when ready. The current strongest destination coverage is Tanzania and Zanzibar, with the platform built to grow into broader African travel experiences.
 
 ## Stack
 
@@ -70,6 +70,7 @@ Default URLs:
 
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:5000/api`
+- Production domain: `https://travellex.tours`
 
 ## Render Backend Deployment
 
@@ -78,9 +79,9 @@ Render does not read `Backend/.env` from your computer, and this repo intentiona
 Required:
 
 ```text
-MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/fernweh-safari?retryWrites=true&w=majority
+MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/travellex?retryWrites=true&w=majority
 JWT_SECRET=<long-random-production-secret>
-CLIENT_URL=<your-frontend-url>
+CLIENT_URL=https://travellex.tours
 ```
 
 Optional, depending on enabled features:
@@ -107,7 +108,7 @@ If MongoDB Atlas rejects the connection after `MONGO_URI` is set, add Render's o
 
 The seed script creates:
 
-- Email: `admin@fernwehsafari.com`
+- Email: `admin@travellex.tours`
 - Password: `AdminPass123`
 
 For production, create admin accounts manually in MongoDB Atlas and set `role` to `admin`.

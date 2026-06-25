@@ -94,11 +94,28 @@ const tourSchema = new mongoose.Schema(
     category: {
       type: String,
       required: [true, "Tour category is required."],
-      enum: ["Safari", "Beach", "Cultural", "Mountain", "Combination"]
+      enum: ["Safari", "Beach", "Cultural", "Mountain", "Combination", "Adventure", "Wildlife", "City", "Food", "History", "Honeymoon", "Family"]
     },
     images: {
       type: [String],
       default: []
+    },
+    vrEnabled: {
+      type: Boolean,
+      default: false
+    },
+    vrMediaUrl: {
+      type: String,
+      trim: true
+    },
+    vrMediaType: {
+      type: String,
+      enum: ["image", "video"],
+      default: "image"
+    },
+    vrCaption: {
+      type: String,
+      trim: true
     },
     highlights: {
       type: [String],
