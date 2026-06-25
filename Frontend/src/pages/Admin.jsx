@@ -229,6 +229,137 @@ function sumCurrency(items, field) {
   return items.reduce((total, item) => total + (Number(item[field]) || 0), 0);
 }
 
+function statusLabel(status) {
+  return String(status || "not set").replace(/_/g, " ");
+}
+
+function getPathValue(item, path) {
+  return String(path)
+    .split(".")
+    .reduce((value, key) => (value === undefined || value === null ? "" : value[key]), item);
+}
+
+function toSearchText(item, searchKeys) {
+  return searchKeys
+    .map((key) => (typeof key === "function" ? key(item) : getPathValue(item, key)))
+    .filter((value) => value !== undefined && value !== null)
+    .join(" ")
+    .toLowerCase();
+}
+
+function compareText(left = "", right = "") {
+  return String(left || "").localeCompare(String(right || ""), undefined, { sensitivity: "base" });
+}
+
+function compareNumber(left = 0, right = 0) {
+  return (Number(left) || 0) - (Number(right) || 0);
+}
+
+function compareDateNewest(left, right) {
+  return new Date(right || 0).getTime() - new Date(left || 0).getTime();
+}
+
+function AdminCollection({
+  children,
+  className = "admin-list full",
+  emptyText = "No items found.",
+  filterOptions = [],
+  gridClassName = "admin-list-grid",
+  items = [],
+  label = "items",
+  pageSize = DEFAULT_PAGE_SIZE,
+  searchKeys = [],
+  searchPlaceholder = "Search this folder",
+  sortOptions = [],
+  viewModes = [
+    { value: "list", label: "List" },
+    { value: "cards", label: "Cards" },
+    { value: "compact", label: "Compact" }
+  ]
+}) {
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [sort, setSort] = useState(sortOptions[0]?.value || "default");
+  const [view, setView] = useState(viewModes[0]?.value || "list");
+  const selectedFilter = filterOptions.find((option) => option.value === filter);
+  const selectedSort = sortOptions.find((option) => option.value === sort);
+  const filteredItems = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
+    return items.filter((item) => {
+      const matchesSearch = !normalizedSearch || toSearchText(item, searchKeys).includes(normalizedSearch);
+      const matchesFilter = !selectedFilter?.predicate || selectedFilter.predicate(item);
+
+      return matchesSearch && matchesFilter;
+    });
+  }, [items, search, searchKeys, selectedFilter]);
+  const sortedItems = useMemo(() => {
+    const nextItems = [...filteredItems];
+
+    if (selectedSort?.compare) {
+      nextItems.sort(selectedSort.compare);
+    }
+
+    return nextItems;
+  }, [filteredItems, selectedSort]);
+  const collectionGridClass = `${gridClassName} view-${view}`;
+
+  return (
+    <div className={`${className} admin-collection view-${view}`}>
+      <div className="admin-collection-toolbar">
+        <label className="field admin-search-field">
+          <span>Search</span>
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={searchPlaceholder} />
+        </label>
+        {filterOptions.length > 0 && (
+          <label className="field">
+            <span>Filter</span>
+            <select value={filter} onChange={(event) => setFilter(event.target.value)}>
+              <option value="all">All {label}</option>
+              {filterOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {sortOptions.length > 0 && (
+          <label className="field">
+            <span>Sort</span>
+            <select value={sort} onChange={(event) => setSort(event.target.value)}>
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <div className="admin-view-switch" role="group" aria-label={`${label} view`}>
+          {viewModes.map((mode) => (
+            <button
+              className={view === mode.value ? "active" : ""}
+              key={mode.value}
+              type="button"
+              onClick={() => setView(mode.value)}
+              aria-pressed={view === mode.value}
+            >
+              {mode.label}
+            </button>
+          ))}
+        </div>
+        <p className="form-note">
+          {sortedItems.length} of {items.length} {label}
+        </p>
+      </div>
+      <PaginatedList className="admin-collection-results" emptyText={emptyText} gridClassName={collectionGridClass} items={sortedItems} label={label} pageSize={pageSize}>
+        {(item) => children(item, view)}
+      </PaginatedList>
+    </div>
+  );
+}
+
 export default function Admin() {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
@@ -254,6 +385,8 @@ export default function Admin() {
   const [previewUserId, setPreviewUserId] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const [userRoleFilter, setUserRoleFilter] = useState("all");
+  const [userSort, setUserSort] = useState("newest");
+  const [userView, setUserView] = useState("list");
   const [userPagination, setUserPagination] = useState({ page: 1, limit: DEFAULT_PAGE_SIZE, total: 0, totalPages: 1, roleCounts: {} });
   const [referralForms, setReferralForms] = useState({});
   const [trackingReconcileForm, setTrackingReconcileForm] = useState(emptyTrackingReconcileForm);
@@ -313,7 +446,28 @@ export default function Admin() {
     });
   }, [userRoleFilter, userSearch, users]);
 
-  const visibleUsers = useMemo(() => filteredUsers.slice(0, DEFAULT_PAGE_SIZE), [filteredUsers]);
+  const userSortOptions = useMemo(
+    () => [
+      { value: "newest", label: "Newest", compare: (left, right) => compareDateNewest(left.createdAt, right.createdAt) },
+      { value: "name", label: "Name A-Z", compare: (left, right) => compareText(left.name, right.name) },
+      { value: "role", label: "Role", compare: (left, right) => compareText(roleLabels[left.role] || left.role, roleLabels[right.role] || right.role) },
+      { value: "country", label: "Country", compare: (left, right) => compareText(left.country, right.country) }
+    ],
+    []
+  );
+
+  const sortedUsers = useMemo(() => {
+    const selectedSort = userSortOptions.find((option) => option.value === userSort);
+    const nextUsers = [...filteredUsers];
+
+    if (selectedSort?.compare) {
+      nextUsers.sort(selectedSort.compare);
+    }
+
+    return nextUsers;
+  }, [filteredUsers, userSort, userSortOptions]);
+
+  const visibleUsers = useMemo(() => sortedUsers.slice(0, DEFAULT_PAGE_SIZE), [sortedUsers]);
 
   const usersByRole = useMemo(
     () =>
@@ -355,6 +509,24 @@ export default function Admin() {
         : [])
     ],
     [commissionStats, companyApplications, enquiries, galleryMedia, guideApplications, isAdmin, partners, referrals, tours, users]
+  );
+
+  const tabCounts = useMemo(
+    () => ({
+      overview: crmStats.length,
+      referrals: referrals.length,
+      users: userPagination.total || users.length,
+      "role dashboards": users.length,
+      "company applications": companyApplications.length,
+      tours: tours.length,
+      partners: partners.length,
+      "guide applications": guideApplications.length,
+      "guide bookings": guideBookings.length,
+      "gallery media": galleryMedia.length,
+      enquiries: enquiries.length,
+      uploads: uploading ? 1 : 0
+    }),
+    [companyApplications, crmStats.length, enquiries, galleryMedia, guideApplications, guideBookings, partners, referrals, tours, uploading, userPagination.total, users.length]
   );
 
   const previewUser = useMemo(() => {
@@ -1123,7 +1295,7 @@ export default function Admin() {
     setSidebarOpen(false);
   }
 
-  const activeMeta = tabMeta[activeTab] || { icon: "⚙️", title: activeTab, description: "Manage Travellex." };
+  const activeMeta = tabMeta[activeTab] || { icon: "CRM", title: activeTab, description: "Manage Travellex." };
 
   return (
     <section className={sidebarOpen ? "admin-console sidebar-open" : "admin-console sidebar-collapsed"}>
@@ -1162,8 +1334,9 @@ export default function Admin() {
               type="button"
               onClick={() => handleTabChange(tab)}
             >
-              <span>{tabMeta[tab]?.icon || "•"}</span>
+              <span>{tabMeta[tab]?.icon || "--"}</span>
               <strong>{tabMeta[tab]?.title || tab}</strong>
+              <small>{tabCounts[tab] ?? 0}</small>
             </button>
           ))}
         </nav>
@@ -1203,11 +1376,35 @@ export default function Admin() {
             <span>{activeMeta.description}</span>
           </div>
           <div className="button-row">
+            <label className="admin-jump-field">
+              <span>Jump to</span>
+              <select value={activeTab} onChange={(event) => handleTabChange(event.target.value)}>
+                {tabs.map((tab) => (
+                  <option key={tab} value={tab}>
+                    {tabMeta[tab]?.title || tab} ({tabCounts[tab] ?? 0})
+                  </option>
+                ))}
+              </select>
+            </label>
             <Link className="button primary compact" to="/">
               View public site
             </Link>
           </div>
         </header>
+        <nav className="admin-folder-tabs" aria-label="Admin folders">
+          {tabs.map((tab) => (
+            <button
+              className={activeTab === tab ? "active" : ""}
+              key={tab}
+              type="button"
+              onClick={() => handleTabChange(tab)}
+              aria-current={activeTab === tab ? "page" : undefined}
+            >
+              <span>{tabMeta[tab]?.title || tab}</span>
+              <small>{tabCounts[tab] ?? 0}</small>
+            </button>
+          ))}
+        </nav>
         <div className="admin-workspace-content">
         {loading ? (
           <Spinner />
@@ -1368,56 +1565,81 @@ export default function Admin() {
                         ))}
                       </select>
                     </label>
+                    <label className="field">
+                      <span>Sort</span>
+                      <select value={userSort} onChange={(event) => setUserSort(event.target.value)}>
+                        {userSortOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                     <button className="button primary compact" type="button" onClick={() => loadUsersForFilters(1)}>
                       Search
                     </button>
+                    <div className="admin-view-switch" role="group" aria-label="User view">
+                      {["list", "cards", "compact"].map((mode) => (
+                        <button
+                          className={userView === mode ? "active" : ""}
+                          key={mode}
+                          type="button"
+                          onClick={() => setUserView(mode)}
+                          aria-pressed={userView === mode}
+                        >
+                          {mode}
+                        </button>
+                      ))}
+                    </div>
                     <p className="form-note">
                       Showing {visibleUsers.length} of {userPagination.total} matching users. Page {userPagination.page} of{" "}
                       {userPagination.totalPages}.
                     </p>
                   </div>
-                  {visibleUsers.map((user) => (
-                    <article className="admin-row" key={user.id}>
-                      <div>
-                        <strong>{user.name}</strong>
-                        <span>
-                          {user.email} - {roleLabels[user.role] || user.role} - {user.country || "No country"}
-                        </span>
-                      </div>
-                      <div className="button-row">
-                        <label className="inline-role-select">
-                          <span>Promote role</span>
-                          <select
-                            aria-label={`Promote ${user.name} role`}
-                            value={user.role}
-                            onChange={(event) => handleUserRoleChange(user.id, event.target.value)}
+                  <div className={`admin-list-grid view-${userView}`}>
+                    {visibleUsers.map((user) => (
+                      <article className="admin-row" key={user.id}>
+                        <div>
+                          <strong>{user.name}</strong>
+                          <span>
+                            {user.email} - {roleLabels[user.role] || user.role} - {user.country || "No country"}
+                          </span>
+                        </div>
+                        <div className="button-row">
+                          <label className="inline-role-select">
+                            <span>Promote role</span>
+                            <select
+                              aria-label={`Promote ${user.name} role`}
+                              value={user.role}
+                              onChange={(event) => handleUserRoleChange(user.id, event.target.value)}
+                            >
+                              {userRoles.map((role) => (
+                                <option key={role} value={role}>
+                                  {roleLabels[role]}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <button
+                            className="button secondary compact"
+                            type="button"
+                            onClick={() => {
+                              setPreviewUserId(user.id);
+                              setActiveTab("role dashboards");
+                            }}
                           >
-                            {userRoles.map((role) => (
-                              <option key={role} value={role}>
-                                {roleLabels[role]}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <button
-                          className="button secondary compact"
-                          type="button"
-                          onClick={() => {
-                            setPreviewUserId(user.id);
-                            setActiveTab("role dashboards");
-                          }}
-                        >
-                          View dashboard
-                        </button>
-                        <button className="button secondary compact" type="button" onClick={() => editUser(user)}>
-                          Edit
-                        </button>
-                        <button className="button danger compact" type="button" onClick={() => removeUser(user.id)}>
-                          Delete
-                        </button>
-                      </div>
-                    </article>
-                  ))}
+                            View dashboard
+                          </button>
+                          <button className="button secondary compact" type="button" onClick={() => editUser(user)}>
+                            Edit
+                          </button>
+                          <button className="button danger compact" type="button" onClick={() => removeUser(user.id)}>
+                            Delete
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
                   {filteredUsers.length > visibleUsers.length && (
                     <p className="empty-state">Refine search to load a smaller working set from {filteredUsers.length} matches.</p>
                   )}
@@ -1519,7 +1741,24 @@ export default function Admin() {
               </div>
             )}
             {activeTab === "company applications" && (
-              <PaginatedList className="admin-list full" items={companyApplications} label="company applications" emptyText="No company applications yet.">
+              <AdminCollection
+                items={companyApplications}
+                label="company applications"
+                emptyText="No company applications yet."
+                searchKeys={["companyName", "contactName", "email", "headquarters", (application) => application.operatingRegions?.join(" ")]}
+                filterOptions={[
+                  { value: "submitted", label: "Submitted", predicate: (application) => application.status === "submitted" },
+                  { value: "call_scheduled", label: "Call scheduled", predicate: (application) => application.status === "call_scheduled" },
+                  { value: "approved", label: "Approved", predicate: (application) => application.status === "approved" },
+                  { value: "rejected", label: "Rejected", predicate: (application) => application.status === "rejected" }
+                ]}
+                sortOptions={[
+                  { value: "newest", label: "Newest", compare: (left, right) => compareDateNewest(left.createdAt, right.createdAt) },
+                  { value: "company", label: "Company A-Z", compare: (left, right) => compareText(left.companyName, right.companyName) },
+                  { value: "status", label: "Status", compare: (left, right) => compareText(left.status, right.status) }
+                ]}
+                searchPlaceholder="Search company, contact, email or region"
+              >
                 {(application) => (
                   <article className="admin-row" key={application._id}>
                     <div>
@@ -1579,10 +1818,28 @@ export default function Admin() {
                     </div>
                   </article>
                 )}
-              </PaginatedList>
+              </AdminCollection>
             )}
             {activeTab === "guide applications" && (
-              <PaginatedList className="admin-list full" items={guideApplications} label="guide applications" emptyText="No guide applications yet.">
+              <AdminCollection
+                items={guideApplications}
+                label="guide applications"
+                emptyText="No guide applications yet."
+                searchKeys={["guideName", "email", "tour.title", (application) => application.languages?.join(" "), "status"]}
+                filterOptions={[
+                  { value: "submitted", label: "Submitted", predicate: (application) => application.status === "submitted" },
+                  { value: "company_approved", label: "Needs admin confirmation", predicate: (application) => application.status === "company_approved" },
+                  { value: "approved", label: "Approved", predicate: (application) => application.status === "approved" },
+                  { value: "rejected", label: "Rejected", predicate: (application) => application.status === "rejected" }
+                ]}
+                sortOptions={[
+                  { value: "newest", label: "Newest", compare: (left, right) => compareDateNewest(left.createdAt, right.createdAt) },
+                  { value: "guide", label: "Guide A-Z", compare: (left, right) => compareText(left.guideName, right.guideName) },
+                  { value: "rate", label: "Highest rate", compare: (left, right) => compareNumber(right.dailyRateEUR, left.dailyRateEUR) },
+                  { value: "status", label: "Status", compare: (left, right) => compareText(left.status, right.status) }
+                ]}
+                searchPlaceholder="Search guide, tour, email or language"
+              >
                 {(application) => (
                   <article className="admin-row" key={application._id}>
                     <div>
@@ -1628,10 +1885,28 @@ export default function Admin() {
                     </div>
                   </article>
                 )}
-              </PaginatedList>
+              </AdminCollection>
             )}
             {activeTab === "guide bookings" && (
-              <PaginatedList className="admin-list full" items={guideBookings} label="guide bookings" emptyText="No guide bookings yet.">
+              <AdminCollection
+                items={guideBookings}
+                label="guide bookings"
+                emptyText="No guide bookings yet."
+                searchKeys={["tour.title", "guide.name", "name", "email", "travelDates", "status"]}
+                filterOptions={[
+                  { value: "requested", label: "Requested", predicate: (booking) => booking.status === "requested" },
+                  { value: "accepted", label: "Accepted", predicate: (booking) => booking.status === "accepted" },
+                  { value: "declined", label: "Declined", predicate: (booking) => booking.status === "declined" },
+                  { value: "closed", label: "Closed", predicate: (booking) => booking.status === "closed" }
+                ]}
+                sortOptions={[
+                  { value: "newest", label: "Newest", compare: (left, right) => compareDateNewest(left.createdAt, right.createdAt) },
+                  { value: "tour", label: "Tour A-Z", compare: (left, right) => compareText(left.tour?.title, right.tour?.title) },
+                  { value: "traveller", label: "Traveller A-Z", compare: (left, right) => compareText(left.name, right.name) },
+                  { value: "status", label: "Status", compare: (left, right) => compareText(left.status, right.status) }
+                ]}
+                searchPlaceholder="Search tour, guide, traveller or dates"
+              >
                 {(booking) => (
                   <article className="admin-row" key={booking._id}>
                     <div>
@@ -1652,7 +1927,7 @@ export default function Admin() {
                     </select>
                   </article>
                 )}
-              </PaginatedList>
+              </AdminCollection>
             )}
             {activeTab === "gallery media" && (
               <div className="admin-grid">
@@ -1761,7 +2036,28 @@ export default function Admin() {
                     )}
                   </div>
                 </form>
-                <PaginatedList className="admin-list" items={galleryMedia} label="media items" emptyText="No gallery media yet.">
+                <AdminCollection
+                  className="admin-list"
+                  items={galleryMedia}
+                  label="media items"
+                  emptyText="No gallery media yet."
+                  searchKeys={["title", "description", "location", "creditName", "submittedBy.name", "status", "mediaType"]}
+                  filterOptions={[
+                    { value: "pending", label: "Pending", predicate: (item) => item.status === "pending" },
+                    { value: "approved", label: "Approved", predicate: (item) => item.status === "approved" },
+                    { value: "rejected", label: "Rejected", predicate: (item) => item.status === "rejected" },
+                    { value: "active", label: "Active", predicate: (item) => item.isActive },
+                    { value: "off", label: "Off", predicate: (item) => !item.isActive },
+                    { value: "video", label: "Video", predicate: (item) => item.mediaType === "video" }
+                  ]}
+                  sortOptions={[
+                    { value: "newest", label: "Newest", compare: (left, right) => compareDateNewest(left.createdAt, right.createdAt) },
+                    { value: "title", label: "Title A-Z", compare: (left, right) => compareText(left.title, right.title) },
+                    { value: "status", label: "Status", compare: (left, right) => compareText(left.status, right.status) },
+                    { value: "expiry", label: "Expiry", compare: (left, right) => compareDateNewest(right.expiresAt, left.expiresAt) }
+                  ]}
+                  searchPlaceholder="Search title, location, credit or status"
+                >
                   {(item) => (
                     <article className="admin-row" key={item._id}>
                       <div>
@@ -1791,7 +2087,7 @@ export default function Admin() {
                       </div>
                     </article>
                   )}
-                </PaginatedList>
+                </AdminCollection>
               </div>
             )}
             {activeTab === "tours" && (
@@ -1951,7 +2247,32 @@ export default function Admin() {
                     )}
                   </div>
                 </form>
-                <PaginatedList className="admin-list" items={tours} label="tours" emptyText="No tours yet.">
+                <AdminCollection
+                  className="admin-list"
+                  items={tours}
+                  label="tours"
+                  emptyText="No tours yet."
+                  searchKeys={["title", "location", "category", "partner.name", "shortDescription", "description"]}
+                  filterOptions={[
+                    { value: "active", label: "Active", predicate: (tour) => tour.isActive },
+                    { value: "pending", label: "Pending", predicate: (tour) => !tour.isActive },
+                    { value: "featured", label: "Featured", predicate: (tour) => tour.featured },
+                    { value: "vr", label: "VR enabled", predicate: (tour) => tour.vrEnabled },
+                    ...activityOptions.map((activity) => ({
+                      value: `category-${activity}`,
+                      label: activity,
+                      predicate: (tour) => tour.category === activity
+                    }))
+                  ]}
+                  sortOptions={[
+                    { value: "newest", label: "Newest", compare: (left, right) => compareDateNewest(left.createdAt, right.createdAt) },
+                    { value: "title", label: "Title A-Z", compare: (left, right) => compareText(left.title, right.title) },
+                    { value: "location", label: "Location A-Z", compare: (left, right) => compareText(left.location, right.location) },
+                    { value: "price-low", label: "Price low-high", compare: (left, right) => compareNumber(left.priceEUR, right.priceEUR) },
+                    { value: "price-high", label: "Price high-low", compare: (left, right) => compareNumber(right.priceEUR, left.priceEUR) }
+                  ]}
+                  searchPlaceholder="Search title, location, partner or category"
+                >
                   {(tour) => (
                     <article className="admin-row" key={tour._id}>
                       <div>
@@ -1971,7 +2292,7 @@ export default function Admin() {
                       </div>
                     </article>
                   )}
-                </PaginatedList>
+                </AdminCollection>
               </div>
             )}
             {activeTab === "partners" && (
@@ -2009,7 +2330,25 @@ export default function Admin() {
                     {editingPartnerId ? "Update partner" : "Create partner"}
                   </button>
                 </form>
-                <PaginatedList className="admin-list" items={partners} label="partners" emptyText="No partners yet.">
+                <AdminCollection
+                  className="admin-list"
+                  items={partners}
+                  label="partners"
+                  emptyText="No partners yet."
+                  searchKeys={["name", "location", "contactEmail", "contactPhone", "description", "commissionTerms"]}
+                  filterOptions={[
+                    { value: "active", label: "Active", predicate: (partner) => partner.isActive },
+                    { value: "inactive", label: "Inactive", predicate: (partner) => !partner.isActive },
+                    { value: "has-secret", label: "Has postback secret", predicate: (partner) => Boolean(partner.postbackSecret) }
+                  ]}
+                  sortOptions={[
+                    { value: "name", label: "Name A-Z", compare: (left, right) => compareText(left.name, right.name) },
+                    { value: "location", label: "Location A-Z", compare: (left, right) => compareText(left.location, right.location) },
+                    { value: "commission-high", label: "Commission high-low", compare: (left, right) => compareNumber(right.commissionRatePercent, left.commissionRatePercent) },
+                    { value: "newest", label: "Newest", compare: (left, right) => compareDateNewest(left.createdAt, right.createdAt) }
+                  ]}
+                  searchPlaceholder="Search partner, location, contact or terms"
+                >
                   {(partner) => (
                     <article className="admin-row" key={partner._id}>
                       <div>
@@ -2038,11 +2377,30 @@ export default function Admin() {
                       </div>
                     </article>
                   )}
-                </PaginatedList>
+                </AdminCollection>
               </div>
             )}
             {activeTab === "enquiries" && (
-              <PaginatedList className="admin-list full" items={enquiries} label="enquiries" emptyText="No enquiries yet.">
+              <AdminCollection
+                items={enquiries}
+                label="enquiries"
+                emptyText="No enquiries yet."
+                searchKeys={["name", "email", "destination", "message", "tour.title", "type", "status"]}
+                filterOptions={[
+                  { value: "new", label: "New", predicate: (enquiry) => enquiry.status === "new" },
+                  { value: "contacted", label: "Contacted", predicate: (enquiry) => enquiry.status === "contacted" },
+                  { value: "referred", label: "Referred", predicate: (enquiry) => enquiry.status === "referred" },
+                  { value: "closed", label: "Closed", predicate: (enquiry) => enquiry.status === "closed" },
+                  { value: "partner_application", label: "Partner applications", predicate: (enquiry) => enquiry.type === "partner_application" }
+                ]}
+                sortOptions={[
+                  { value: "newest", label: "Newest", compare: (left, right) => compareDateNewest(left.createdAt, right.createdAt) },
+                  { value: "name", label: "Name A-Z", compare: (left, right) => compareText(left.name, right.name) },
+                  { value: "status", label: "Status", compare: (left, right) => compareText(left.status, right.status) },
+                  { value: "destination", label: "Destination A-Z", compare: (left, right) => compareText(left.destination, right.destination) }
+                ]}
+                searchPlaceholder="Search name, email, destination or message"
+              >
                 {(enquiry) => (
                   <article className="admin-row" key={enquiry._id}>
                     <div>
@@ -2063,7 +2421,7 @@ export default function Admin() {
                     </select>
                   </article>
                 )}
-              </PaginatedList>
+              </AdminCollection>
             )}
             {activeTab === "referrals" && (
               <div className="admin-list full">
@@ -2165,7 +2523,31 @@ export default function Admin() {
                     </button>
                   </div>
                 </form>
-                <PaginatedList className="admin-list embedded" items={referrals} label="referrals" emptyText="No referral clicks tracked yet.">
+                <AdminCollection
+                  className="admin-list embedded"
+                  items={referrals}
+                  label="referrals"
+                  emptyText="No referral clicks tracked yet."
+                  searchKeys={["trackingCode", "tour.title", "partner.name", "user.email", "partnerBookingId", "status", "notes"]}
+                  filterOptions={[
+                    ...referralStatuses.map((status) => ({
+                      value: status,
+                      label: statusLabel(status),
+                      predicate: (referral) => (referral.status || (referral.converted ? "converted" : "clicked")) === status
+                    })),
+                    { value: "unpaid", label: "Unpaid commission", predicate: (referral) => Number(referral.confirmedCommissionEUR || 0) > Number(referral.paidCommissionEUR || 0) },
+                    { value: "guest", label: "Guest clicks", predicate: (referral) => !referral.user }
+                  ]}
+                  sortOptions={[
+                    { value: "newest", label: "Newest", compare: (left, right) => compareDateNewest(left.clickedAt, right.clickedAt) },
+                    { value: "tour", label: "Tour A-Z", compare: (left, right) => compareText(left.tour?.title, right.tour?.title) },
+                    { value: "partner", label: "Partner A-Z", compare: (left, right) => compareText(left.partner?.name, right.partner?.name) },
+                    { value: "confirmed-high", label: "Confirmed high-low", compare: (left, right) => compareNumber(right.confirmedCommissionEUR, left.confirmedCommissionEUR) },
+                    { value: "status", label: "Status", compare: (left, right) => compareText(left.status, right.status) }
+                  ]}
+                  searchPlaceholder="Search tracking code, tour, partner or traveller"
+                  pageSize={12}
+                >
                   {(referral) => (
                     <article className="admin-row referral-row" key={referral._id}>
                       <div>
@@ -2254,28 +2636,8 @@ export default function Admin() {
                       </div>
                     </article>
                   )}
-                </PaginatedList>
+                </AdminCollection>
               </div>
-            )}
-            {activeTab === "referrals-old" && (
-              <PaginatedList className="admin-list full" items={referrals} label="referrals" emptyText="No referral clicks tracked yet.">
-                {(referral) => (
-                  <article className="admin-row" key={referral._id}>
-                    <div>
-                      <strong>{referral.tour?.title}</strong>
-                      <span>
-                        {referral.partner?.name} · {formatDate(referral.clickedAt)} ·{" "}
-                        {referral.converted ? "Converted" : "Pending"}
-                      </span>
-                    </div>
-                    {!referral.converted && (
-                      <button className="button primary compact" type="button" onClick={() => handleReferralConversion(referral._id)}>
-                        Mark converted
-                      </button>
-                    )}
-                  </article>
-                )}
-              </PaginatedList>
             )}
             {activeTab === "uploads" && (
               <div className="side-panel">

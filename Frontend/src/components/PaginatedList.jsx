@@ -16,7 +16,7 @@ export default function PaginatedList({
 
   useEffect(() => {
     setPage(1);
-  }, [items.length, pageSize]);
+  }, [items, pageSize]);
 
   const safePage = Math.min(page, totalPages);
   const visibleItems = useMemo(() => {
