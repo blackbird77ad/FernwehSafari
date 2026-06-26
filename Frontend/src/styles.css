@@ -3490,12 +3490,14 @@ textarea:focus {
 }
 
 .admin-console-nav button {
+  --tab-accent: var(--admin-accent);
   position: relative;
   grid-template-columns: minmax(0, 1fr) auto;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid color-mix(in srgb, var(--tab-accent) 18%, rgba(255, 255, 255, 0.08));
   border-radius: 0.5rem;
   padding: 0.68rem 0.72rem;
   background: rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0.16rem 0 0 color-mix(in srgb, var(--tab-accent) 66%, transparent);
   color: rgba(255, 255, 255, 0.94);
   font-size: 0.96rem;
   font-weight: 850;
@@ -3521,22 +3523,26 @@ textarea:focus {
   place-items: center;
   border-radius: 999px;
   padding: 0 0.35rem;
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.86);
+  background: color-mix(in srgb, var(--tab-accent) 20%, rgba(255, 255, 255, 0.12));
+  color: rgba(255, 255, 255, 0.92);
   font-size: 0.72rem;
   font-weight: 920;
 }
 
 .admin-console-nav button.active,
 .admin-console-nav button:hover {
-  border-color: rgba(200, 162, 74, 0.42);
-  background: linear-gradient(90deg, rgba(200, 162, 74, 0.2), rgba(14, 116, 144, 0.12));
+  border-color: color-mix(in srgb, var(--tab-accent) 62%, rgba(255, 255, 255, 0.16));
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--tab-accent) 24%, rgba(255, 255, 255, 0.04)),
+    rgba(255, 255, 255, 0.065)
+  );
   color: #fffaf0;
 }
 
 .admin-console-nav button.active small,
 .admin-console-nav button:hover small {
-  background: var(--admin-accent);
+  background: color-mix(in srgb, var(--tab-accent) 82%, white);
   color: var(--admin-deep-2);
 }
 
@@ -3547,7 +3553,7 @@ textarea:focus {
   left: -0.35rem;
   width: 0.2rem;
   border-radius: 999px;
-  background: var(--admin-accent);
+  background: var(--tab-accent);
   content: "";
 }
 
@@ -3603,16 +3609,21 @@ textarea:focus {
 }
 
 .admin-folder-tabs button {
+  --tab-accent: var(--admin-accent);
   position: relative;
   display: inline-flex;
   min-height: 2.42rem;
   align-items: center;
   gap: 0.45rem;
-  border: 1px solid var(--admin-line);
+  border: 1px solid color-mix(in srgb, var(--tab-accent) 28%, var(--admin-line));
   border-bottom-color: rgba(215, 221, 227, 0.36);
   border-radius: 0.62rem 0.62rem 0 0;
   padding: 0.5rem 0.75rem;
-  background: linear-gradient(180deg, var(--sky), color-mix(in srgb, var(--sky) 72%, var(--admin-surface)));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tab-accent) 12%, var(--sky)),
+    color-mix(in srgb, var(--sky) 74%, var(--admin-surface))
+  );
   color: var(--admin-muted);
   cursor: pointer;
   font-weight: 900;
@@ -3626,7 +3637,8 @@ textarea:focus {
   left: 0.78rem;
   height: 0.16rem;
   border-radius: 999px;
-  background: transparent;
+  background: var(--tab-accent);
+  opacity: 0.62;
   content: "";
 }
 
@@ -3640,7 +3652,8 @@ textarea:focus {
 }
 
 .admin-folder-tabs button.active::before {
-  background: linear-gradient(90deg, var(--admin-accent), var(--admin-accent-text));
+  background: linear-gradient(90deg, var(--tab-accent), color-mix(in srgb, var(--tab-accent) 42%, white));
+  opacity: 1;
 }
 
 .admin-folder-tabs button small {
@@ -3650,15 +3663,15 @@ textarea:focus {
   place-items: center;
   border-radius: 999px;
   padding: 0 0.35rem;
-  background: white;
-  color: var(--admin-accent-text);
+  background: color-mix(in srgb, var(--tab-accent) 12%, white);
+  color: color-mix(in srgb, var(--tab-accent) 76%, var(--admin-deep));
   font-size: 0.72rem;
   font-weight: 950;
 }
 
 .admin-folder-tabs button.active small {
-  background: rgba(200, 162, 74, 0.16);
-  color: var(--admin-deep);
+  background: color-mix(in srgb, var(--tab-accent) 18%, white);
+  color: color-mix(in srgb, var(--tab-accent) 78%, var(--admin-deep));
 }
 
 .admin-topbar .eyebrow,

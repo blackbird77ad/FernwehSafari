@@ -128,6 +128,21 @@ const tabMeta = {
   }
 };
 
+const tabAccentColors = {
+  overview: "#0e7490",
+  referrals: "#c8a24a",
+  users: "#047857",
+  "role dashboards": "#6366f1",
+  "company applications": "#b87333",
+  tours: "#0f766e",
+  partners: "#7c3aed",
+  "guide applications": "#be123c",
+  "guide bookings": "#2563eb",
+  "gallery media": "#db2777",
+  enquiries: "#ea580c",
+  uploads: "#0891b2"
+};
+
 const emptyTour = {
   title: "",
   shortDescription: "",
@@ -1369,6 +1384,7 @@ export default function Admin() {
               className={activeTab === tab ? "active" : ""}
               key={tab}
               type="button"
+              style={{ "--tab-accent": tabAccentColors[tab] || "var(--admin-accent)" }}
               onClick={() => handleTabChange(tab)}
             >
               <strong>{tabMeta[tab]?.title || tab}</strong>
@@ -1433,6 +1449,7 @@ export default function Admin() {
               className={activeTab === tab ? "active" : ""}
               key={tab}
               type="button"
+              style={{ "--tab-accent": tabAccentColors[tab] || "var(--admin-accent)" }}
               onClick={() => handleTabChange(tab)}
               aria-current={activeTab === tab ? "page" : undefined}
             >
