@@ -109,7 +109,7 @@ If MongoDB Atlas rejects the connection after `MONGO_URI` is set, add Render's o
 
 ## Cloudflare Pages Frontend Deployment
 
-Cloudflare Pages does not read `Frontend/.env` from your computer. Add this variable in the Cloudflare Pages dashboard before deploying:
+Cloudflare Pages does not read `Frontend/.env` from your computer. Production browser builds are hard-locked to the Render API, but keep this variable in the Cloudflare Pages dashboard for clarity and local/preview parity:
 
 ```text
 VITE_API_URL=https://fernwehsafari.onrender.com/api
@@ -123,7 +123,7 @@ The app will also tolerate the Render root URL and add `/api` automatically, but
 VITE_API_URL=https://fernwehsafari.onrender.com/api
 ```
 
-Do not leave `VITE_API_URL` as `http://localhost:5000/api` in production. Browsers around the world will try to call their own computer instead of Travellex, which appears as a network error. Also do not set it to `https://travellex.tours/api` or `https://fernwehsafari.pages.dev/api`; those are frontend hosts, not the Render backend.
+Do not leave `VITE_API_URL` as `http://localhost:5000/api` in production. Also do not set it to `https://travellex.tours/api` or `https://fernwehsafari.pages.dev/api`; those are frontend hosts, not the Render backend.
 
 The frontend includes Cloudflare Pages Function safety nets at `Frontend/functions/api/[[path]].js` and `functions/api/[[path]].js`. This covers both common Pages setups: `Frontend` as the project root, or the repository root with `Frontend/dist` as the output directory. If any deployed bundle still calls `/api/...` on the frontend domain, the Function proxies that request to:
 

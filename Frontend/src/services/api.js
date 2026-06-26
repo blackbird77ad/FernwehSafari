@@ -1,7 +1,6 @@
 import axios from "axios";
 
 const PRODUCTION_API_URL = "https://fernwehsafari.onrender.com/api";
-const FRONTEND_HOSTS = new Set(["travellex.tours", "www.travellex.tours", "fernwehsafari.pages.dev"]);
 
 function cleanConfiguredURL(value) {
   const rawValue = String(value || "").trim().replace(/^['"]|['"]$/g, "");
@@ -21,10 +20,6 @@ function normalizeBaseURL(value) {
   }
 
   return baseURL.endsWith("/api") ? baseURL : `${baseURL}/api`;
-}
-
-function isFrontendHost(hostname = "") {
-  return FRONTEND_HOSTS.has(hostname) || hostname.endsWith(".fernwehsafari.pages.dev");
 }
 
 function defaultApiURL() {
@@ -49,13 +44,12 @@ function resolveApiURL(configuredURL) {
   const currentHostname = window.location.hostname;
   const isLocalhost = currentHostname === "localhost" || currentHostname === "127.0.0.1";
 
+  if (!isLocalhost) {
+    return PRODUCTION_API_URL;
+  }
+
   try {
     const candidate = cleanedConfiguredURL ? new window.URL(cleanedConfiguredURL, window.location.origin) : new window.URL(fallbackURL);
-
-    if (!isLocalhost && isFrontendHost(candidate.hostname)) {
-      return PRODUCTION_API_URL;
-    }
-
     return normalizeBaseURL(candidate.href);
   } catch {
     return fallbackURL;
