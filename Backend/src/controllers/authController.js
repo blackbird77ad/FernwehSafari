@@ -79,6 +79,12 @@ async function sendVerificationEmail(user, token) {
   }
 }
 
+function runInBackground(task) {
+  Promise.resolve()
+    .then(task)
+    .catch(() => null);
+}
+
 const register = asyncHandler(async (req, res) => {
   const { name, email, password, country } = req.body;
 
@@ -96,13 +102,13 @@ const register = asyncHandler(async (req, res) => {
     if (existingUser.emailVerified === false) {
       const token = assignVerificationToken(existingUser);
       await existingUser.save();
-      const verificationStatus = await sendVerificationEmail(existingUser, token);
+      runInBackground(() => sendVerificationEmail(existingUser, token));
 
       sendResponse(res, 200, {
         verificationRequired: true,
         email: existingUser.email,
-        verificationEmailSent: verificationStatus.sent,
-        verificationEmailMessage: verificationStatus.sent ? "Verification email resent." : verificationStatus.reason
+        verificationEmailSent: null,
+        verificationEmailMessage: "Verification email is being sent. Check your inbox shortly."
       });
       return;
     }
@@ -120,20 +126,22 @@ const register = asyncHandler(async (req, res) => {
   });
   const verificationToken = assignVerificationToken(user);
   await user.save();
-  const verificationStatus = await sendVerificationEmail(user, verificationToken);
+  runInBackground(() => sendVerificationEmail(user, verificationToken));
 
-  await notifyOwner(`New Travellex user registered: ${user.name}`, [
-    `Name: ${user.name}`,
-    `Email: ${user.email}`,
-    `Role: ${normalizeRole(user.role)}`,
-    `Country: ${user.country || "Not provided"}`
-  ]).catch(() => null);
+  runInBackground(() =>
+    notifyOwner(`New Travellex user registered: ${user.name}`, [
+      `Name: ${user.name}`,
+      `Email: ${user.email}`,
+      `Role: ${normalizeRole(user.role)}`,
+      `Country: ${user.country || "Not provided"}`
+    ])
+  );
 
   sendResponse(res, 201, {
     verificationRequired: true,
     email: user.email,
-    verificationEmailSent: verificationStatus.sent,
-    verificationEmailMessage: verificationStatus.sent ? "Verification email sent." : verificationStatus.reason,
+    verificationEmailSent: null,
+    verificationEmailMessage: "Verification email is being sent. Check your inbox shortly.",
     user: serializeUser(user)
   });
 });
