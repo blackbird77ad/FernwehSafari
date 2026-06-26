@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import ConfirmActionButton from "../components/ConfirmActionButton";
 import PaginatedList from "../components/PaginatedList";
 import Spinner from "../components/Spinner";
 import TourCard from "../components/TourCard";
@@ -376,9 +377,12 @@ export default function Dashboard() {
                       <button className="button secondary compact" type="button" onClick={() => editCompanyTour(tour)}>
                         Edit
                       </button>
-                      <button className="button danger compact" type="button" onClick={() => removeCompanyTour(tour._id)}>
-                        Delete
-                      </button>
+                      <ConfirmActionButton
+                        actionLabel={`Delete ${tour.title}`}
+                        confirmMessage={`Delete tour "${tour.title}"? This cannot be undone.`}
+                        iconOnly
+                        onConfirm={() => removeCompanyTour(tour._id)}
+                      />
                     </div>
                   </article>
                 )}
@@ -480,9 +484,14 @@ export default function Dashboard() {
               {(tour) => (
                 <div className="stacked-card" key={tour._id}>
                   <TourCard tour={tour} />
-                  <button className="button secondary" type="button" onClick={() => handleRemove(tour._id)}>
+                  <ConfirmActionButton
+                    actionLabel={`Remove ${tour.title} from saved tours`}
+                    className="button secondary"
+                    confirmMessage={`Remove "${tour.title}" from your saved tours?`}
+                    onConfirm={() => handleRemove(tour._id)}
+                  >
                     Remove
-                  </button>
+                  </ConfirmActionButton>
                 </div>
               )}
             </PaginatedList>

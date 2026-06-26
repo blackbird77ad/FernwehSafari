@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import ConfirmActionButton from "../components/ConfirmActionButton";
 import PaginatedList from "../components/PaginatedList";
 import Spinner from "../components/Spinner";
 import Toast from "../components/Toast";
@@ -1712,9 +1713,12 @@ export default function Admin() {
                           <button className="button secondary compact" type="button" onClick={() => editUser(user)}>
                             Edit
                           </button>
-                          <button className="button danger compact" type="button" onClick={() => removeUser(user.id)}>
-                            Delete
-                          </button>
+                          <ConfirmActionButton
+                            actionLabel={`Delete ${user.name}`}
+                            confirmMessage={`Delete ${user.name}? This removes the account and cannot be undone.`}
+                            iconOnly
+                            onConfirm={() => removeUser(user.id)}
+                          />
                         </div>
                       </article>
                     ))}
@@ -1888,9 +1892,12 @@ export default function Admin() {
                       >
                         Reject
                       </button>
-                      <button className="button danger compact" type="button" onClick={() => removeCompanyApplication(application._id)}>
-                        Delete
-                      </button>
+                      <ConfirmActionButton
+                        actionLabel={`Delete ${application.companyName} application`}
+                        confirmMessage={`Delete ${application.companyName}'s company application? This cannot be undone.`}
+                        iconOnly
+                        onConfirm={() => removeCompanyApplication(application._id)}
+                      />
                     </div>
                   </article>
                 )}
@@ -2157,9 +2164,12 @@ export default function Admin() {
                         <button className="button danger compact" type="button" onClick={() => handleGalleryReview(item._id, "rejected")}>
                           Reject
                         </button>
-                        <button className="button danger compact" type="button" onClick={() => removeGalleryMedia(item._id)}>
-                          Delete
-                        </button>
+                        <ConfirmActionButton
+                          actionLabel={`Delete ${item.title}`}
+                          confirmMessage={`Delete gallery media "${item.title}"? This cannot be undone.`}
+                          iconOnly
+                          onConfirm={() => removeGalleryMedia(item._id)}
+                        />
                       </div>
                     </article>
                   )}
@@ -2453,9 +2463,12 @@ export default function Admin() {
                         <button className="button secondary compact" type="button" onClick={() => editTour(tour)}>
                           Edit
                         </button>
-                        <button className="button danger compact" type="button" onClick={() => removeTour(tour._id)}>
-                          Delete
-                        </button>
+                        <ConfirmActionButton
+                          actionLabel={`Delete ${tour.title}`}
+                          confirmMessage={`Delete tour "${tour.title}"? This cannot be undone.`}
+                          iconOnly
+                          onConfirm={() => removeTour(tour._id)}
+                        />
                       </div>
                     </article>
                   )}
@@ -2542,9 +2555,12 @@ export default function Admin() {
                         <button className="button secondary compact" type="button" onClick={() => rotatePartnerSecret(partner._id)}>
                           Rotate secret
                         </button>
-                        <button className="button danger compact" type="button" onClick={() => removePartner(partner._id)}>
-                          Delete
-                        </button>
+                        <ConfirmActionButton
+                          actionLabel={`Delete ${partner.name}`}
+                          confirmMessage={`Delete partner "${partner.name}"? This cannot be undone.`}
+                          iconOnly
+                          onConfirm={() => removePartner(partner._id)}
+                        />
                       </div>
                     </article>
                   )}

@@ -1210,6 +1210,32 @@ p {
   transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
 }
 
+.button.has-icon {
+  gap: 0.42rem;
+}
+
+.button-icon {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 1rem;
+}
+
+.button.icon-only {
+  width: 2.35rem;
+  min-width: 2.35rem;
+  padding-inline: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .button:hover {
   transform: translateY(-1px);
 }
