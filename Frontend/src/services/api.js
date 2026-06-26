@@ -3,8 +3,23 @@ import axios from "axios";
 const PRODUCTION_API_URL = "https://fernwehsafari.onrender.com/api";
 const FRONTEND_HOSTS = new Set(["travellex.tours", "www.travellex.tours", "fernwehsafari.pages.dev"]);
 
+function cleanConfiguredURL(value) {
+  const rawValue = String(value || "").trim().replace(/^['"]|['"]$/g, "");
+  const envAssignmentMatch = rawValue.match(/^VITE_API_URL\s*=\s*(.+)$/i);
+  const nextValue = envAssignmentMatch ? envAssignmentMatch[1].trim().replace(/^['"]|['"]$/g, "") : rawValue;
+  const absoluteUrlMatch = nextValue.match(/https?:\/\/.+$/i);
+
+  return absoluteUrlMatch ? absoluteUrlMatch[0] : nextValue;
+}
+
 function normalizeBaseURL(value) {
-  const baseURL = String(value || "").replace(/\/+$/, "");
+  const baseURL = cleanConfiguredURL(value).replace(/\/+$/, "");
+  const apiPathIndex = baseURL.indexOf("/api/");
+
+  if (apiPathIndex !== -1) {
+    return baseURL.slice(0, apiPathIndex + 4);
+  }
+
   return baseURL.endsWith("/api") ? baseURL : `${baseURL}/api`;
 }
 
@@ -24,8 +39,10 @@ function defaultApiURL() {
 }
 
 function resolveApiURL(configuredURL) {
+  const cleanedConfiguredURL = cleanConfiguredURL(configuredURL);
+
   if (typeof window === "undefined") {
-    return normalizeBaseURL(configuredURL || defaultApiURL());
+    return normalizeBaseURL(cleanedConfiguredURL || defaultApiURL());
   }
 
   const fallbackURL = defaultApiURL();
@@ -33,7 +50,7 @@ function resolveApiURL(configuredURL) {
   const isLocalhost = currentHostname === "localhost" || currentHostname === "127.0.0.1";
 
   try {
-    const candidate = configuredURL ? new window.URL(configuredURL, window.location.origin) : new window.URL(fallbackURL);
+    const candidate = cleanedConfiguredURL ? new window.URL(cleanedConfiguredURL, window.location.origin) : new window.URL(fallbackURL);
 
     if (!isLocalhost && isFrontendHost(candidate.hostname)) {
       return PRODUCTION_API_URL;

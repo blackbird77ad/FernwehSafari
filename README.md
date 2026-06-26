@@ -115,6 +115,8 @@ Cloudflare Pages does not read `Frontend/.env` from your computer. Add this vari
 VITE_API_URL=https://fernwehsafari.onrender.com/api
 ```
 
+In Cloudflare's UI, enter the variable name as `VITE_API_URL` and the value as only `https://fernwehsafari.onrender.com/api`. Do not paste `VITE_API_URL=https://fernwehsafari.onrender.com/api` into the value field.
+
 The app will also tolerate the Render root URL and add `/api` automatically, but the safest Cloudflare Pages value is:
 
 ```text

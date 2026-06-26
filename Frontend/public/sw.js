@@ -1,4 +1,4 @@
-const CACHE_NAME = "travellex-pwa-v1";
+const CACHE_NAME = "travellex-pwa-v2";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/travellex-pwa-icon.svg"];
 
 self.addEventListener("install", (event) => {
@@ -34,32 +34,41 @@ self.addEventListener("fetch", (event) => {
 
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
+      (async () => {
+        try {
+          const response = await fetch(request);
           const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("/", copy));
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put("/", copy);
           return response;
-        })
-        .catch(() => caches.match("/") || Response.error())
+        } catch {
+          const cached = await caches.match("/");
+          return cached || Response.error();
+        }
+      })()
     );
     return;
   }
 
   if (url.origin === self.location.origin) {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        const fresh = fetch(request)
-          .then((response) => {
-            if (response.ok) {
-              const copy = response.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-            }
-            return response;
-          })
-          .catch(() => cached);
+      (async () => {
+        const cached = await caches.match(request);
 
-        return cached || fresh;
-      })
+        try {
+          const response = await fetch(request);
+
+          if (response.ok) {
+            const copy = response.clone();
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(request, copy);
+          }
+
+          return response;
+        } catch {
+          return cached || Response.error();
+        }
+      })()
     );
   }
 });

@@ -19,8 +19,11 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 
 if ("serviceWorker" in window.navigator && import.meta.env.PROD) {
   window.addEventListener("load", () => {
-    window.navigator.serviceWorker.register("/sw.js").catch(() => {
-      // The app still works normally if the browser blocks service workers.
-    });
+    window.navigator.serviceWorker
+      .register("/sw.js")
+      .then((registration) => registration.update())
+      .catch(() => {
+        // The app still works normally if the browser blocks service workers.
+      });
   });
 }
