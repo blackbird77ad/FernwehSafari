@@ -71,6 +71,7 @@ Default URLs:
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:5000/api`
 - Production domain: `https://travellex.tours`
+- Production API: `https://api.travellex.tours/api`
 - Cloudflare Pages host: `https://fernwehsafari.pages.dev`
 
 ## Render Backend Deployment
@@ -105,6 +106,22 @@ Start Command: npm start
 ```
 
 If MongoDB Atlas rejects the connection after `MONGO_URI` is set, add Render's outbound access to Atlas Network Access, or allow access from `0.0.0.0/0` if that matches your security policy.
+
+## Cloudflare Pages Frontend Deployment
+
+Cloudflare Pages does not read `Frontend/.env` from your computer. Add this variable in the Cloudflare Pages dashboard before deploying:
+
+```text
+VITE_API_URL=https://api.travellex.tours/api
+```
+
+If you do not use `api.travellex.tours`, set `VITE_API_URL` to the public Render backend URL with `/api` at the end, for example:
+
+```text
+VITE_API_URL=https://<your-render-service>.onrender.com/api
+```
+
+Do not leave `VITE_API_URL` as `http://localhost:5000/api` in production. Browsers around the world will try to call their own computer instead of Travellex, which appears as a network error.
 
 ## Demo Admin
 

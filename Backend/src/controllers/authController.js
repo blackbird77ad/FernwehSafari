@@ -41,7 +41,10 @@ function hashToken(token) {
 }
 
 function buildClientUrl(path) {
-  const clientUrl = (process.env.CLIENT_URL || "http://localhost:5173").replace(/\/$/, "");
+  const configuredClientUrl = (process.env.CLIENT_URL || "http://localhost:5173").replace(/\/+$/, "");
+  const isLocalClientUrl = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredClientUrl);
+  const clientUrl = process.env.NODE_ENV === "production" && isLocalClientUrl ? "https://travellex.tours" : configuredClientUrl;
+
   return `${clientUrl}${path}`;
 }
 

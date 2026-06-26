@@ -1,4 +1,4 @@
-import { activityOptions, destinationOptions, tourSortOptions } from "../utils/travelOptions";
+import { activityOptions, comfortLevelOptions, destinationOptions, tourSortOptions, tourTypeOptions } from "../utils/travelOptions";
 
 export default function FilterBar({ filters, onChange }) {
   function update(field, value) {
@@ -42,6 +42,25 @@ export default function FilterBar({ filters, onChange }) {
         </datalist>
       </label>
       <label className="field">
+        <span>Travel date</span>
+        <input
+          type="date"
+          value={filters.travelDate}
+          onChange={(event) => update("travelDate", event.target.value)}
+        />
+      </label>
+      <label className="field">
+        <span>Min price</span>
+        <input
+          type="number"
+          min="0"
+          step="100"
+          value={filters.minPrice}
+          onChange={(event) => update("minPrice", event.target.value)}
+          placeholder="500"
+        />
+      </label>
+      <label className="field">
         <span>Max price</span>
         <input
           type="number"
@@ -51,6 +70,37 @@ export default function FilterBar({ filters, onChange }) {
           onChange={(event) => update("maxPrice", event.target.value)}
           placeholder="4000"
         />
+      </label>
+      <label className="field">
+        <span>Comfort</span>
+        <select value={filters.comfortLevel} onChange={(event) => update("comfortLevel", event.target.value)}>
+          <option value="">Any comfort</option>
+          {comfortLevelOptions.map((level) => (
+            <option key={level} value={level}>
+              {level}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="field">
+        <span>Tour type</span>
+        <select value={filters.tourType} onChange={(event) => update("tourType", event.target.value)}>
+          <option value="">Any type</option>
+          {tourTypeOptions.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="field">
+        <span>Min rating</span>
+        <select value={filters.minRating} onChange={(event) => update("minRating", event.target.value)}>
+          <option value="">Any rating</option>
+          <option value="3">3+ stars</option>
+          <option value="4">4+ stars</option>
+          <option value="4.5">4.5+ stars</option>
+        </select>
       </label>
       <label className="field">
         <span>Sort</span>

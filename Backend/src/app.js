@@ -13,15 +13,20 @@ const userRoutes = require("./routes/userRoutes");
 const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
+
+function normalizeOrigin(origin = "") {
+  return String(origin).trim().replace(/\/+$/, "");
+}
+
 const configuredOrigins = [
   process.env.CLIENT_URL,
   ...(process.env.CLIENT_ORIGINS || "")
     .split(",")
-    .map((origin) => origin.trim())
+    .map((origin) => normalizeOrigin(origin))
     .filter(Boolean)
 ];
 const allowedOrigins = [
-  ...configuredOrigins,
+  ...configuredOrigins.map((origin) => normalizeOrigin(origin)),
   "https://travellex.tours",
   "https://www.travellex.tours",
   "https://fernwehsafari.pages.dev",
@@ -30,10 +35,36 @@ const allowedOrigins = [
 ].filter(Boolean);
 const uniqueAllowedOrigins = [...new Set(allowedOrigins)];
 
+function isAllowedOrigin(origin) {
+  if (!origin) {
+    return true;
+  }
+
+  const normalizedOrigin = normalizeOrigin(origin);
+
+  if (uniqueAllowedOrigins.includes(normalizedOrigin)) {
+    return true;
+  }
+
+  try {
+    const { hostname, protocol } = new URL(normalizedOrigin);
+    const isHttps = protocol === "https:";
+    return (
+      isHttps &&
+      (hostname === "travellex.tours" ||
+        hostname === "www.travellex.tours" ||
+        hostname === "fernwehsafari.pages.dev" ||
+        hostname.endsWith(".fernwehsafari.pages.dev"))
+    );
+  } catch (error) {
+    return false;
+  }
+}
+
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || uniqueAllowedOrigins.includes(origin)) {
+      if (isAllowedOrigin(origin)) {
         callback(null, true);
         return;
       }

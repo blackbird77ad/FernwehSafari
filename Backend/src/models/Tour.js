@@ -55,6 +55,9 @@ const approvedGuideSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const COMFORT_LEVELS = ["Budget", "Midrange", "Luxury", "Premium", "Mixed"];
+const TOUR_TYPES = ["Private", "Shared", "Private or shared"];
+
 const tourSchema = new mongoose.Schema(
   {
     title: {
@@ -86,6 +89,10 @@ const tourSchema = new mongoose.Schema(
       required: [true, "Tour duration is required."],
       trim: true
     },
+    durationDays: {
+      type: Number,
+      min: [1, "Tour duration days must be at least 1."]
+    },
     location: {
       type: String,
       required: [true, "Tour location is required."],
@@ -99,6 +106,53 @@ const tourSchema = new mongoose.Schema(
     images: {
       type: [String],
       default: []
+    },
+    comfortLevel: {
+      type: String,
+      enum: COMFORT_LEVELS,
+      default: "Midrange"
+    },
+    tourType: {
+      type: String,
+      enum: TOUR_TYPES,
+      default: "Private or shared"
+    },
+    routeSummary: {
+      type: String,
+      trim: true
+    },
+    startLocation: {
+      type: String,
+      trim: true
+    },
+    endLocation: {
+      type: String,
+      trim: true
+    },
+    inclusions: {
+      type: [String],
+      default: []
+    },
+    exclusions: {
+      type: [String],
+      default: []
+    },
+    availableFrom: {
+      type: Date
+    },
+    availableTo: {
+      type: Date
+    },
+    reviewRating: {
+      type: Number,
+      min: [0, "Review rating cannot be below 0."],
+      max: [5, "Review rating cannot exceed 5."],
+      default: 0
+    },
+    reviewCount: {
+      type: Number,
+      min: [0, "Review count cannot be negative."],
+      default: 0
     },
     vrEnabled: {
       type: Boolean,
@@ -168,3 +222,5 @@ tourSchema.pre("validate", function setSlug(next) {
 });
 
 module.exports = mongoose.model("Tour", tourSchema);
+module.exports.COMFORT_LEVELS = COMFORT_LEVELS;
+module.exports.TOUR_TYPES = TOUR_TYPES;

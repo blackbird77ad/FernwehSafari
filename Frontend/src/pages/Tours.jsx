@@ -5,7 +5,27 @@ import FilterBar from "../components/FilterBar";
 import Spinner from "../components/Spinner";
 import TourCard from "../components/TourCard";
 import { getTours } from "../services/tourService";
+import { eur } from "../utils/formatters";
 import { destinationStories } from "../utils/staticContent";
+
+function ratingLabel(tour) {
+  const rating = Number(tour.reviewRating || tour.partner?.rating || 0);
+  const reviewCount = Number(tour.reviewCount || tour.partner?.reviewCount || 0);
+
+  if (!rating) {
+    return "Travellex reviewed";
+  }
+
+  return `${rating.toFixed(1)} / 5${reviewCount ? ` (${reviewCount})` : ""}`;
+}
+
+function routeLabel(tour) {
+  return [tour.startLocation, tour.routeSummary, tour.endLocation].filter(Boolean).join(" - ") || tour.location;
+}
+
+function inclusionsLabel(tour) {
+  return tour.inclusions?.length ? tour.inclusions.slice(0, 3).join(", ") : "Ask operator";
+}
 
 export default function Tours() {
   const [searchParams] = useSearchParams();
@@ -13,7 +33,12 @@ export default function Tours() {
     search: searchParams.get("search") || "",
     category: searchParams.get("category") || "",
     location: searchParams.get("location") || "",
+    travelDate: searchParams.get("travelDate") || "",
+    minPrice: searchParams.get("minPrice") || "",
     maxPrice: searchParams.get("maxPrice") || "",
+    comfortLevel: searchParams.get("comfortLevel") || "",
+    tourType: searchParams.get("tourType") || "",
+    minRating: searchParams.get("minRating") || "",
     sort: searchParams.get("sort") || "featured"
   });
   const [tours, setTours] = useState([]);
@@ -26,10 +51,59 @@ export default function Tours() {
       search: filters.search || undefined,
       category: filters.category || undefined,
       location: filters.location || undefined,
+      travelDate: filters.travelDate || undefined,
+      minPrice: filters.minPrice || undefined,
       maxPrice: filters.maxPrice || undefined,
+      comfortLevel: filters.comfortLevel || undefined,
+      tourType: filters.tourType || undefined,
+      minRating: filters.minRating || undefined,
       sort: filters.sort || undefined
     }),
     [filters]
+  );
+
+  const comparisonSummary = useMemo(() => {
+    const destinations = new Map();
+
+    tours.forEach((tour) => {
+      const key = (tour.location || "Africa tours").toLowerCase();
+      const current = destinations.get(key) || {
+        location: tour.location || "Africa tours",
+        count: 0,
+        operators: new Set(),
+        prices: []
+      };
+
+      current.count += 1;
+      current.operators.add(tour.partner?.name || "Approved operator");
+      current.prices.push(Number(tour.priceEUR) || 0);
+      destinations.set(key, current);
+    });
+
+    return [...destinations.values()]
+      .map((item) => ({
+        ...item,
+        operatorCount: item.operators.size,
+        lowPrice: Math.min(...item.prices.filter(Boolean)),
+        highPrice: Math.max(...item.prices.filter(Boolean))
+      }))
+      .filter((item) => item.count > 1 || item.operatorCount > 1)
+      .sort((left, right) => right.operatorCount - left.operatorCount)
+      .slice(0, 4);
+  }, [tours]);
+
+  const comparisonRows = useMemo(
+    () =>
+      [...tours]
+        .sort((left, right) => {
+          const locationCompare = String(left.location || "").localeCompare(String(right.location || ""), undefined, {
+            sensitivity: "base"
+          });
+
+          return locationCompare || (Number(left.priceEUR) || 0) - (Number(right.priceEUR) || 0);
+        })
+        .slice(0, 10),
+    [tours]
   );
 
   useEffect(() => {
@@ -66,11 +140,83 @@ export default function Tours() {
         ) : error ? (
           <p className="empty-state">{error}</p>
         ) : tours.length ? (
-          <div className="card-grid tours-grid">
-            {tours.map((tour) => (
-              <TourCard key={tour._id} tour={tour} />
-            ))}
-          </div>
+          <>
+            {comparisonSummary.length > 0 && (
+              <div className="operator-comparison-strip" aria-label="Destinations with multiple tour operators">
+                {comparisonSummary.map((item) => (
+                  <article key={item.location}>
+                    <span>{item.location}</span>
+                    <strong>
+                      {item.operatorCount} operators - {item.count} tours
+                    </strong>
+                    {Number.isFinite(item.lowPrice) && Number.isFinite(item.highPrice) && (
+                      <small>
+                        From {item.lowPrice === item.highPrice ? eur.format(item.lowPrice) : `${eur.format(item.lowPrice)} - ${eur.format(item.highPrice)}`}
+                      </small>
+                    )}
+                  </article>
+                ))}
+              </div>
+            )}
+            {comparisonRows.length > 1 && (
+              <div className="tour-compare-board" aria-label="Tour comparison">
+                <div className="tour-compare-scroll">
+                  <table className="tour-compare-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Tour</th>
+                        <th scope="col">Company</th>
+                        <th scope="col">Price</th>
+                        <th scope="col">Duration</th>
+                        <th scope="col">Comfort</th>
+                        <th scope="col">Route</th>
+                        <th scope="col">Includes</th>
+                        <th scope="col">Reviews</th>
+                        <th scope="col">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {comparisonRows.map((tour) => (
+                        <tr key={tour._id}>
+                          <td>
+                            <Link className="tour-compare-title" to={`/tours/${tour.slug}`}>
+                              {tour.title}
+                            </Link>
+                            <small>{tour.location}</small>
+                          </td>
+                          <td>{tour.partner?.name || "Approved operator"}</td>
+                          <td>
+                            <strong>{eur.format(tour.priceEUR)}</strong>
+                            <small>{tour.tourType || "Private or shared"}</small>
+                          </td>
+                          <td>{tour.duration}</td>
+                          <td>{tour.comfortLevel || "Ask"}</td>
+                          <td>{routeLabel(tour)}</td>
+                          <td>{inclusionsLabel(tour)}</td>
+                          <td>{ratingLabel(tour)}</td>
+                          <td>
+                            <div className="tour-compare-actions">
+                              <Link className="button secondary compact" to={`/tours/${tour.slug}`}>
+                                Details
+                              </Link>
+                              <Link className="button primary compact" to={`/tours/${tour.slug}#quote`}>
+                                Quote
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            <div className="card-grid tours-grid">
+              {tours.map((tour) => (
+                <TourCard key={tour._id} tour={tour} />
+              ))}
+            </div>
+          </>
         ) : (
           <p className="empty-state">No active tours match those filters.</p>
         )}

@@ -6,7 +6,18 @@ const Tour = require("../models/Tour");
 const { sendEnquiryEmails } = require("../lib/resend");
 
 const createEnquiry = asyncHandler(async (req, res) => {
-  const { name, email, destination, message, tour: tourId, type = "traveller" } = req.body;
+  const {
+    name,
+    email,
+    destination,
+    message,
+    tour: tourId,
+    type = "traveller",
+    requestType = "question",
+    travelDate,
+    groupSize,
+    budgetEUR
+  } = req.body;
 
   if (!name || !email) {
     throw new ApiError(422, "Name and email are required.");
@@ -30,7 +41,11 @@ const createEnquiry = asyncHandler(async (req, res) => {
     partner: tour?.partner?._id,
     destination,
     message,
-    type
+    type,
+    requestType,
+    travelDate: travelDate || undefined,
+    groupSize: groupSize === "" || groupSize === undefined ? undefined : Number(groupSize),
+    budgetEUR: budgetEUR === "" || budgetEUR === undefined ? undefined : Number(budgetEUR)
   });
   await enquiry.populate(["tour", "partner", "user"]);
 

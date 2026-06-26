@@ -33,6 +33,22 @@ const enquirySchema = new mongoose.Schema(
       type: String,
       trim: true
     },
+    requestType: {
+      type: String,
+      enum: ["question", "quote"],
+      default: "question"
+    },
+    travelDate: {
+      type: Date
+    },
+    groupSize: {
+      type: Number,
+      min: [1, "Group size must be at least 1."]
+    },
+    budgetEUR: {
+      type: Number,
+      min: [0, "Budget must be positive."]
+    },
     type: {
       type: String,
       enum: ["traveller", "partner_application"],

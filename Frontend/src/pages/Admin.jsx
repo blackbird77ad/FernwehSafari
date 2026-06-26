@@ -5,7 +5,7 @@ import Spinner from "../components/Spinner";
 import Toast from "../components/Toast";
 import travellexLogo from "../assets/photos/Travellex-logo-wordmark.png";
 import useAuth from "../hooks/useAuth";
-import { activityOptions } from "../utils/travelOptions";
+import { activityOptions, comfortLevelOptions, tourTypeOptions } from "../utils/travelOptions";
 import {
   createPartner,
   deletePartner,
@@ -40,6 +40,7 @@ import {
 import { getEnquiries, updateEnquiryStatus } from "../services/enquiryService";
 import { getReferrals, markReferralConverted, reconcileReferralByTrackingCode } from "../services/referralService";
 import { uploadImage } from "../services/uploadService";
+import { apiBaseURL } from "../services/api";
 import {
   createUser,
   deleteUser,
@@ -68,6 +69,9 @@ const partnerFieldLabels = {
   contactEmail: "Contact email",
   contactPhone: "Contact phone",
   description: "Partner description",
+  rating: "Operator rating",
+  reviewCount: "Operator reviews",
+  licenseInfo: "Licence / trust note",
   logo: "Logo URL",
   commissionRatePercent: "Default commission %",
   commissionTerms: "Commission terms"
@@ -75,62 +79,50 @@ const partnerFieldLabels = {
 
 const tabMeta = {
   overview: {
-    icon: "📊",
     title: "Analytics",
     description: "Production numbers, commission pipeline and operational queues."
   },
   referrals: {
-    icon: "💶",
     title: "Referral Commissions",
     description: "Track outbound booking clicks, partner codes, conversion status and earned commission."
   },
   users: {
-    icon: "👥",
     title: "Users",
     description: "Search, promote and manage traveller, partner, guide, moderator and admin accounts."
   },
   "role dashboards": {
-    icon: "🧭",
     title: "Role Dashboards",
     description: "Preview what each account type is doing without changing login sessions."
   },
   "company applications": {
-    icon: "🤝",
     title: "Partner Applications",
     description: "Review tour company applications and move approved operators into the partner system."
   },
   tours: {
-    icon: "🗺️",
     title: "Tours",
     description: "Approve, edit and publish the tour inventory that powers the public site."
   },
   partners: {
-    icon: "🏢",
     title: "Partners",
     description: "Manage partner booking URLs, commission rates and commercial terms."
   },
   "guide applications": {
-    icon: "🥾",
     title: "Guide Applications",
     description: "Confirm company-approved tour guides before they appear on tours."
   },
   "guide bookings": {
-    icon: "📅",
     title: "Guide Bookings",
     description: "Monitor traveller requests sent to approved tour guides."
   },
   "gallery media": {
-    icon: "🖼️",
     title: "Gallery Media",
     description: "Approve, schedule, switch off and remove public travel media."
   },
   enquiries: {
-    icon: "✉️",
     title: "Enquiries",
     description: "Track public questions and traveller contact requests."
   },
   uploads: {
-    icon: "☁️",
     title: "Uploads",
     description: "Add Cloudinary media into tour and gallery workflows."
   }
@@ -142,12 +134,24 @@ const emptyTour = {
   description: "",
   priceEUR: "",
   duration: "",
+  durationDays: "",
   location: "",
   category: "Safari",
+  comfortLevel: "Midrange",
+  tourType: "Private or shared",
+  routeSummary: "",
+  startLocation: "",
+  endLocation: "",
   partner: "",
   referralLink: "",
   commissionRatePercent: "",
   images: "",
+  inclusions: "",
+  exclusions: "",
+  availableFrom: "",
+  availableTo: "",
+  reviewRating: "",
+  reviewCount: "",
   vrEnabled: false,
   vrMediaUrl: "",
   vrMediaType: "image",
@@ -164,6 +168,9 @@ const emptyPartner = {
   contactEmail: "",
   contactPhone: "",
   description: "",
+  rating: "",
+  reviewCount: "",
+  licenseInfo: "",
   logo: "",
   commissionRatePercent: "",
   commissionTerms: "",
@@ -896,7 +903,9 @@ export default function Admin() {
     return {
       ...partnerForm,
       commissionRatePercent:
-        partnerForm.commissionRatePercent === "" ? 0 : Number(partnerForm.commissionRatePercent)
+        partnerForm.commissionRatePercent === "" ? 0 : Number(partnerForm.commissionRatePercent),
+      rating: partnerForm.rating === "" ? 0 : Number(partnerForm.rating),
+      reviewCount: partnerForm.reviewCount === "" ? 0 : Number(partnerForm.reviewCount)
     };
   }
 
@@ -904,6 +913,7 @@ export default function Admin() {
     const payload = {
       ...tourForm,
       priceEUR: Number(tourForm.priceEUR),
+      durationDays: tourForm.durationDays === "" ? undefined : Number(tourForm.durationDays),
       commissionRatePercent:
         tourForm.commissionRatePercent === "" ? undefined : Number(tourForm.commissionRatePercent),
       images: tourForm.images
@@ -913,7 +923,19 @@ export default function Admin() {
       highlights: tourForm.highlights
         .split("\n")
         .map((item) => item.trim())
-        .filter(Boolean)
+        .filter(Boolean),
+      inclusions: tourForm.inclusions
+        .split("\n")
+        .map((item) => item.trim())
+        .filter(Boolean),
+      exclusions: tourForm.exclusions
+        .split("\n")
+        .map((item) => item.trim())
+        .filter(Boolean),
+      availableFrom: tourForm.availableFrom || undefined,
+      availableTo: tourForm.availableTo || undefined,
+      reviewRating: tourForm.reviewRating === "" ? 0 : Number(tourForm.reviewRating),
+      reviewCount: tourForm.reviewCount === "" ? 0 : Number(tourForm.reviewCount)
     };
 
     if (!isAdmin) {
@@ -954,12 +976,24 @@ export default function Admin() {
       description: tour.description || "",
       priceEUR: tour.priceEUR || "",
       duration: tour.duration || "",
+      durationDays: tour.durationDays || "",
       location: tour.location || "",
       category: tour.category || "Safari",
+      comfortLevel: tour.comfortLevel || "Midrange",
+      tourType: tour.tourType || "Private or shared",
+      routeSummary: tour.routeSummary || "",
+      startLocation: tour.startLocation || "",
+      endLocation: tour.endLocation || "",
       partner: tour.partner?._id || tour.partner || "",
       referralLink: tour.referralLink || "",
       commissionRatePercent: tour.commissionRatePercent ?? "",
       images: (tour.images || []).join("\n"),
+      inclusions: (tour.inclusions || []).join("\n"),
+      exclusions: (tour.exclusions || []).join("\n"),
+      availableFrom: tour.availableFrom ? tour.availableFrom.slice(0, 10) : "",
+      availableTo: tour.availableTo ? tour.availableTo.slice(0, 10) : "",
+      reviewRating: tour.reviewRating ?? "",
+      reviewCount: tour.reviewCount ?? "",
       vrEnabled: Boolean(tour.vrEnabled),
       vrMediaUrl: tour.vrMediaUrl || "",
       vrMediaType: tour.vrMediaType || "image",
@@ -1010,6 +1044,9 @@ export default function Admin() {
       contactEmail: partner.contactEmail || "",
       contactPhone: partner.contactPhone || "",
       description: partner.description || "",
+      rating: partner.rating ?? "",
+      reviewCount: partner.reviewCount ?? "",
+      licenseInfo: partner.licenseInfo || "",
       logo: partner.logo || "",
       commissionRatePercent: partner.commissionRatePercent ?? "",
       commissionTerms: partner.commissionTerms || "",
@@ -1295,7 +1332,7 @@ export default function Admin() {
     setSidebarOpen(false);
   }
 
-  const activeMeta = tabMeta[activeTab] || { icon: "CRM", title: activeTab, description: "Manage Travellex." };
+  const activeMeta = tabMeta[activeTab] || { title: activeTab, description: "Manage Travellex." };
 
   return (
     <section className={sidebarOpen ? "admin-console sidebar-open" : "admin-console sidebar-collapsed"}>
@@ -1334,7 +1371,6 @@ export default function Admin() {
               type="button"
               onClick={() => handleTabChange(tab)}
             >
-              <span>{tabMeta[tab]?.icon || "--"}</span>
               <strong>{tabMeta[tab]?.title || tab}</strong>
               <small>{tabCounts[tab] ?? 0}</small>
             </button>
@@ -1371,7 +1407,7 @@ export default function Admin() {
             <span />
           </button>
           <div>
-            <p className="eyebrow">{activeMeta.icon} Admin workspace</p>
+            <p className="eyebrow">Admin workspace</p>
             <h1>{activeMeta.title}</h1>
             <span>{activeMeta.description}</span>
           </div>
@@ -2125,6 +2161,15 @@ export default function Admin() {
                       <input value={tourForm.duration} onChange={(event) => updateTourField("duration", event.target.value)} required />
                     </label>
                     <label className="field">
+                      <span>Duration days</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={tourForm.durationDays}
+                        onChange={(event) => updateTourField("durationDays", event.target.value)}
+                      />
+                    </label>
+                    <label className="field">
                       <span>Location</span>
                       <input value={tourForm.location} onChange={(event) => updateTourField("location", event.target.value)} required />
                     </label>
@@ -2137,6 +2182,74 @@ export default function Admin() {
                           </option>
                         ))}
                       </select>
+                    </label>
+                  </div>
+                  <div className="form-grid">
+                    <label className="field">
+                      <span>Comfort level</span>
+                      <select value={tourForm.comfortLevel} onChange={(event) => updateTourField("comfortLevel", event.target.value)}>
+                        {comfortLevelOptions.map((level) => (
+                          <option key={level} value={level}>
+                            {level}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field">
+                      <span>Tour type</span>
+                      <select value={tourForm.tourType} onChange={(event) => updateTourField("tourType", event.target.value)}>
+                        {tourTypeOptions.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field">
+                      <span>Start location</span>
+                      <input value={tourForm.startLocation} onChange={(event) => updateTourField("startLocation", event.target.value)} />
+                    </label>
+                    <label className="field">
+                      <span>End location</span>
+                      <input value={tourForm.endLocation} onChange={(event) => updateTourField("endLocation", event.target.value)} />
+                    </label>
+                  </div>
+                  <label className="field">
+                    <span>Route summary</span>
+                    <input
+                      value={tourForm.routeSummary}
+                      onChange={(event) => updateTourField("routeSummary", event.target.value)}
+                      placeholder="Arusha - Tarangire - Ngorongoro - Zanzibar"
+                    />
+                  </label>
+                  <div className="form-grid">
+                    <label className="field">
+                      <span>Available from</span>
+                      <input type="date" value={tourForm.availableFrom} onChange={(event) => updateTourField("availableFrom", event.target.value)} />
+                    </label>
+                    <label className="field">
+                      <span>Available to</span>
+                      <input type="date" value={tourForm.availableTo} onChange={(event) => updateTourField("availableTo", event.target.value)} />
+                    </label>
+                    <label className="field">
+                      <span>Review rating</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="5"
+                        step="0.1"
+                        value={tourForm.reviewRating}
+                        onChange={(event) => updateTourField("reviewRating", event.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Review count</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={tourForm.reviewCount}
+                        onChange={(event) => updateTourField("reviewCount", event.target.value)}
+                      />
                     </label>
                   </div>
                   <label className="field">
@@ -2168,6 +2281,14 @@ export default function Admin() {
                   <label className="field">
                     <span>Image URLs, one per line</span>
                     <textarea value={tourForm.images} onChange={(event) => updateTourField("images", event.target.value)} />
+                  </label>
+                  <label className="field">
+                    <span>Inclusions, one per line</span>
+                    <textarea value={tourForm.inclusions} onChange={(event) => updateTourField("inclusions", event.target.value)} />
+                  </label>
+                  <label className="field">
+                    <span>Exclusions, one per line</span>
+                    <textarea value={tourForm.exclusions} onChange={(event) => updateTourField("exclusions", event.target.value)} />
                   </label>
                   {isAdmin && (
                     <div className="vr-admin-panel">
@@ -2252,12 +2373,17 @@ export default function Admin() {
                   items={tours}
                   label="tours"
                   emptyText="No tours yet."
-                  searchKeys={["title", "location", "category", "partner.name", "shortDescription", "description"]}
+                  searchKeys={["title", "location", "category", "partner.name", "shortDescription", "description", "comfortLevel", "tourType", "routeSummary", "inclusions"]}
                   filterOptions={[
                     { value: "active", label: "Active", predicate: (tour) => tour.isActive },
                     { value: "pending", label: "Pending", predicate: (tour) => !tour.isActive },
                     { value: "featured", label: "Featured", predicate: (tour) => tour.featured },
                     { value: "vr", label: "VR enabled", predicate: (tour) => tour.vrEnabled },
+                    ...comfortLevelOptions.map((level) => ({
+                      value: `comfort-${level}`,
+                      label: level,
+                      predicate: (tour) => tour.comfortLevel === level
+                    })),
                     ...activityOptions.map((activity) => ({
                       value: `category-${activity}`,
                       label: activity,
@@ -2269,7 +2395,8 @@ export default function Admin() {
                     { value: "title", label: "Title A-Z", compare: (left, right) => compareText(left.title, right.title) },
                     { value: "location", label: "Location A-Z", compare: (left, right) => compareText(left.location, right.location) },
                     { value: "price-low", label: "Price low-high", compare: (left, right) => compareNumber(left.priceEUR, right.priceEUR) },
-                    { value: "price-high", label: "Price high-low", compare: (left, right) => compareNumber(right.priceEUR, left.priceEUR) }
+                    { value: "price-high", label: "Price high-low", compare: (left, right) => compareNumber(right.priceEUR, left.priceEUR) },
+                    { value: "rating", label: "Rating high-low", compare: (left, right) => compareNumber(right.reviewRating, left.reviewRating) }
                   ]}
                   searchPlaceholder="Search title, location, partner or category"
                 >
@@ -2279,7 +2406,7 @@ export default function Admin() {
                         <strong>{tour.title}</strong>
                         {tour.vrEnabled && <span className="tour-vr-admin-status">VR on</span>}
                         <span>
-                          {tour.location} · {tour.category} · {eur.format(tour.priceEUR)}
+                          {tour.location} - {tour.category} - {eur.format(tour.priceEUR)}
                         </span>
                       </div>
                       <div className="button-row">
@@ -2308,9 +2435,10 @@ export default function Admin() {
                           <textarea value={partnerForm[key]} onChange={(event) => updatePartnerField(key, event.target.value)} />
                         ) : (
                           <input
-                            type={key === "commissionRatePercent" ? "number" : "text"}
-                            min={key === "commissionRatePercent" ? "0" : undefined}
-                            max={key === "commissionRatePercent" ? "100" : undefined}
+                            type={["commissionRatePercent", "rating", "reviewCount"].includes(key) ? "number" : "text"}
+                            min={["commissionRatePercent", "rating", "reviewCount"].includes(key) ? "0" : undefined}
+                            max={key === "commissionRatePercent" ? "100" : key === "rating" ? "5" : undefined}
+                            step={key === "rating" ? "0.1" : undefined}
                             value={partnerForm[key]}
                             onChange={(event) => updatePartnerField(key, event.target.value)}
                             required={key === "name" || key === "bookingURL"}
@@ -2335,31 +2463,34 @@ export default function Admin() {
                   items={partners}
                   label="partners"
                   emptyText="No partners yet."
-                  searchKeys={["name", "location", "contactEmail", "contactPhone", "description", "commissionTerms"]}
+                  searchKeys={["name", "location", "contactEmail", "contactPhone", "description", "licenseInfo", "commissionTerms"]}
                   filterOptions={[
                     { value: "active", label: "Active", predicate: (partner) => partner.isActive },
                     { value: "inactive", label: "Inactive", predicate: (partner) => !partner.isActive },
+                    { value: "reviewed", label: "Reviewed", predicate: (partner) => Number(partner.rating || 0) > 0 },
                     { value: "has-secret", label: "Has postback secret", predicate: (partner) => Boolean(partner.postbackSecret) }
                   ]}
                   sortOptions={[
                     { value: "name", label: "Name A-Z", compare: (left, right) => compareText(left.name, right.name) },
                     { value: "location", label: "Location A-Z", compare: (left, right) => compareText(left.location, right.location) },
+                    { value: "rating-high", label: "Rating high-low", compare: (left, right) => compareNumber(right.rating, left.rating) },
                     { value: "commission-high", label: "Commission high-low", compare: (left, right) => compareNumber(right.commissionRatePercent, left.commissionRatePercent) },
                     { value: "newest", label: "Newest", compare: (left, right) => compareDateNewest(left.createdAt, right.createdAt) }
                   ]}
-                  searchPlaceholder="Search partner, location, contact or terms"
+                  searchPlaceholder="Search partner, location, trust note or terms"
                 >
                   {(partner) => (
                     <article className="admin-row" key={partner._id}>
                       <div>
                         <strong>{partner.name}</strong>
                         <span>
-                          {partner.location} - Default commission {partner.commissionRatePercent || 0}%
+                          {partner.location} - {partner.rating ? `${Number(partner.rating).toFixed(1)} / 5` : "No rating"} - Default commission {partner.commissionRatePercent || 0}%
                         </span>
+                        {partner.licenseInfo && <p>{partner.licenseInfo}</p>}
                         <p>{partner.commissionTerms || "No commission terms saved yet."}</p>
                         <div className="postback-box">
                           <p className="eyebrow">Partner postback setup</p>
-                          <code>{`${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/referrals/postback`}</code>
+                          <code>{`${apiBaseURL}/referrals/postback`}</code>
                           <code>{`x-travellex-partner-secret: ${partner.postbackSecret || "Generate by rotating secret"}`}</code>
                           <code>{`{"travellex_ref":"TRACKING_CODE","bookingValueEUR":2000,"partnerBookingId":"BOOKING-123","status":"converted"}`}</code>
                         </div>
@@ -2648,7 +2779,7 @@ export default function Admin() {
                   <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading} />
                 </label>
                 <p>
-                  Uploaded image URLs are inserted into the tour form so they can be saved into a tour’s images array.
+                  Uploaded image URLs are inserted into the tour form so they can be saved into the tour images array.
                 </p>
               </div>
             )}

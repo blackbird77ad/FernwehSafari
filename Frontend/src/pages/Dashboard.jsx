@@ -14,7 +14,7 @@ import {
 import { getMyReferrals } from "../services/referralService";
 import { createTour, deleteTour, getTours, updateTour } from "../services/tourService";
 import { eur, formatDate } from "../utils/formatters";
-import { activityOptions } from "../utils/travelOptions";
+import { activityOptions, comfortLevelOptions, tourTypeOptions } from "../utils/travelOptions";
 
 const emptyCompanyTour = {
   title: "",
@@ -22,10 +22,20 @@ const emptyCompanyTour = {
   description: "",
   priceEUR: "",
   duration: "",
+  durationDays: "",
   location: "",
   category: "Safari",
+  comfortLevel: "Midrange",
+  tourType: "Private or shared",
+  routeSummary: "",
+  startLocation: "",
+  endLocation: "",
   referralLink: "",
   images: "",
+  inclusions: "",
+  exclusions: "",
+  availableFrom: "",
+  availableTo: "",
   highlights: ""
 };
 
@@ -52,6 +62,7 @@ export default function Dashboard() {
     return {
       ...tourForm,
       priceEUR: Number(tourForm.priceEUR),
+      durationDays: tourForm.durationDays === "" ? undefined : Number(tourForm.durationDays),
       images: tourForm.images
         .split("\n")
         .map((item) => item.trim())
@@ -59,7 +70,17 @@ export default function Dashboard() {
       highlights: tourForm.highlights
         .split("\n")
         .map((item) => item.trim())
-        .filter(Boolean)
+        .filter(Boolean),
+      inclusions: tourForm.inclusions
+        .split("\n")
+        .map((item) => item.trim())
+        .filter(Boolean),
+      exclusions: tourForm.exclusions
+        .split("\n")
+        .map((item) => item.trim())
+        .filter(Boolean),
+      availableFrom: tourForm.availableFrom || undefined,
+      availableTo: tourForm.availableTo || undefined
     };
   }
 
@@ -142,10 +163,20 @@ export default function Dashboard() {
       description: tour.description || "",
       priceEUR: tour.priceEUR || "",
       duration: tour.duration || "",
+      durationDays: tour.durationDays || "",
       location: tour.location || "",
       category: tour.category || "Safari",
+      comfortLevel: tour.comfortLevel || "Midrange",
+      tourType: tour.tourType || "Private or shared",
+      routeSummary: tour.routeSummary || "",
+      startLocation: tour.startLocation || "",
+      endLocation: tour.endLocation || "",
       referralLink: tour.referralLink || "",
       images: (tour.images || []).join("\n"),
+      inclusions: (tour.inclusions || []).join("\n"),
+      exclusions: (tour.exclusions || []).join("\n"),
+      availableFrom: tour.availableFrom ? tour.availableFrom.slice(0, 10) : "",
+      availableTo: tour.availableTo ? tour.availableTo.slice(0, 10) : "",
       highlights: (tour.highlights || []).join("\n")
     });
   }
@@ -223,6 +254,15 @@ export default function Dashboard() {
                     <input value={tourForm.duration} onChange={(event) => updateTourField("duration", event.target.value)} required />
                   </label>
                   <label className="field">
+                    <span>Duration days</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={tourForm.durationDays}
+                      onChange={(event) => updateTourField("durationDays", event.target.value)}
+                    />
+                  </label>
+                  <label className="field">
                     <span>Location</span>
                     <input value={tourForm.location} onChange={(event) => updateTourField("location", event.target.value)} required />
                   </label>
@@ -237,6 +277,54 @@ export default function Dashboard() {
                     </select>
                   </label>
                 </div>
+                <div className="form-grid">
+                  <label className="field">
+                    <span>Comfort level</span>
+                    <select value={tourForm.comfortLevel} onChange={(event) => updateTourField("comfortLevel", event.target.value)}>
+                      {comfortLevelOptions.map((level) => (
+                        <option key={level} value={level}>
+                          {level}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>Tour type</span>
+                    <select value={tourForm.tourType} onChange={(event) => updateTourField("tourType", event.target.value)}>
+                      {tourTypeOptions.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>Start location</span>
+                    <input value={tourForm.startLocation} onChange={(event) => updateTourField("startLocation", event.target.value)} />
+                  </label>
+                  <label className="field">
+                    <span>End location</span>
+                    <input value={tourForm.endLocation} onChange={(event) => updateTourField("endLocation", event.target.value)} />
+                  </label>
+                </div>
+                <label className="field">
+                  <span>Route summary</span>
+                  <input
+                    value={tourForm.routeSummary}
+                    onChange={(event) => updateTourField("routeSummary", event.target.value)}
+                    placeholder="Arusha - Tarangire - Ngorongoro"
+                  />
+                </label>
+                <div className="form-grid">
+                  <label className="field">
+                    <span>Available from</span>
+                    <input type="date" value={tourForm.availableFrom} onChange={(event) => updateTourField("availableFrom", event.target.value)} />
+                  </label>
+                  <label className="field">
+                    <span>Available to</span>
+                    <input type="date" value={tourForm.availableTo} onChange={(event) => updateTourField("availableTo", event.target.value)} />
+                  </label>
+                </div>
                 <label className="field">
                   <span>Booking/referral link</span>
                   <input value={tourForm.referralLink} onChange={(event) => updateTourField("referralLink", event.target.value)} />
@@ -244,6 +332,14 @@ export default function Dashboard() {
                 <label className="field">
                   <span>Image URLs, one per line</span>
                   <textarea value={tourForm.images} onChange={(event) => updateTourField("images", event.target.value)} />
+                </label>
+                <label className="field">
+                  <span>Inclusions, one per line</span>
+                  <textarea value={tourForm.inclusions} onChange={(event) => updateTourField("inclusions", event.target.value)} />
+                </label>
+                <label className="field">
+                  <span>Exclusions, one per line</span>
+                  <textarea value={tourForm.exclusions} onChange={(event) => updateTourField("exclusions", event.target.value)} />
                 </label>
                 <label className="field">
                   <span>Highlights, one per line</span>

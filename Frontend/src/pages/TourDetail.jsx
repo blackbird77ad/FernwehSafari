@@ -186,6 +186,9 @@ export default function TourDetail() {
           image: tour.vrMediaUrl
         }
       : null;
+  const rating = Number(tour.reviewRating || tour.partner?.rating || 0);
+  const reviewCount = Number(tour.reviewCount || tour.partner?.reviewCount || 0);
+  const routePoints = [tour.startLocation, tour.routeSummary, tour.endLocation].filter(Boolean);
 
   return (
     <>
@@ -196,11 +199,14 @@ export default function TourDetail() {
           <p>{destinationStory?.hook || tour.shortDescription}</p>
           <div className="button-row">
             <button className="button primary" type="button" onClick={handleReferral} disabled={bookingLoading}>
-              {bookingLoading ? "Starting..." : "Start Travellex booking"}
+              {bookingLoading ? "Starting..." : "Book with Travellex"}
             </button>
             <button className="button secondary light" type="button" onClick={handleSave}>
               Save tour
             </button>
+            <a className="button secondary light" href="#quote">
+              Request quote
+            </a>
             {vrScene && (
               <a className="button secondary light" href="#tour-vr">
                 Enter VR preview
@@ -222,16 +228,54 @@ export default function TourDetail() {
             </span>
             <span>
               <strong>Price Level</strong>
-              {destinationStory?.priceLevel || "$$"}
+              {tour.comfortLevel || destinationStory?.priceLevel || "$$"}
             </span>
             <span>
-              <strong>Entry Fee</strong>
-              {destinationStory?.entryFee || "Ask operator"}
+              <strong>Operator</strong>
+              {tour.partner?.name || "Travellex partner"}
+            </span>
+            <span>
+              <strong>Reviews</strong>
+              {rating ? `${rating.toFixed(1)} / 5 (${reviewCount || 0})` : "Travellex reviewed"}
             </span>
           </div>
           <div className="content-block">
             <p>📍 {compactDescription}</p>
             <p>🧭 Duration: {tour.duration}. Route base: {tour.location}. Listed from {eur.format(tour.priceEUR)}.</p>
+          </div>
+          <div className="tour-comparison-panel">
+            <div>
+              <p className="eyebrow">Compare this offer</p>
+              <h2>Operator, route, comfort and inclusions.</h2>
+            </div>
+            <div className="comparison-grid">
+              <span>
+                <strong>Company</strong>
+                {tour.partner?.name || "Approved operator"}
+              </span>
+              <span>
+                <strong>Comfort</strong>
+                {tour.comfortLevel || "Ask operator"}
+              </span>
+              <span>
+                <strong>Tour type</strong>
+                {tour.tourType || "Private or shared"}
+              </span>
+              <span>
+                <strong>Route</strong>
+                {routePoints.length ? routePoints.join(" - ") : tour.location}
+              </span>
+            </div>
+            {tour.inclusions?.length > 0 && (
+              <>
+                <h3>Included</h3>
+                <ul className="check-list compact">
+                  {tour.inclusions.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
           <ImageGallery images={tour.images} />
           {vrScene && (
@@ -347,9 +391,10 @@ export default function TourDetail() {
             <p>{tour.partner?.description || "This tour is fulfilled by an approved Travellex operator."}</p>
             <span>{tour.partner?.location}</span>
           </div>
-          <div className="side-panel">
-            <p className="eyebrow">Enquire</p>
-            <EnquiryForm tour={tour} />
+          <div className="side-panel" id="quote">
+            <p className="eyebrow">Request quote</p>
+            <h2>Ask Travellex to confirm availability.</h2>
+            <EnquiryForm requestType="quote" tour={tour} />
           </div>
           {user?.role === "tour_guide" && (
             <div className="side-panel">
@@ -447,9 +492,14 @@ export default function TourDetail() {
           <strong>{tour.title}</strong>
           <small>{eur.format(tour.priceEUR)} · Travellex tracked booking</small>
         </span>
-        <button className="button primary compact" type="button" onClick={handleReferral} disabled={bookingLoading}>
-          {bookingLoading ? "Starting..." : "Book with Travellex"}
-        </button>
+        <div className="button-row">
+          <a className="button secondary compact" href="#quote">
+            Quote
+          </a>
+          <button className="button primary compact" type="button" onClick={handleReferral} disabled={bookingLoading}>
+            {bookingLoading ? "Starting..." : "Book with Travellex"}
+          </button>
+        </div>
       </div>
     </>
   );

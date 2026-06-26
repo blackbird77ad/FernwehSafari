@@ -6,6 +6,10 @@ const TourPartner = require("../models/TourPartner");
 const Tour = require("../models/Tour");
 const { notifyOwner } = require("../lib/resend");
 
+function escapeRegExp(value = "") {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 async function uniqueSlug(title, existingId) {
   const base = slugify(title);
   let candidate = base;
@@ -24,8 +28,9 @@ async function uniqueSlug(title, existingId) {
   return candidate;
 }
 
-function buildTourQuery(query, includeInactive = false) {
+async function buildTourQuery(query, includeInactive = false) {
   const filters = {};
+  const andFilters = [];
 
   if (!includeInactive) {
     filters.isActive = true;
@@ -36,11 +41,62 @@ function buildTourQuery(query, includeInactive = false) {
   }
 
   if (query.location) {
-    filters.location = new RegExp(query.location, "i");
+    const location = new RegExp(escapeRegExp(query.location), "i");
+    const matchingPartners = await TourPartner.find({ location }).select("_id");
+    const partnerIds = matchingPartners.map((partner) => partner._id);
+
+    filters.$or = [
+      { location },
+      { routeSummary: location },
+      { startLocation: location },
+      { endLocation: location },
+      ...(partnerIds.length ? [{ partner: { $in: partnerIds } }] : [])
+    ];
   }
 
   if (query.featured === "true") {
     filters.featured = true;
+  }
+
+  if (query.comfortLevel) {
+    filters.comfortLevel = query.comfortLevel;
+  }
+
+  if (query.tourType) {
+    filters.tourType = query.tourType;
+  }
+
+  if (query.partner) {
+    filters.partner = query.partner;
+  }
+
+  if (query.minRating) {
+    const minRating = Number(query.minRating);
+
+    if (Number.isFinite(minRating)) {
+      const matchingPartners = await TourPartner.find({ rating: { $gte: minRating } }).select("_id");
+      const partnerIds = matchingPartners.map((partner) => partner._id);
+
+      andFilters.push({
+        $or: [
+          { reviewRating: { $gte: minRating } },
+          ...(partnerIds.length ? [{ partner: { $in: partnerIds } }] : [])
+        ]
+      });
+    }
+  }
+
+  if (query.travelDate) {
+    const travelDate = new Date(query.travelDate);
+
+    if (!Number.isNaN(travelDate.getTime())) {
+      andFilters.push({
+        $or: [{ availableFrom: { $exists: false } }, { availableFrom: null }, { availableFrom: { $lte: travelDate } }]
+      });
+      andFilters.push({
+        $or: [{ availableTo: { $exists: false } }, { availableTo: null }, { availableTo: { $gte: travelDate } }]
+      });
+    }
   }
 
   if (query.minPrice || query.maxPrice) {
@@ -55,16 +111,42 @@ function buildTourQuery(query, includeInactive = false) {
     }
   }
 
+  if (query.maxDurationDays) {
+    filters.durationDays = { ...(filters.durationDays || {}), $lte: Number(query.maxDurationDays) };
+  }
+
   if (query.search) {
-    const search = new RegExp(query.search, "i");
-    filters.$or = [
+    const search = new RegExp(escapeRegExp(query.search), "i");
+    const matchingPartners = await TourPartner.find({
+      $or: [{ name: search }, { location: search }, { description: search }, { licenseInfo: search }]
+    }).select("_id");
+    const partnerIds = matchingPartners.map((partner) => partner._id);
+    const searchFilters = [
       { title: search },
       { shortDescription: search },
       { description: search },
       { location: search },
       { category: search },
-      { highlights: search }
+      { highlights: search },
+      { routeSummary: search },
+      { startLocation: search },
+      { endLocation: search },
+      { inclusions: search },
+      { comfortLevel: search },
+      { tourType: search },
+      ...(partnerIds.length ? [{ partner: { $in: partnerIds } }] : [])
     ];
+
+    if (filters.$or) {
+      andFilters.push({ $or: filters.$or });
+      delete filters.$or;
+    }
+
+    andFilters.push({ $or: searchFilters });
+  }
+
+  if (andFilters.length) {
+    filters.$and = andFilters;
   }
 
   return filters;
@@ -76,6 +158,8 @@ function buildTourSort(sort = "featured") {
     newest: { createdAt: -1 },
     "price-asc": { priceEUR: 1, createdAt: -1 },
     "price-desc": { priceEUR: -1, createdAt: -1 },
+    "rating-desc": { reviewRating: -1, reviewCount: -1, createdAt: -1 },
+    "duration-asc": { durationDays: 1, createdAt: -1 },
     "title-asc": { title: 1 }
   };
 
@@ -122,7 +206,7 @@ async function ensureCanManageTour(req, tour) {
 const listTours = asyncHandler(async (req, res) => {
   const includeInactive =
     (isStaff(req.user) || req.query.mine === "true") && req.query.includeInactive === "true";
-  const filters = buildTourQuery(req.query, includeInactive);
+  const filters = await buildTourQuery(req.query, includeInactive);
   const sort = buildTourSort(req.query.sort);
 
   if (req.query.mine === "true") {

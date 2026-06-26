@@ -15,7 +15,11 @@ function tourLabel(enquiry) {
 }
 
 function enquiryLabel(enquiry) {
-  return enquiry.type === "partner_application" ? "Tour listing application" : tourLabel(enquiry);
+  if (enquiry.type === "partner_application") {
+    return "Tour listing application";
+  }
+
+  return enquiry.requestType === "quote" ? `Quote request: ${tourLabel(enquiry)}` : tourLabel(enquiry);
 }
 
 function normalizeLines(lines = []) {
@@ -69,9 +73,12 @@ async function sendEnquiryEmails(enquiry) {
   const destination = enquiry.destination || enquiry.tour?.location || "Not provided";
   const partnerName = enquiry.partner?.name || "Not assigned";
   const partnerEmail = enquiry.partner?.contactEmail || "Not provided";
+  const requestType = enquiry.requestType === "quote" ? "Quote request" : "Question";
   const confirmationText =
     enquiry.type === "partner_application"
       ? "Travellex has received your tour listing application and will follow up to schedule a discussion."
+      : enquiry.requestType === "quote"
+        ? "Travellex has received your quote request and will follow up with availability, operator details and next steps."
       : "Travellex has received your travel request and will follow up with the best next step.";
 
   await Promise.all([
@@ -81,12 +88,16 @@ async function sendEnquiryEmails(enquiry) {
       subject: `New Travellex enquiry: ${label}`,
       text: [
         `Type: ${enquiry.type || "traveller"}`,
+        `Request: ${requestType}`,
         `Name: ${enquiry.name}`,
         `Email: ${enquiry.email}`,
         `Destination: ${destination}`,
         `Tour: ${tourName}`,
         `Partner: ${partnerName}`,
         `Partner email: ${partnerEmail}`,
+        `Travel date: ${enquiry.travelDate ? enquiry.travelDate.toISOString().slice(0, 10) : "Not provided"}`,
+        `Group size: ${enquiry.groupSize || "Not provided"}`,
+        `Budget EUR: ${enquiry.budgetEUR || "Not provided"}`,
         "",
         enquiry.message || "No message provided."
       ].join("\n")

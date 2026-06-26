@@ -30,6 +30,21 @@ const tourPartnerSchema = new mongoose.Schema(
       type: String,
       trim: true
     },
+    rating: {
+      type: Number,
+      min: [0, "Partner rating cannot be below 0."],
+      max: [5, "Partner rating cannot exceed 5."],
+      default: 0
+    },
+    reviewCount: {
+      type: Number,
+      min: [0, "Partner review count cannot be negative."],
+      default: 0
+    },
+    licenseInfo: {
+      type: String,
+      trim: true
+    },
     logo: {
       type: String,
       trim: true

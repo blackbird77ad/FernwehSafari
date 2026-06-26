@@ -1,7 +1,24 @@
 import axios from "axios";
 
+function normalizeBaseURL(value) {
+  return String(value || "").replace(/\/+$/, "");
+}
+
+function defaultApiURL() {
+  if (typeof window === "undefined") {
+    return "http://localhost:5000/api";
+  }
+
+  const { hostname } = window.location;
+  const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
+
+  return isLocalhost ? "http://localhost:5000/api" : "https://api.travellex.tours/api";
+}
+
+export const apiBaseURL = normalizeBaseURL(import.meta.env.VITE_API_URL || defaultApiURL());
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+  baseURL: apiBaseURL
 });
 
 const TOKEN_KEY = "travellex_token";

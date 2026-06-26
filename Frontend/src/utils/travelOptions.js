@@ -47,5 +47,11 @@ export const tourSortOptions = [
   { value: "newest", label: "Newest" },
   { value: "price-asc", label: "Price: low to high" },
   { value: "price-desc", label: "Price: high to low" },
+  { value: "rating-desc", label: "Best reviewed" },
+  { value: "duration-asc", label: "Shortest first" },
   { value: "title-asc", label: "A-Z" }
 ];
+
+export const comfortLevelOptions = ["Budget", "Midrange", "Luxury", "Premium", "Mixed"];
+
+export const tourTypeOptions = ["Private", "Shared", "Private or shared"];
