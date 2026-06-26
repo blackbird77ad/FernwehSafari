@@ -1,7 +1,8 @@
 import axios from "axios";
 
 function normalizeBaseURL(value) {
-  return String(value || "").replace(/\/+$/, "");
+  const baseURL = String(value || "").replace(/\/+$/, "");
+  return baseURL.endsWith("/api") ? baseURL : `${baseURL}/api`;
 }
 
 function defaultApiURL() {
@@ -12,7 +13,7 @@ function defaultApiURL() {
   const { hostname } = window.location;
   const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
 
-  return isLocalhost ? "http://localhost:5000/api" : "https://api.travellex.tours/api";
+  return isLocalhost ? "http://localhost:5000/api" : "https://fernwehsafari.onrender.com/api";
 }
 
 export const apiBaseURL = normalizeBaseURL(import.meta.env.VITE_API_URL || defaultApiURL());
