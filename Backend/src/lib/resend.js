@@ -1,6 +1,7 @@
 const { Resend } = require("resend");
 
 const ownerEmail = "msamilashalom@gmail.com";
+const EMAIL_TIMEOUT_MS = Number(process.env.EMAIL_TIMEOUT_MS) || 8000;
 
 function getClient() {
   if (!process.env.RESEND_API_KEY) {
@@ -33,14 +34,27 @@ async function sendEmail({ to, subject, lines }) {
     return { sent: false, reason: "RESEND_API_KEY is not configured." };
   }
 
-  await resend.emails.send({
-    from: "Travellex <onboarding@resend.dev>",
-    to,
-    subject,
-    text: normalizeLines(lines).join("\n")
-  });
+  let timeoutId;
 
-  return { sent: true };
+  try {
+    await Promise.race([
+      resend.emails.send({
+        from: "Travellex <onboarding@resend.dev>",
+        to,
+        subject,
+        text: normalizeLines(lines).join("\n")
+      }),
+      new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error("Email provider timed out.")), EMAIL_TIMEOUT_MS);
+      })
+    ]);
+
+    return { sent: true };
+  } catch (error) {
+    return { sent: false, reason: error.message || "Email could not be sent." };
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 async function notifyOwner(subject, lines) {
