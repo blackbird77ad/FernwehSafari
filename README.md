@@ -121,7 +121,19 @@ The app will also tolerate the Render root URL and add `/api` automatically, but
 VITE_API_URL=https://fernwehsafari.onrender.com/api
 ```
 
-Do not leave `VITE_API_URL` as `http://localhost:5000/api` in production. Browsers around the world will try to call their own computer instead of Travellex, which appears as a network error.
+Do not leave `VITE_API_URL` as `http://localhost:5000/api` in production. Browsers around the world will try to call their own computer instead of Travellex, which appears as a network error. Also do not set it to `https://travellex.tours/api` or `https://fernwehsafari.pages.dev/api`; those are frontend hosts, not the Render backend.
+
+The frontend includes a Cloudflare Pages Function at `Frontend/functions/api/[[path]].js` as a production safety net. If any deployed bundle still calls `/api/...` on the frontend domain, the Function proxies that request to:
+
+```text
+https://fernwehsafari.onrender.com/api
+```
+
+Optional Cloudflare Pages Function environment override:
+
+```text
+API_PROXY_TARGET=https://fernwehsafari.onrender.com/api
+```
 
 ## Demo Admin
 

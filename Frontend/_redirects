@@ -1,4 +1,4 @@
-# Optional same-domain API proxy. Replace the URL with your real Render backend and remove the leading "#".
-# /api/* https://<your-render-service>.onrender.com/api/:splat 200
+# API requests are handled by the Cloudflare Pages Function in functions/api/[[path]].js.
+# Keep this SPA fallback below the API Function route.
 
 /* /index.html 200

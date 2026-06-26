@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import PaginatedList, { DEFAULT_PAGE_SIZE } from "../components/PaginatedList";
+import PaginatedList from "../components/PaginatedList";
 import Spinner from "../components/Spinner";
 import Toast from "../components/Toast";
 import travellexLogo from "../assets/photos/Travellex-logo-wordmark.png";
@@ -61,6 +61,9 @@ const roleLabels = {
 };
 
 const referralStatuses = ["clicked", "converted", "paid", "cancelled", "disputed"];
+const ADMIN_COLLECTION_PAGE_SIZE = 40;
+const ADMIN_USER_PAGE_SIZE = 50;
+const ADMIN_USER_PAGE_SIZE_OPTIONS = [50, 100, 200];
 
 const partnerFieldLabels = {
   name: "Partner name",
@@ -284,25 +287,27 @@ function compareDateNewest(left, right) {
 function AdminCollection({
   children,
   className = "admin-list full",
+  defaultView = "compact",
   emptyText = "No items found.",
   filterOptions = [],
   gridClassName = "admin-list-grid",
   items = [],
   label = "items",
-  pageSize = DEFAULT_PAGE_SIZE,
+  pageSize = ADMIN_COLLECTION_PAGE_SIZE,
   searchKeys = [],
   searchPlaceholder = "Search this folder",
   sortOptions = [],
   viewModes = [
+    { value: "compact", label: "Compact" },
     { value: "list", label: "List" },
-    { value: "cards", label: "Cards" },
-    { value: "compact", label: "Compact" }
+    { value: "cards", label: "Cards" }
   ]
 }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState(sortOptions[0]?.value || "default");
-  const [view, setView] = useState(viewModes[0]?.value || "list");
+  const initialView = viewModes.some((mode) => mode.value === defaultView) ? defaultView : viewModes[0]?.value || "list";
+  const [view, setView] = useState(initialView);
   const selectedFilter = filterOptions.find((option) => option.value === filter);
   const selectedSort = sortOptions.find((option) => option.value === sort);
   const filteredItems = useMemo(() => {
@@ -408,8 +413,8 @@ export default function Admin() {
   const [userSearch, setUserSearch] = useState("");
   const [userRoleFilter, setUserRoleFilter] = useState("all");
   const [userSort, setUserSort] = useState("newest");
-  const [userView, setUserView] = useState("list");
-  const [userPagination, setUserPagination] = useState({ page: 1, limit: DEFAULT_PAGE_SIZE, total: 0, totalPages: 1, roleCounts: {} });
+  const [userView, setUserView] = useState("compact");
+  const [userPagination, setUserPagination] = useState({ page: 1, limit: ADMIN_USER_PAGE_SIZE, total: 0, totalPages: 1, roleCounts: {} });
   const [referralForms, setReferralForms] = useState({});
   const [trackingReconcileForm, setTrackingReconcileForm] = useState(emptyTrackingReconcileForm);
   const [galleryForm, setGalleryForm] = useState(emptyGalleryMedia);
@@ -489,7 +494,7 @@ export default function Admin() {
     return nextUsers;
   }, [filteredUsers, userSort, userSortOptions]);
 
-  const visibleUsers = useMemo(() => sortedUsers.slice(0, DEFAULT_PAGE_SIZE), [sortedUsers]);
+  const visibleUsers = sortedUsers;
 
   const usersByRole = useMemo(
     () =>
@@ -815,7 +820,7 @@ export default function Admin() {
 
       if (isAdmin) {
         const [userResponse, enquiryResponse, referralResponse, companyApplicationResponse] = await Promise.all([
-          getUsers({ limit: DEFAULT_PAGE_SIZE, page: 1 }),
+          getUsers({ limit: ADMIN_USER_PAGE_SIZE, page: 1 }),
           getEnquiries(),
           getReferrals(),
           getTourCompanyApplications()
@@ -823,7 +828,7 @@ export default function Admin() {
 
         setUsers(userResponse.data.users);
         setUserPagination({
-          ...(userResponse.data.pagination || { page: 1, limit: DEFAULT_PAGE_SIZE, total: userResponse.data.users.length, totalPages: 1 }),
+          ...(userResponse.data.pagination || { page: 1, limit: ADMIN_USER_PAGE_SIZE, total: userResponse.data.users.length, totalPages: 1 }),
           roleCounts: userResponse.data.roleCounts || {}
         });
         setEnquiries(enquiryResponse.data.enquiries);
@@ -831,7 +836,7 @@ export default function Admin() {
         setCompanyApplications(companyApplicationResponse.data.applications);
       } else {
         setUsers([]);
-        setUserPagination({ page: 1, limit: DEFAULT_PAGE_SIZE, total: 0, totalPages: 1, roleCounts: {} });
+        setUserPagination({ page: 1, limit: ADMIN_USER_PAGE_SIZE, total: 0, totalPages: 1, roleCounts: {} });
         setEnquiries([]);
         setReferrals([]);
         setCompanyApplications([]);
@@ -846,8 +851,9 @@ export default function Admin() {
   async function loadUsersForFilters(page = 1, overrides = {}) {
     const search = overrides.search ?? userSearch;
     const role = overrides.role ?? userRoleFilter;
+    const limit = Number(overrides.limit ?? userPagination.limit ?? ADMIN_USER_PAGE_SIZE);
     const params = {
-      limit: userPagination.limit || DEFAULT_PAGE_SIZE,
+      limit,
       page
     };
 
@@ -1609,7 +1615,14 @@ export default function Admin() {
                     </label>
                     <label className="field">
                       <span>Role filter</span>
-                      <select value={userRoleFilter} onChange={(event) => setUserRoleFilter(event.target.value)}>
+                      <select
+                        value={userRoleFilter}
+                        onChange={(event) => {
+                          const nextRole = event.target.value;
+                          setUserRoleFilter(nextRole);
+                          loadUsersForFilters(1, { role: nextRole });
+                        }}
+                      >
                         <option value="all">All roles</option>
                         {userRoles.map((role) => (
                           <option key={role} value={role}>
@@ -1628,11 +1641,24 @@ export default function Admin() {
                         ))}
                       </select>
                     </label>
+                    <label className="field">
+                      <span>Rows</span>
+                      <select
+                        value={userPagination.limit || ADMIN_USER_PAGE_SIZE}
+                        onChange={(event) => loadUsersForFilters(1, { limit: Number(event.target.value) })}
+                      >
+                        {ADMIN_USER_PAGE_SIZE_OPTIONS.map((size) => (
+                          <option key={size} value={size}>
+                            {size}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                     <button className="button primary compact" type="button" onClick={() => loadUsersForFilters(1)}>
                       Search
                     </button>
                     <div className="admin-view-switch" role="group" aria-label="User view">
-                      {["list", "cards", "compact"].map((mode) => (
+                      {["compact", "list", "cards"].map((mode) => (
                         <button
                           className={userView === mode ? "active" : ""}
                           key={mode}
@@ -1645,13 +1671,13 @@ export default function Admin() {
                       ))}
                     </div>
                     <p className="form-note">
-                      Showing {visibleUsers.length} of {userPagination.total} matching users. Page {userPagination.page} of{" "}
+                      Showing {visibleUsers.length} loaded of {userPagination.total} users. Page {userPagination.page} of{" "}
                       {userPagination.totalPages}.
                     </p>
                   </div>
                   <div className={`admin-list-grid view-${userView}`}>
                     {visibleUsers.map((user) => (
-                      <article className="admin-row" key={user.id}>
+                      <article className="admin-row user-admin-row" key={user.id}>
                         <div>
                           <strong>{user.name}</strong>
                           <span>
@@ -1693,9 +1719,6 @@ export default function Admin() {
                       </article>
                     ))}
                   </div>
-                  {filteredUsers.length > visibleUsers.length && (
-                    <p className="empty-state">Refine search to load a smaller working set from {filteredUsers.length} matches.</p>
-                  )}
                   <div className="button-row">
                     <button
                       className="button secondary compact"
