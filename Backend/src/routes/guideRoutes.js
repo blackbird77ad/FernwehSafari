@@ -12,7 +12,7 @@ const { auth, optionalAuth } = require("../middleware/auth");
 
 const router = express.Router();
 
-router.post("/applications", auth, createGuideApplication);
+router.post("/applications", optionalAuth, createGuideApplication);
 router.get("/applications", auth, listGuideApplications);
 router.patch("/applications/:id/company-decision", auth, companyDecision);
 router.patch("/applications/:id/admin-decision", auth, adminDecision);

@@ -6,6 +6,11 @@ const sendResponse = require("../utils/sendResponse");
 const TourCompanyApplication = require("../models/TourCompanyApplication");
 const TourPartner = require("../models/TourPartner");
 const User = require("../models/User");
+const {
+  assignPasswordResetToken,
+  buildClientUrl,
+  PASSWORD_RESET_TOKEN_TTL_MINUTES
+} = require("../lib/accountTokens");
 const { notifyOwner, notifyUser } = require("../lib/resend");
 
 function parseList(value) {
@@ -48,8 +53,8 @@ function normalizeApplicationPayload(body) {
   };
 }
 
-function temporaryPassword() {
-  return `Travellex-${crypto.randomBytes(4).toString("hex")}`;
+function randomAccountPassword() {
+  return crypto.randomBytes(32).toString("hex");
 }
 
 function applicationStatusCopy(status, reviewNotes) {
@@ -66,20 +71,33 @@ function applicationStatusCopy(status, reviewNotes) {
 }
 
 async function approveCompanyApplication(application, adminUser, reviewNotes) {
-  let user = await User.findOne({ email: application.email.toLowerCase() });
-  let generatedPassword = "";
+  let user = await User.findOne({ email: application.email.toLowerCase() }).select(
+    "+emailVerificationTokenHash +emailVerificationExpiresAt +passwordResetTokenHash +passwordResetExpiresAt"
+  );
+  let setupPasswordUrl = "";
+  let accountCreated = false;
 
   if (!user) {
-    generatedPassword = temporaryPassword();
-    user = await User.create({
+    user = new User({
       name: application.contactName,
       email: application.email,
-      passwordHash: await bcrypt.hash(generatedPassword, 12),
+      passwordHash: await bcrypt.hash(randomAccountPassword(), 12),
       country: application.headquarters,
-      role: "tour_company"
+      role: "tour_company",
+      emailVerified: true,
+      emailVerifiedAt: new Date()
     });
+    const setupToken = assignPasswordResetToken(user);
+    setupPasswordUrl = buildClientUrl(`/reset-password?token=${encodeURIComponent(setupToken)}`);
+    accountCreated = true;
+    await user.save();
   } else {
     user.role = "tour_company";
+    user.suspended = false;
+    user.emailVerified = true;
+    user.emailVerifiedAt = user.emailVerifiedAt || new Date();
+    user.emailVerificationTokenHash = undefined;
+    user.emailVerificationExpiresAt = undefined;
     await user.save();
   }
 
@@ -110,18 +128,32 @@ async function approveCompanyApplication(application, adminUser, reviewNotes) {
   application.partner = partner._id;
   await application.save();
 
-  await notifyUser(application.email, "Travellex tour company application approved", [
-    `Hello ${application.contactName},`,
-    "",
-    "Your company application has been approved.",
-    "Your account now has tour company access and can post tours for Travellex review.",
-    generatedPassword ? `Temporary password: ${generatedPassword}` : "Use your existing Travellex login.",
-    "",
-    "Please update any temporary password after logging in.",
-    "Travellex"
-  ]);
+  const loginUrl = buildClientUrl("/login");
+  const emailStatus = await notifyUser(
+    application.email,
+    "Travellex tour company application approved",
+    [
+      `Hello ${application.contactName},`,
+      "",
+      "Your company application has been approved.",
+      "Your account now has tour company access and can post tours for Travellex review.",
+      accountCreated
+        ? `Set password: ${setupPasswordUrl}`
+        : `Login: ${loginUrl}`,
+      accountCreated
+        ? `This password setup link expires in ${PASSWORD_RESET_TOKEN_TTL_MINUTES} minutes. If it expires, use Forgot password on the login page.`
+        : "Use your existing Travellex login. If you do not remember your password, use Forgot password on the login page.",
+      "",
+      "Travellex"
+    ],
+    {
+      cta: accountCreated
+        ? { label: "Set password", href: setupPasswordUrl }
+        : { label: "Login", href: loginUrl }
+    }
+  );
 
-  return application;
+  return { application, emailStatus, accountCreated };
 }
 
 const createCompanyApplication = asyncHandler(async (req, res) => {
@@ -176,13 +208,17 @@ const updateCompanyApplicationStatus = asyncHandler(async (req, res) => {
 
   const { status, reviewNotes = "" } = req.body;
   const validStatuses = ["under_review", "call_scheduled", "approved", "rejected"];
+  let emailStatus = null;
+  let accountCreated = false;
 
   if (!validStatuses.includes(status)) {
     throw new ApiError(422, `Status must be one of: ${validStatuses.join(", ")}.`);
   }
 
   if (status === "approved") {
-    await approveCompanyApplication(application, req.user, reviewNotes);
+    const result = await approveCompanyApplication(application, req.user, reviewNotes);
+    emailStatus = result.emailStatus;
+    accountCreated = result.accountCreated;
   } else {
     application.status = status;
     application.reviewNotes = reviewNotes;
@@ -190,7 +226,7 @@ const updateCompanyApplicationStatus = asyncHandler(async (req, res) => {
     application.reviewedAt = new Date();
     await application.save();
 
-    await notifyUser(application.email, "Travellex tour company application update", [
+    emailStatus = await notifyUser(application.email, "Travellex tour company application update", [
       `Hello ${application.contactName},`,
       "",
       ...applicationStatusCopy(status, reviewNotes),
@@ -200,7 +236,7 @@ const updateCompanyApplicationStatus = asyncHandler(async (req, res) => {
   }
 
   await application.populate(["submittedBy", "linkedUser", "partner", "reviewedBy"]);
-  sendResponse(res, 200, { application });
+  sendResponse(res, 200, { application, accountCreated, emailStatus });
 });
 
 const deleteCompanyApplication = asyncHandler(async (req, res) => {

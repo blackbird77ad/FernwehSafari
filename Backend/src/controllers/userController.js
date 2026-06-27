@@ -14,6 +14,8 @@ function serializeAdminUser(user) {
     email: user.email,
     role: user.role,
     country: user.country,
+    suspended: Boolean(user.suspended),
+    emailVerified: user.emailVerified !== false,
     savedTours: user.savedTours || [],
     createdAt: user.createdAt,
     updatedAt: user.updatedAt
@@ -133,7 +135,7 @@ const updateUser = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User not found.");
   }
 
-  const { name, email, password, country, role } = req.body;
+  const { name, email, password, country, role, suspended } = req.body;
 
   if (role !== undefined) {
     ensureValidRole(role);
@@ -147,6 +149,14 @@ const updateUser = asyncHandler(async (req, res) => {
 
   if (country !== undefined) {
     user.country = country;
+  }
+
+  if (suspended !== undefined) {
+    if (String(user._id) === String(req.user._id) && suspended === true) {
+      throw new ApiError(403, "You cannot suspend your own account.");
+    }
+
+    user.suspended = Boolean(suspended);
   }
 
   if (email !== undefined && email.toLowerCase() !== user.email) {
@@ -195,6 +205,32 @@ const updateUserRole = asyncHandler(async (req, res) => {
     `Changed by: ${req.user.name} (${req.user.email})`,
     `User: ${user.name} (${user.email})`,
     `New role: ${user.role}`
+  ]);
+
+  sendResponse(res, 200, { user: serializeAdminUser(user) });
+});
+
+const updateUserSuspension = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+
+  const suspended = req.body.suspended === true;
+
+  if (String(user._id) === String(req.user._id) && suspended) {
+    throw new ApiError(403, "You cannot suspend your own account.");
+  }
+
+  user.suspended = suspended;
+  await user.save();
+
+  await notifyOwner(`CRM user ${suspended ? "suspended" : "activated"}: ${user.name}`, [
+    `Changed by: ${req.user.name} (${req.user.email})`,
+    `User: ${user.name} (${user.email})`,
+    `Role: ${user.role}`,
+    `Status: ${suspended ? "Suspended" : "Active"}`
   ]);
 
   sendResponse(res, 200, { user: serializeAdminUser(user) });
@@ -271,5 +307,6 @@ module.exports = {
   removeSavedTour,
   saveTour,
   updateUser,
+  updateUserSuspension,
   updateUserRole
 };

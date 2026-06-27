@@ -31,6 +31,10 @@ async function attachUser(req, tokenRequired) {
       throw new ApiError(401, "User no longer exists.");
     }
 
+    if (user?.suspended && tokenRequired) {
+      throw new ApiError(403, "This account is suspended. Contact Travellex support.");
+    }
+
     req.user = user || null;
   } catch (error) {
     if (tokenRequired) {

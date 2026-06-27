@@ -3150,8 +3150,94 @@ textarea:focus {
   white-space: nowrap;
 }
 
+.users-admin-grid {
+  align-items: start;
+}
+
+.user-form-fold {
+  gap: 0.55rem;
+}
+
+.user-form-toggle {
+  display: flex;
+  min-height: 2.35rem;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid var(--admin-line);
+  border-radius: 0.55rem;
+  padding: 0.52rem 0.68rem;
+  background: var(--sky);
+  color: var(--admin-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.user-form-toggle span {
+  color: var(--admin-muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.user-form-toggle strong {
+  color: var(--admin-deep);
+}
+
+.user-form-panel {
+  box-shadow: none;
+}
+
+.user-role-tabs {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.user-admin-row {
+  grid-template-columns: 1fr;
+}
+
+.user-name-toggle {
+  width: fit-content;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--admin-text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+  text-align: left;
+}
+
+.user-name-toggle:hover {
+  color: var(--admin-deep);
+}
+
+.user-row-details {
+  display: grid;
+  gap: 0.55rem;
+  border-top: 1px solid var(--admin-line);
+  padding-top: 0.52rem;
+}
+
+.user-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 0.75rem;
+}
+
+.user-detail-grid span {
+  color: var(--admin-muted);
+  font-size: 0.82rem;
+}
+
 .referral-row {
   align-items: flex-start;
+}
+
+.referral-top-collection {
+  order: -1;
 }
 
 .referral-row > div:first-child {
@@ -3865,6 +3951,62 @@ textarea:focus {
   gap: 0.55rem;
 }
 
+.partner-application-workflow {
+  gap: 0.75rem;
+}
+
+.partner-pending-section {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.partner-application-section-head,
+.partner-application-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.partner-application-section-head h2 {
+  margin: 0;
+}
+
+.partner-application-count,
+.partner-application-status {
+  display: inline-flex;
+  min-height: 1.65rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--admin-line);
+  border-radius: 999px;
+  padding: 0.22rem 0.58rem;
+  background: var(--sky);
+  color: var(--admin-deep);
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.partner-application-status-approved {
+  border-color: rgba(4, 120, 87, 0.24);
+  background: rgba(220, 252, 231, 0.9);
+  color: #047857;
+}
+
+.partner-application-status-rejected {
+  border-color: rgba(190, 18, 60, 0.24);
+  background: rgba(255, 228, 230, 0.9);
+  color: #be123c;
+}
+
+.partner-review-tabs {
+  width: 100%;
+  margin-bottom: 0.55rem;
+}
+
 .admin-collection-toolbar {
   display: grid;
   grid-template-columns: minmax(14rem, 1.45fr) repeat(2, minmax(8rem, 0.65fr)) auto minmax(8rem, auto);
@@ -4059,13 +4201,13 @@ textarea:focus {
 .footer span,
 .footer a {
   color: rgba(255, 255, 255, 0.9);
+  font-weight: 400;
 }
 
 .footer a {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  font-weight: 800;
 }
 
 .footer a:hover,

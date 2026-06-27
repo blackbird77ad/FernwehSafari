@@ -16,6 +16,10 @@ export function updateUserRole(id, role) {
   return api.patch(`/users/${id}/role`, { role });
 }
 
+export function updateUserSuspension(id, suspended) {
+  return api.patch(`/users/${id}/suspension`, { suspended });
+}
+
 export function deleteUser(id) {
   return api.delete(`/users/${id}`);
 }

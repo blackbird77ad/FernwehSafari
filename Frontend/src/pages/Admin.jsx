@@ -47,6 +47,7 @@ import {
   deleteUser,
   getUsers,
   updateUser,
+  updateUserSuspension,
   updateUserRole
 } from "../services/userService";
 import { eur, formatDate } from "../utils/formatters";
@@ -58,6 +59,14 @@ const roleLabels = {
   tour_company: "Tour company",
   tour_guide: "Tour guide",
   moderator: "Moderator",
+  admin: "Admin"
+};
+
+const userRoleTabLabels = {
+  traveller: "Travelers",
+  tour_company: "Partners",
+  tour_guide: "Tour Guides",
+  moderator: "Moderators",
   admin: "Admin"
 };
 
@@ -259,6 +268,39 @@ function statusLabel(status) {
   return String(status || "not set").replace(/_/g, " ");
 }
 
+const partnerApplicationReviewTabs = [
+  { value: "approved", label: "Approved partners" },
+  { value: "rejected", label: "Rejected partner applications" }
+];
+
+function isReviewedPartnerApplication(application) {
+  return ["approved", "rejected"].includes(application.status);
+}
+
+function partnerApplicationStatusLabel(status) {
+  const labels = {
+    new: "Pending partner request",
+    submitted: "Pending partner request",
+    under_review: "Partner request under review",
+    call_scheduled: "Partner call scheduled",
+    approved: "Approved partner",
+    rejected: "Rejected partner application"
+  };
+
+  return labels[status] || statusLabel(status);
+}
+
+function emailDeliveryMessage(baseMessage, emailStatus) {
+  if (emailStatus && emailStatus.sent === false) {
+    return {
+      tone: "error",
+      message: `${baseMessage} Email notification failed: ${emailStatus.reason || "Check Resend configuration."}`
+    };
+  }
+
+  return { message: baseMessage };
+}
+
 function getPathValue(item, path) {
   return String(path)
     .split(".")
@@ -401,6 +443,7 @@ export default function Admin() {
   const [enquiries, setEnquiries] = useState([]);
   const [referrals, setReferrals] = useState([]);
   const [companyApplications, setCompanyApplications] = useState([]);
+  const [partnerApplicationReviewTab, setPartnerApplicationReviewTab] = useState("approved");
   const [guideApplications, setGuideApplications] = useState([]);
   const [guideBookings, setGuideBookings] = useState([]);
   const [galleryMedia, setGalleryMedia] = useState([]);
@@ -410,6 +453,8 @@ export default function Admin() {
   const [editingPartnerId, setEditingPartnerId] = useState("");
   const [userForm, setUserForm] = useState(emptyUser);
   const [editingUserId, setEditingUserId] = useState("");
+  const [userFormOpen, setUserFormOpen] = useState(false);
+  const [expandedUserId, setExpandedUserId] = useState("");
   const [previewUserId, setPreviewUserId] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const [userRoleFilter, setUserRoleFilter] = useState("all");
@@ -501,9 +546,13 @@ export default function Admin() {
     () =>
       userRoles.map((role) => ({
         role,
-        label: roleLabels[role],
+        label: userRoleTabLabels[role] || roleLabels[role],
         count: userPagination.roleCounts?.[role] || 0
       })),
+    [userPagination.roleCounts]
+  );
+  const allUserRoleCount = useMemo(
+    () => Object.values(userPagination.roleCounts || {}).reduce((total, count) => total + (Number(count) || 0), 0),
     [userPagination.roleCounts]
   );
 
@@ -555,6 +604,25 @@ export default function Admin() {
       uploads: uploading ? 1 : 0
     }),
     [companyApplications, crmStats.length, enquiries, galleryMedia, guideApplications, guideBookings, partners, referrals, tours, uploading, userPagination.total, users.length]
+  );
+
+  const pendingCompanyApplicationItems = useMemo(
+    () =>
+      companyApplications
+        .filter((application) => !isReviewedPartnerApplication(application))
+        .sort((left, right) => compareDateNewest(left.createdAt, right.createdAt)),
+    [companyApplications]
+  );
+  const reviewedCompanyApplicationItems = useMemo(
+    () => companyApplications.filter((application) => application.status === partnerApplicationReviewTab),
+    [companyApplications, partnerApplicationReviewTab]
+  );
+  const partnerApplicationReviewCounts = useMemo(
+    () => ({
+      approved: companyApplications.filter((application) => application.status === "approved").length,
+      rejected: companyApplications.filter((application) => application.status === "rejected").length
+    }),
+    [companyApplications]
   );
 
   const previewUser = useMemo(() => {
@@ -1101,7 +1169,8 @@ export default function Admin() {
 
       setUserForm(emptyUser);
       setEditingUserId("");
-      await loadAdminData();
+      setUserFormOpen(false);
+      await loadUsersForFilters(1);
     } catch (error) {
       setToast({ tone: "error", message: error.message });
     }
@@ -1178,6 +1247,7 @@ export default function Admin() {
       country: user.country || "",
       role: user.role || "traveller"
     });
+    setUserFormOpen(true);
     setActiveTab("users");
   }
 
@@ -1185,7 +1255,17 @@ export default function Admin() {
     try {
       await updateUserRole(id, role);
       setToast({ message: "User role updated." });
-      await loadAdminData();
+      await loadUsersForFilters(1);
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    }
+  }
+
+  async function handleUserSuspension(id, suspended) {
+    try {
+      await updateUserSuspension(id, suspended);
+      setToast({ message: `User ${suspended ? "suspended" : "activated"}.` });
+      await loadUsersForFilters(userPagination.page);
     } catch (error) {
       setToast({ tone: "error", message: error.message });
     }
@@ -1195,7 +1275,7 @@ export default function Admin() {
     try {
       await deleteUser(id);
       setToast({ message: "User deleted." });
-      await loadAdminData();
+      await loadUsersForFilters(userPagination.page);
     } catch (error) {
       setToast({ tone: "error", message: error.message });
     }
@@ -1281,8 +1361,8 @@ export default function Admin() {
     const reviewNotes = window.prompt("Review notes for this decision?") || "";
 
     try {
-      await updateTourCompanyApplicationStatus(id, { status, reviewNotes });
-      setToast({ message: `Company application ${status}.` });
+      const response = await updateTourCompanyApplicationStatus(id, { status, reviewNotes });
+      setToast(emailDeliveryMessage(`Company application ${status}.`, response.data.emailStatus));
       await loadAdminData();
     } catch (error) {
       setToast({ tone: "error", message: error.message });
@@ -1303,8 +1383,8 @@ export default function Admin() {
     const notes = window.prompt("Admin notes for this guide decision?") || "";
 
     try {
-      await decideGuideApplicationByAdmin(id, { decision, notes });
-      setToast({ message: `Guide application ${decision}.` });
+      const response = await decideGuideApplicationByAdmin(id, { decision, notes });
+      setToast(emailDeliveryMessage(`Guide application ${decision}.`, response.data.emailStatus));
       await loadAdminData();
     } catch (error) {
       setToast({ tone: "error", message: error.message });
@@ -1352,6 +1432,95 @@ export default function Admin() {
   function handleTabChange(tab) {
     setActiveTab(tab);
     setSidebarOpen(false);
+  }
+
+  function renderCompanyApplicationRow(application, { canReview = false } = {}) {
+    const currentStatus = application.status || "new";
+    const displayStatus = partnerApplicationStatusLabel(currentStatus);
+    const notes = application.reviewNotes || application.notes || "No notes provided.";
+
+    return (
+      <article className="admin-row partner-application-row" key={application._id}>
+        <div>
+          <div className="partner-application-title-row">
+            <strong>{application.companyName}</strong>
+            <span className={`partner-application-status partner-application-status-${currentStatus}`}>
+              {displayStatus}
+            </span>
+          </div>
+          <span>
+            {application.contactName} - {application.email}
+          </span>
+          <p>
+            {application.headquarters} - Regions: {application.operatingRegions?.join(", ") || "Not provided"} -
+            Guides: {application.hasInHouseGuides ? "In-house" : "External/none listed"}
+          </p>
+          <p>{notes}</p>
+        </div>
+        <div className="button-row">
+          <a className="button secondary compact" href={`mailto:${application.email}`}>
+            Email
+          </a>
+          {application.phone && (
+            <a className="button secondary compact" href={`tel:${application.phone}`}>
+              Call
+            </a>
+          )}
+          {application.whatsapp && (
+            <a
+              className="button secondary compact"
+              href={`https://wa.me/${application.whatsapp.replace(/\D/g, "")}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              WhatsApp
+            </a>
+          )}
+          {canReview && currentStatus !== "under_review" && (
+            <button
+              className="button secondary compact"
+              type="button"
+              onClick={() => handleCompanyApplicationStatus(application._id, "under_review")}
+            >
+              Under review
+            </button>
+          )}
+          {canReview && currentStatus !== "call_scheduled" && (
+            <button
+              className="button secondary compact"
+              type="button"
+              onClick={() => handleCompanyApplicationStatus(application._id, "call_scheduled")}
+            >
+              Call scheduled
+            </button>
+          )}
+          {canReview && (
+            <>
+              <button
+                className="button primary compact"
+                type="button"
+                onClick={() => handleCompanyApplicationStatus(application._id, "approved")}
+              >
+                Approve
+              </button>
+              <button
+                className="button danger compact"
+                type="button"
+                onClick={() => handleCompanyApplicationStatus(application._id, "rejected")}
+              >
+                Reject
+              </button>
+            </>
+          )}
+          <ConfirmActionButton
+            actionLabel={`Delete ${application.companyName} application`}
+            confirmMessage={`Delete ${application.companyName}'s company application? This cannot be undone.`}
+            iconOnly
+            onConfirm={() => removeCompanyApplication(application._id)}
+          />
+        </div>
+      </article>
+    );
   }
 
   const activeMeta = tabMeta[activeTab] || { title: activeTab, description: "Manage Travellex." };
@@ -1549,62 +1718,101 @@ export default function Admin() {
               </div>
             )}
             {activeTab === "users" && (
-              <div className="admin-grid">
-                <form className="panel-form admin-form" onSubmit={handleUserSubmit}>
-                  <h2>{editingUserId ? "Edit user" : "Create user"}</h2>
-                  <label className="field">
-                    <span>Name</span>
-                    <input value={userForm.name} onChange={(event) => updateUserField("name", event.target.value)} required />
-                  </label>
-                  <label className="field">
-                    <span>Email</span>
-                    <input type="email" value={userForm.email} onChange={(event) => updateUserField("email", event.target.value)} required />
-                  </label>
-                  <div className="form-grid">
-                    <label className="field">
-                      <span>Password {editingUserId ? "(leave blank to keep)" : ""}</span>
-                      <input
-                        type="password"
-                        minLength="8"
-                        value={userForm.password}
-                        onChange={(event) => updateUserField("password", event.target.value)}
-                        required={!editingUserId}
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Country</span>
-                      <input value={userForm.country} onChange={(event) => updateUserField("country", event.target.value)} />
-                    </label>
-                  </div>
-                  <label className="field">
-                    <span>Role</span>
-                    <select value={userForm.role} onChange={(event) => updateUserField("role", event.target.value)}>
-                      {userRoles.map((role) => (
-                        <option key={role} value={role}>
-                          {roleLabels[role]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <div className="button-row">
-                    <button className="button primary" type="submit">
-                      {editingUserId ? "Update user" : "Create user"}
+              <div className="admin-grid users-admin-grid">
+                <section className="side-panel user-form-fold">
+                  <button
+                    className="user-form-toggle"
+                    type="button"
+                    onClick={() => setUserFormOpen((current) => !current)}
+                    aria-expanded={userFormOpen}
+                  >
+                    <span>{editingUserId ? "Editing user" : "Create user"}</span>
+                    <strong>{userFormOpen ? "Hide" : "Open"}</strong>
+                  </button>
+                  {userFormOpen && (
+                    <form className="panel-form admin-form user-form-panel" onSubmit={handleUserSubmit}>
+                      <h2>{editingUserId ? "Edit user" : "Create user"}</h2>
+                      <label className="field">
+                        <span>Name</span>
+                        <input value={userForm.name} onChange={(event) => updateUserField("name", event.target.value)} required />
+                      </label>
+                      <label className="field">
+                        <span>Email</span>
+                        <input type="email" value={userForm.email} onChange={(event) => updateUserField("email", event.target.value)} required />
+                      </label>
+                      <div className="form-grid">
+                        <label className="field">
+                          <span>Password {editingUserId ? "(leave blank to keep)" : ""}</span>
+                          <input
+                            type="password"
+                            minLength="8"
+                            value={userForm.password}
+                            onChange={(event) => updateUserField("password", event.target.value)}
+                            required={!editingUserId}
+                          />
+                        </label>
+                        <label className="field">
+                          <span>Country</span>
+                          <input value={userForm.country} onChange={(event) => updateUserField("country", event.target.value)} />
+                        </label>
+                      </div>
+                      <label className="field">
+                        <span>Role</span>
+                        <select value={userForm.role} onChange={(event) => updateUserField("role", event.target.value)}>
+                          {userRoles.map((role) => (
+                            <option key={role} value={role}>
+                              {roleLabels[role]}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <div className="button-row">
+                        <button className="button primary" type="submit">
+                          {editingUserId ? "Update user" : "Create user"}
+                        </button>
+                        {editingUserId && (
+                          <button
+                            className="button secondary"
+                            type="button"
+                            onClick={() => {
+                              setEditingUserId("");
+                              setUserForm(emptyUser);
+                              setUserFormOpen(false);
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
+                    </form>
+                  )}
+                </section>
+                <div className="admin-list">
+                  <div className="tab-row user-role-tabs" role="tablist" aria-label="User roles">
+                    <button
+                      className={userRoleFilter === "all" ? "active" : ""}
+                      type="button"
+                      onClick={() => {
+                        setUserRoleFilter("all");
+                        loadUsersForFilters(1, { role: "all" });
+                      }}
+                    >
+                      All users ({allUserRoleCount || userPagination.total || users.length})
                     </button>
-                    {editingUserId && (
+                    {userRoles.map((role) => (
                       <button
-                        className="button secondary"
+                        className={userRoleFilter === role ? "active" : ""}
+                        key={role}
                         type="button"
                         onClick={() => {
-                          setEditingUserId("");
-                          setUserForm(emptyUser);
+                          setUserRoleFilter(role);
+                          loadUsersForFilters(1, { role });
                         }}
                       >
-                        Cancel
+                        {userRoleTabLabels[role] || roleLabels[role]} ({userPagination.roleCounts?.[role] || 0})
                       </button>
-                    )}
+                    ))}
                   </div>
-                </form>
-                <div className="admin-list">
                   <div className="admin-toolbar">
                     <label className="field">
                       <span>Search users</span>
@@ -1613,24 +1821,6 @@ export default function Admin() {
                         onChange={(event) => setUserSearch(event.target.value)}
                         placeholder="Name, email, country or role"
                       />
-                    </label>
-                    <label className="field">
-                      <span>Role filter</span>
-                      <select
-                        value={userRoleFilter}
-                        onChange={(event) => {
-                          const nextRole = event.target.value;
-                          setUserRoleFilter(nextRole);
-                          loadUsersForFilters(1, { role: nextRole });
-                        }}
-                      >
-                        <option value="all">All roles</option>
-                        {userRoles.map((role) => (
-                          <option key={role} value={role}>
-                            {roleLabels[role]}
-                          </option>
-                        ))}
-                      </select>
                     </label>
                     <label className="field">
                       <span>Sort</span>
@@ -1678,48 +1868,73 @@ export default function Admin() {
                   </div>
                   <div className={`admin-list-grid view-${userView}`}>
                     {visibleUsers.map((user) => (
-                      <article className="admin-row user-admin-row" key={user.id}>
+                      <article className={expandedUserId === user.id ? "admin-row user-admin-row expanded" : "admin-row user-admin-row"} key={user.id}>
                         <div>
-                          <strong>{user.name}</strong>
+                          <button
+                            className="user-name-toggle"
+                            type="button"
+                            onClick={() => setExpandedUserId((current) => (current === user.id ? "" : user.id))}
+                            aria-expanded={expandedUserId === user.id}
+                          >
+                            {user.name}
+                          </button>
                           <span>
-                            {user.email} - {roleLabels[user.role] || user.role} - {user.country || "No country"}
+                            {user.email} - {roleLabels[user.role] || user.role} - {user.country || "No country"} -{" "}
+                            {user.suspended ? "Suspended" : "Active"}
                           </span>
                         </div>
-                        <div className="button-row">
-                          <label className="inline-role-select">
-                            <span>Promote role</span>
-                            <select
-                              aria-label={`Promote ${user.name} role`}
-                              value={user.role}
-                              onChange={(event) => handleUserRoleChange(user.id, event.target.value)}
-                            >
-                              {userRoles.map((role) => (
-                                <option key={role} value={role}>
-                                  {roleLabels[role]}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <button
-                            className="button secondary compact"
-                            type="button"
-                            onClick={() => {
-                              setPreviewUserId(user.id);
-                              setActiveTab("role dashboards");
-                            }}
-                          >
-                            View dashboard
-                          </button>
-                          <button className="button secondary compact" type="button" onClick={() => editUser(user)}>
-                            Edit
-                          </button>
-                          <ConfirmActionButton
-                            actionLabel={`Delete ${user.name}`}
-                            confirmMessage={`Delete ${user.name}? This removes the account and cannot be undone.`}
-                            iconOnly
-                            onConfirm={() => removeUser(user.id)}
-                          />
-                        </div>
+                        {expandedUserId === user.id && (
+                          <div className="user-row-details">
+                            <div className="user-detail-grid">
+                              <span>Role: {roleLabels[user.role] || user.role}</span>
+                              <span>Country: {user.country || "No country"}</span>
+                              <span>Email: {user.emailVerified ? "verified" : "unverified"}</span>
+                              <span>Status: {user.suspended ? "Suspended" : "Active"}</span>
+                            </div>
+                            <div className="button-row">
+                              <label className="inline-role-select">
+                                <span>Role</span>
+                                <select
+                                  aria-label={`Change ${user.name} role`}
+                                  value={user.role}
+                                  onChange={(event) => handleUserRoleChange(user.id, event.target.value)}
+                                >
+                                  {userRoles.map((role) => (
+                                    <option key={role} value={role}>
+                                      {roleLabels[role]}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <button
+                                className="button secondary compact"
+                                type="button"
+                                onClick={() => {
+                                  setPreviewUserId(user.id);
+                                  setActiveTab("role dashboards");
+                                }}
+                              >
+                                View dashboard
+                              </button>
+                              <button className="button secondary compact" type="button" onClick={() => editUser(user)}>
+                                Edit
+                              </button>
+                              <button
+                                className={user.suspended ? "button secondary compact" : "button danger compact"}
+                                type="button"
+                                onClick={() => handleUserSuspension(user.id, !user.suspended)}
+                              >
+                                {user.suspended ? "Activate" : "Suspend"}
+                              </button>
+                              <ConfirmActionButton
+                                actionLabel={`Delete ${user.name}`}
+                                confirmMessage={`Delete ${user.name}? This removes the account and cannot be undone.`}
+                                iconOnly
+                                onConfirm={() => removeUser(user.id)}
+                              />
+                            </div>
+                          </div>
+                        )}
                       </article>
                     ))}
                   </div>
@@ -1821,87 +2036,71 @@ export default function Admin() {
               </div>
             )}
             {activeTab === "company applications" && (
-              <AdminCollection
-                items={companyApplications}
-                label="company applications"
-                emptyText="No company applications yet."
-                searchKeys={["companyName", "contactName", "email", "headquarters", (application) => application.operatingRegions?.join(" ")]}
-                filterOptions={[
-                  { value: "submitted", label: "Submitted", predicate: (application) => application.status === "submitted" },
-                  { value: "call_scheduled", label: "Call scheduled", predicate: (application) => application.status === "call_scheduled" },
-                  { value: "approved", label: "Approved", predicate: (application) => application.status === "approved" },
-                  { value: "rejected", label: "Rejected", predicate: (application) => application.status === "rejected" }
-                ]}
-                sortOptions={[
-                  { value: "newest", label: "Newest", compare: (left, right) => compareDateNewest(left.createdAt, right.createdAt) },
-                  { value: "company", label: "Company A-Z", compare: (left, right) => compareText(left.companyName, right.companyName) },
-                  { value: "status", label: "Status", compare: (left, right) => compareText(left.status, right.status) }
-                ]}
-                searchPlaceholder="Search company, contact, email or region"
-              >
-                {(application) => (
-                  <article className="admin-row" key={application._id}>
+              <div className="admin-list full partner-application-workflow">
+                <section className="side-panel partner-pending-section">
+                  <div className="partner-application-section-head">
                     <div>
-                      <strong>{application.companyName}</strong>
-                      <span>
-                        {application.contactName} - {application.email} - {application.status}
-                      </span>
-                      <p>
-                        {application.headquarters} - Regions: {application.operatingRegions?.join(", ") || "Not provided"} -
-                        Guides: {application.hasInHouseGuides ? "In-house" : "External/none listed"}
-                      </p>
-                      <p>{application.notes || "No notes provided."}</p>
+                      <p className="eyebrow">Pending partner requests</p>
+                      <h2>Needs review</h2>
                     </div>
-                    <div className="button-row">
-                      <a className="button secondary compact" href={`mailto:${application.email}`}>
-                        Email
-                      </a>
-                      {application.phone && (
-                        <a className="button secondary compact" href={`tel:${application.phone}`}>
-                          Call
-                        </a>
-                      )}
-                      {application.whatsapp && (
-                        <a
-                          className="button secondary compact"
-                          href={`https://wa.me/${application.whatsapp.replace(/\D/g, "")}`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          WhatsApp
-                        </a>
-                      )}
-                      <button
-                        className="button secondary compact"
-                        type="button"
-                        onClick={() => handleCompanyApplicationStatus(application._id, "call_scheduled")}
-                      >
-                        Call scheduled
-                      </button>
-                      <button
-                        className="button primary compact"
-                        type="button"
-                        onClick={() => handleCompanyApplicationStatus(application._id, "approved")}
-                      >
-                        Approve
-                      </button>
-                      <button
-                        className="button danger compact"
-                        type="button"
-                        onClick={() => handleCompanyApplicationStatus(application._id, "rejected")}
-                      >
-                        Reject
-                      </button>
-                      <ConfirmActionButton
-                        actionLabel={`Delete ${application.companyName} application`}
-                        confirmMessage={`Delete ${application.companyName}'s company application? This cannot be undone.`}
-                        iconOnly
-                        onConfirm={() => removeCompanyApplication(application._id)}
-                      />
+                    <span className="partner-application-count">{pendingCompanyApplicationItems.length}</span>
+                  </div>
+                  {pendingCompanyApplicationItems.length ? (
+                    <div className="admin-list-grid view-list">
+                      {pendingCompanyApplicationItems.map((application) => renderCompanyApplicationRow(application, { canReview: true }))}
                     </div>
-                  </article>
-                )}
-              </AdminCollection>
+                  ) : (
+                    <p>No pending partner requests.</p>
+                  )}
+                </section>
+
+                <section className="partner-reviewed-section">
+                  <div className="tab-row partner-review-tabs" role="tablist" aria-label="Reviewed partner applications">
+                    {partnerApplicationReviewTabs.map((tab) => (
+                      <button
+                        className={partnerApplicationReviewTab === tab.value ? "active" : ""}
+                        key={tab.value}
+                        type="button"
+                        onClick={() => setPartnerApplicationReviewTab(tab.value)}
+                      >
+                        {tab.label} ({partnerApplicationReviewCounts[tab.value] || 0})
+                      </button>
+                    ))}
+                  </div>
+                  <AdminCollection
+                    items={reviewedCompanyApplicationItems}
+                    label={partnerApplicationReviewTab === "approved" ? "approved partners" : "rejected partner applications"}
+                    emptyText={
+                      partnerApplicationReviewTab === "approved"
+                        ? "No approved partners yet."
+                        : "No rejected partner applications yet."
+                    }
+                    searchKeys={[
+                      "companyName",
+                      "contactName",
+                      "email",
+                      "headquarters",
+                      "website",
+                      "reviewNotes",
+                      (application) => application.operatingRegions?.join(" "),
+                      (application) => partnerApplicationStatusLabel(application.status)
+                    ]}
+                    filterOptions={[
+                      { value: "has-notes", label: "Has review notes", predicate: (application) => Boolean(application.reviewNotes) },
+                      { value: "has-whatsapp", label: "Has WhatsApp", predicate: (application) => Boolean(application.whatsapp) },
+                      { value: "has-phone", label: "Has phone", predicate: (application) => Boolean(application.phone) }
+                    ]}
+                    sortOptions={[
+                      { value: "newest", label: "Newest request", compare: (left, right) => compareDateNewest(left.createdAt, right.createdAt) },
+                      { value: "reviewed", label: "Latest decision", compare: (left, right) => compareDateNewest(left.reviewedAt, right.reviewedAt) },
+                      { value: "company", label: "Company A-Z", compare: (left, right) => compareText(left.companyName, right.companyName) }
+                    ]}
+                    searchPlaceholder="Search reviewed partner applications"
+                  >
+                    {(application) => renderCompanyApplicationRow(application)}
+                  </AdminCollection>
+                </section>
+              </div>
             )}
             {activeTab === "guide applications" && (
               <AdminCollection
@@ -1912,8 +2111,12 @@ export default function Admin() {
                 filterOptions={[
                   { value: "submitted", label: "Submitted", predicate: (application) => application.status === "submitted" },
                   { value: "company_approved", label: "Needs admin confirmation", predicate: (application) => application.status === "company_approved" },
-                  { value: "approved", label: "Approved", predicate: (application) => application.status === "approved" },
-                  { value: "rejected", label: "Rejected", predicate: (application) => application.status === "rejected" }
+                  { value: "admin_approved", label: "Approved", predicate: (application) => application.status === "admin_approved" },
+                  {
+                    value: "rejected",
+                    label: "Rejected",
+                    predicate: (application) => ["company_rejected", "admin_rejected"].includes(application.status)
+                  }
                 ]}
                 sortOptions={[
                   { value: "newest", label: "Newest", compare: (left, right) => compareDateNewest(left.createdAt, right.createdAt) },
@@ -2711,7 +2914,7 @@ export default function Admin() {
                   </div>
                 </form>
                 <AdminCollection
-                  className="admin-list embedded"
+                  className="admin-list embedded referral-top-collection"
                   items={referrals}
                   label="referrals"
                   emptyText="No referral clicks tracked yet."

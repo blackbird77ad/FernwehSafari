@@ -23,6 +23,10 @@ const tourGuideApplicationSchema = new mongoose.Schema(
       lowercase: true,
       trim: true
     },
+    createdAccountFromApplication: {
+      type: Boolean,
+      default: false
+    },
     phone: {
       type: String,
       trim: true

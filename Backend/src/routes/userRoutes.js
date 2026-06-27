@@ -6,6 +6,7 @@ const {
   removeSavedTour,
   saveTour,
   updateUser,
+  updateUserSuspension,
   updateUserRole
 } = require("../controllers/userController");
 const { auth } = require("../middleware/auth");
@@ -18,6 +19,7 @@ router.delete("/me/saved-tours/:tourId", auth, removeSavedTour);
 router.get("/", auth, adminOnly, listUsers);
 router.post("/", auth, adminOnly, createUser);
 router.patch("/:id/role", auth, adminOnly, updateUserRole);
+router.patch("/:id/suspension", auth, adminOnly, updateUserSuspension);
 router.put("/:id", auth, adminOnly, updateUser);
 router.delete("/:id", auth, adminOnly, deleteUser);
 

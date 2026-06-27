@@ -40,6 +40,14 @@ const emptyCompanyTour = {
   highlights: ""
 };
 
+function emailDeliveryText(baseMessage, emailStatus) {
+  if (emailStatus && emailStatus.sent === false) {
+    return `${baseMessage} Email notification failed: ${emailStatus.reason || "Check Resend configuration."}`;
+  }
+
+  return baseMessage;
+}
+
 export default function Dashboard() {
   const { removeSavedTour, user } = useAuth();
   const [enquiries, setEnquiries] = useState([]);
@@ -206,8 +214,8 @@ export default function Dashboard() {
     const notes = window.prompt("Notes for this guide decision?") || "";
 
     try {
-      await decideGuideApplicationByCompany(id, { decision, notes });
-      setMessage(`Guide application ${decision}.`);
+      const response = await decideGuideApplicationByCompany(id, { decision, notes });
+      setMessage(emailDeliveryText(`Guide application ${decision}.`, response.data.emailStatus));
       await loadDashboard();
     } catch (error) {
       setMessage(error.message);

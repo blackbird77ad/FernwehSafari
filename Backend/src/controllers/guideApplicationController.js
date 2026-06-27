@@ -1,9 +1,17 @@
+const bcrypt = require("bcryptjs");
+const crypto = require("node:crypto");
 const ApiError = require("../utils/apiError");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/sendResponse");
 const Tour = require("../models/Tour");
 const TourGuideApplication = require("../models/TourGuideApplication");
 const TourGuideBooking = require("../models/TourGuideBooking");
+const User = require("../models/User");
+const {
+  assignPasswordResetToken,
+  buildClientUrl,
+  PASSWORD_RESET_TOKEN_TTL_MINUTES
+} = require("../lib/accountTokens");
 const { notifyMany, notifyOwner, notifyUser } = require("../lib/resend");
 
 function parseList(value) {
@@ -25,6 +33,10 @@ function canReviewForCompany(user, tour) {
   return isStaff(user) || (user?.role === "tour_company" && String(tour.owner) === String(user._id));
 }
 
+function randomAccountPassword() {
+  return crypto.randomBytes(32).toString("hex");
+}
+
 async function getApplication(id) {
   const application = await TourGuideApplication.findById(id)
     .populate("tour")
@@ -44,20 +56,65 @@ async function notifyCompanyAndOwner(tour, subject, lines) {
   await notifyMany(recipients, subject, lines);
 }
 
-const createGuideApplication = asyncHandler(async (req, res) => {
-  if (req.user.role !== "tour_guide") {
-    throw new ApiError(403, "Only tour guide accounts can apply to guide a tour.");
+async function resolveGuideApplicant(req) {
+  if (req.user) {
+    if (["tour_company", "admin", "moderator"].includes(req.user.role)) {
+      throw new ApiError(403, "Use a tour guide or traveller account to apply as a guide.");
+    }
+
+    if (req.user.role !== "tour_guide") {
+      const user = await User.findById(req.user._id);
+      user.role = "tour_guide";
+      user.emailVerified = true;
+      user.emailVerifiedAt = user.emailVerifiedAt || new Date();
+      await user.save();
+      return { guideUser: user, accountCreated: false };
+    }
+
+    return { guideUser: req.user, accountCreated: false };
   }
 
+  const guideName = String(req.body.guideName || "").trim();
+  const email = String(req.body.email || "")
+    .trim()
+    .toLowerCase();
+
+  if (!guideName || !email) {
+    throw new ApiError(422, "Guide name and email are required to apply without logging in.");
+  }
+
+  const existingUser = await User.findOne({ email });
+
+  if (existingUser) {
+    throw new ApiError(409, "An account already exists for this email. Login first, then apply as a tour guide.");
+  }
+
+  const guideUser = await User.create({
+    name: guideName,
+    email,
+    passwordHash: await bcrypt.hash(randomAccountPassword(), 12),
+    country: req.body.location,
+    role: "tour_guide",
+    suspended: true,
+    emailVerified: true,
+    emailVerifiedAt: new Date()
+  });
+
+  return { guideUser, accountCreated: true };
+}
+
+const createGuideApplication = asyncHandler(async (req, res) => {
   const tour = await Tour.findById(req.body.tourId || req.body.tour).populate("partner");
 
   if (!tour || !tour.isActive) {
     throw new ApiError(404, "Active tour not found.");
   }
 
+  const { guideUser, accountCreated } = await resolveGuideApplicant(req);
+
   const existing = await TourGuideApplication.findOne({
     tour: tour._id,
-    guide: req.user._id,
+    guide: guideUser._id,
     status: { $in: ["submitted", "company_approved", "admin_approved"] }
   });
 
@@ -67,9 +124,10 @@ const createGuideApplication = asyncHandler(async (req, res) => {
 
   const application = await TourGuideApplication.create({
     tour: tour._id,
-    guide: req.user._id,
-    guideName: req.body.guideName || req.user.name,
-    email: req.body.email || req.user.email,
+    guide: guideUser._id,
+    guideName: req.body.guideName || guideUser.name,
+    email: req.body.email || guideUser.email,
+    createdAccountFromApplication: accountCreated,
     phone: req.body.phone,
     whatsapp: req.body.whatsapp,
     location: req.body.location,
@@ -142,7 +200,7 @@ const companyDecision = asyncHandler(async (req, res) => {
   application.companyReviewedAt = new Date();
   await application.save();
 
-  await notifyUser(application.email, `Tour guide application ${approved ? "approved by company" : "rejected"}`, [
+  const emailStatus = await notifyUser(application.email, `Tour guide application ${approved ? "approved by company" : "rejected"}`, [
     `Hello ${application.guideName},`,
     "",
     approved
@@ -163,7 +221,7 @@ const companyDecision = asyncHandler(async (req, res) => {
   }
 
   await application.populate(["tour", "guide", "companyReviewedBy", "adminReviewedBy"]);
-  sendResponse(res, 200, { application });
+  sendResponse(res, 200, { application, emailStatus });
 });
 
 const adminDecision = asyncHandler(async (req, res) => {
@@ -185,7 +243,29 @@ const adminDecision = asyncHandler(async (req, res) => {
   application.adminReviewedAt = new Date();
   await application.save();
 
+  let setupPasswordUrl = "";
+
   if (approved) {
+    const guideUser = await User.findById(application.guide._id).select(
+      "+emailVerificationTokenHash +emailVerificationExpiresAt +passwordResetTokenHash +passwordResetExpiresAt"
+    );
+
+    if (guideUser) {
+      guideUser.role = "tour_guide";
+      guideUser.suspended = false;
+      guideUser.emailVerified = true;
+      guideUser.emailVerifiedAt = guideUser.emailVerifiedAt || new Date();
+      guideUser.emailVerificationTokenHash = undefined;
+      guideUser.emailVerificationExpiresAt = undefined;
+
+      if (application.createdAccountFromApplication) {
+        const setupToken = assignPasswordResetToken(guideUser);
+        setupPasswordUrl = buildClientUrl(`/reset-password?token=${encodeURIComponent(setupToken)}`);
+      }
+
+      await guideUser.save();
+    }
+
     tour.approvedGuides = [
       ...tour.approvedGuides.filter((item) => String(item.guide) !== String(application.guide._id)),
       {
@@ -201,19 +281,36 @@ const adminDecision = asyncHandler(async (req, res) => {
     await tour.save();
   }
 
-  await notifyUser(application.email, `Travellex guide application ${approved ? "approved" : "rejected"}`, [
-    `Hello ${application.guideName},`,
-    "",
+  const dashboardUrl = buildClientUrl("/dashboard");
+  const emailStatus = await notifyUser(
+    application.email,
+    `Travellex guide application ${approved ? "approved" : "rejected"}`,
+    [
+      `Hello ${application.guideName},`,
+      "",
+      approved
+        ? `Travellex approved you as a guide option for ${tour.title}. Your day rate can now appear on the tour.`
+        : `Travellex did not approve your guide application for ${tour.title}.`,
+      application.adminReviewNotes || "",
+      approved && setupPasswordUrl ? `Set password: ${setupPasswordUrl}` : "",
+      approved && !setupPasswordUrl ? `Login: ${dashboardUrl}` : "",
+      setupPasswordUrl
+        ? `This password setup link expires in ${PASSWORD_RESET_TOKEN_TTL_MINUTES} minutes. If it expires, use Forgot password on the login page.`
+        : "",
+      "",
+      "Travellex"
+    ],
     approved
-      ? `Travellex approved you as a guide option for ${tour.title}. Your day rate can now appear on the tour.`
-      : `Travellex did not approve your guide application for ${tour.title}.`,
-    application.adminReviewNotes || "",
-    "",
-    "Travellex"
-  ]);
+      ? {
+          cta: setupPasswordUrl
+            ? { label: "Set password", href: setupPasswordUrl }
+            : { label: "Open dashboard", href: dashboardUrl }
+        }
+      : {}
+  );
 
   await application.populate(["tour", "guide", "companyReviewedBy", "adminReviewedBy"]);
-  sendResponse(res, 200, { application });
+  sendResponse(res, 200, { application, accountCreated: Boolean(setupPasswordUrl), emailStatus });
 });
 
 const createGuideBooking = asyncHandler(async (req, res) => {

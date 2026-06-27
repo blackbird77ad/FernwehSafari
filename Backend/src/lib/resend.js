@@ -15,6 +15,7 @@ const resendReplyTo = process.env.RESEND_REPLY_TO || publicContactEmail;
 const emailLogoUrl = process.env.EMAIL_LOGO_URL || "";
 const clientUrl = (process.env.CLIENT_URL || "https://travellex.tours").replace(/\/+$/, "");
 const EMAIL_TIMEOUT_MS = Number(process.env.EMAIL_TIMEOUT_MS) || 8000;
+let missingResendKeyLogged = false;
 
 function parseEmailList(value, fallback = []) {
   const emails = String(value || "")
@@ -133,7 +134,7 @@ function extractCta(lines, explicitCta) {
     return { cta: explicitCta, lineIndex: -1 };
   }
 
-  const actionPattern = /^(Confirm email|Reset password|Open|View|View listing|Review|Manage|Continue|See details|Track request):\s*(https?:\/\/\S+)/i;
+  const actionPattern = /^(Confirm email|Reset password|Set password|Login|Open|View|View listing|Review|Manage|Continue|See details|Track request):\s*(https?:\/\/\S+)/i;
 
   for (let index = 0; index < lines.length; index += 1) {
     const match = String(lines[index]).match(actionPattern);
@@ -277,7 +278,7 @@ function buildEmailHtml({ subject, lines, variant = "public", preheader = "", ct
             </tr>
             <tr>
               <td style="padding:18px 28px 26px;background:#fbfcfa;border-top:1px solid #e5eee8;">
-                <p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#52645d;">Travellex creates curated Tanzania and Zanzibar travel experiences.</p>
+                <p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#52645d;">Travellex connects travellers with curated tours, guides and partner travel experiences across Africa and beyond.</p>
                 <p style="margin:0;font-size:12px;line-height:1.5;color:#7a8883;">
                   <a href="${escapeAttribute(clientUrl)}" style="color:#0f766e;text-decoration:none;">${escapeHtml(clientUrl.replace(/^https?:\/\//, ""))}</a>
                   &nbsp;|&nbsp;
@@ -315,6 +316,11 @@ async function sendEmail({ to, subject, lines, variant = "public", preheader, ct
   const resend = getClient();
 
   if (!resend) {
+    if (!missingResendKeyLogged) {
+      console.warn("[email] RESEND_API_KEY is not configured. Email delivery is disabled.");
+      missingResendKeyLogged = true;
+    }
+
     return { sent: false, reason: "RESEND_API_KEY is not configured." };
   }
 
@@ -334,7 +340,13 @@ async function sendEmail({ to, subject, lines, variant = "public", preheader, ct
 
     return { sent: true, id: response?.data?.id };
   } catch (error) {
-    return { sent: false, reason: error.message || "Email could not be sent." };
+    const reason = error.message || "Email could not be sent.";
+    console.error("[email] send failed", {
+      to: Array.isArray(to) ? to.join(",") : to,
+      subject,
+      reason
+    });
+    return { sent: false, reason };
   } finally {
     clearTimeout(timeoutId);
   }

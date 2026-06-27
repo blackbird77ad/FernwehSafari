@@ -16,12 +16,14 @@ const VirtualTourCanvas = lazy(() => import("../components/VirtualTourCanvas"));
 export default function TourDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated, saveTour, user } = useAuth();
+  const { isAuthenticated, refreshUser, saveTour, user } = useAuth();
   const [tour, setTour] = useState(null);
   const [loading, setLoading] = useState(true);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [guideApplicationForm, setGuideApplicationForm] = useState({
+    guideName: "",
+    email: "",
     phone: "",
     whatsapp: "",
     location: "",
@@ -105,18 +107,22 @@ export default function TourDetail() {
   async function handleGuideApplication(event) {
     event.preventDefault();
 
-    if (!isAuthenticated) {
-      navigate("/login", { state: { from: `/tours/${slug}` } });
-      return;
-    }
-
     try {
       await createGuideApplication({
         ...guideApplicationForm,
         tourId: tour._id
       });
-      setMessage("Guide application sent. The tour company reviews first, then Travellex confirms.");
+      if (isAuthenticated) {
+        await refreshUser();
+      }
+      setMessage(
+        isAuthenticated
+          ? "Guide application sent. The tour company reviews first, then Travellex confirms."
+          : "Guide application sent. If Travellex approves you, we will email a password setup link."
+      );
       setGuideApplicationForm({
+        guideName: "",
+        email: "",
         phone: "",
         whatsapp: "",
         location: "",
@@ -189,6 +195,7 @@ export default function TourDetail() {
   const rating = Number(tour.reviewRating || tour.partner?.rating || 0);
   const reviewCount = Number(tour.reviewCount || tour.partner?.reviewCount || 0);
   const routePoints = [tour.startLocation, tour.routeSummary, tour.endLocation].filter(Boolean);
+  const canApplyAsGuide = !user || user.role === "traveller" || user.role === "tour_guide";
 
   return (
     <>
@@ -396,11 +403,32 @@ export default function TourDetail() {
             <h2>Ask Travellex to confirm availability.</h2>
             <EnquiryForm requestType="quote" tour={tour} />
           </div>
-          {user?.role === "tour_guide" && (
+          {canApplyAsGuide && (
             <div className="side-panel">
               <p className="eyebrow">Tour guide application</p>
               <h2>Apply to guide this tour</h2>
               <form className="panel-form" onSubmit={handleGuideApplication}>
+                {!isAuthenticated && (
+                  <div className="form-grid">
+                    <label className="field">
+                      <span>Name</span>
+                      <input
+                        value={guideApplicationForm.guideName}
+                        onChange={(event) => updateGuideApplicationField("guideName", event.target.value)}
+                        required
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Email</span>
+                      <input
+                        type="email"
+                        value={guideApplicationForm.email}
+                        onChange={(event) => updateGuideApplicationField("email", event.target.value)}
+                        required
+                      />
+                    </label>
+                  </div>
+                )}
                 <div className="form-grid">
                   <label className="field">
                     <span>Phone</span>

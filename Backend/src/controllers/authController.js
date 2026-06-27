@@ -1,14 +1,18 @@
 const bcrypt = require("bcryptjs");
-const crypto = require("node:crypto");
 const jwt = require("jsonwebtoken");
 const ApiError = require("../utils/apiError");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/sendResponse");
 const User = require("../models/User");
+const {
+  assignPasswordResetToken,
+  assignVerificationToken,
+  buildClientUrl,
+  hashToken,
+  PASSWORD_RESET_TOKEN_TTL_MINUTES,
+  VERIFICATION_TOKEN_TTL_HOURS
+} = require("../lib/accountTokens");
 const { notifyOwner, notifyUser } = require("../lib/resend");
-
-const VERIFICATION_TOKEN_TTL_HOURS = 24;
-const PASSWORD_RESET_TOKEN_TTL_MINUTES = 60;
 
 function normalizeRole(role) {
   return role === "user" ? User.DEFAULT_ROLE : role;
@@ -35,36 +39,6 @@ function serializeUser(user) {
     country: user.country,
     savedTours: user.savedTours || []
   };
-}
-
-function hashToken(token) {
-  return crypto.createHash("sha256").update(token).digest("hex");
-}
-
-function buildClientUrl(path) {
-  const configuredClientUrl = (process.env.CLIENT_URL || "http://localhost:5173").replace(/\/+$/, "");
-  const isLocalClientUrl = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredClientUrl);
-  const clientUrl = process.env.NODE_ENV === "production" && isLocalClientUrl ? "https://travellex.tours" : configuredClientUrl;
-
-  return `${clientUrl}${path}`;
-}
-
-function createSecureToken() {
-  return crypto.randomBytes(32).toString("hex");
-}
-
-function assignVerificationToken(user) {
-  const token = createSecureToken();
-  user.emailVerificationTokenHash = hashToken(token);
-  user.emailVerificationExpiresAt = new Date(Date.now() + VERIFICATION_TOKEN_TTL_HOURS * 60 * 60 * 1000);
-  return token;
-}
-
-function assignPasswordResetToken(user) {
-  const token = createSecureToken();
-  user.passwordResetTokenHash = hashToken(token);
-  user.passwordResetExpiresAt = new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MINUTES * 60 * 1000);
-  return token;
 }
 
 async function sendVerificationEmail(user, token) {
@@ -123,10 +97,16 @@ async function sendPasswordChangedEmail(user) {
   }
 }
 
-function runInBackground(task) {
-  Promise.resolve()
-    .then(task)
-    .catch(() => null);
+async function sendRegistrationAdminEmail(user, verificationStatus) {
+  return notifyOwner(`New Travellex user registration: ${user.name}`, [
+    `Name: ${user.name}`,
+    `Email: ${user.email}`,
+    `Role: ${normalizeRole(user.role)}`,
+    `Country: ${user.country || "Not provided"}`,
+    `Email verification: ${verificationStatus?.sent ? "Sent" : verificationStatus?.reason || "Not sent"}`,
+    "Status: Waiting for email confirmation",
+    `Open: ${buildClientUrl("/admin")}`
+  ]);
 }
 
 const register = asyncHandler(async (req, res) => {
@@ -146,13 +126,13 @@ const register = asyncHandler(async (req, res) => {
     if (existingUser.emailVerified === false) {
       const token = assignVerificationToken(existingUser);
       await existingUser.save();
-      runInBackground(() => sendVerificationEmail(existingUser, token));
+      const verificationStatus = await sendVerificationEmail(existingUser, token);
 
       sendResponse(res, 200, {
         verificationRequired: true,
         email: existingUser.email,
-        verificationEmailSent: null,
-        verificationEmailMessage: "Verification email is being sent. Check your inbox shortly."
+        verificationEmailSent: verificationStatus.sent,
+        verificationEmailMessage: verificationStatus.sent ? "Verification email sent. Check your inbox shortly." : verificationStatus.reason
       });
       return;
     }
@@ -170,13 +150,14 @@ const register = asyncHandler(async (req, res) => {
   });
   const verificationToken = assignVerificationToken(user);
   await user.save();
-  runInBackground(() => sendVerificationEmail(user, verificationToken));
+  const verificationStatus = await sendVerificationEmail(user, verificationToken);
+  await sendRegistrationAdminEmail(user, verificationStatus);
 
   sendResponse(res, 201, {
     verificationRequired: true,
     email: user.email,
-    verificationEmailSent: null,
-    verificationEmailMessage: "Verification email is being sent. Check your inbox shortly.",
+    verificationEmailSent: verificationStatus.sent,
+    verificationEmailMessage: verificationStatus.sent ? "Verification email sent. Check your inbox shortly." : verificationStatus.reason,
     user: serializeUser(user)
   });
 });
@@ -198,6 +179,10 @@ const login = asyncHandler(async (req, res) => {
 
   if (!passwordMatches) {
     throw new ApiError(401, "Invalid email or password.");
+  }
+
+  if (user.suspended) {
+    throw new ApiError(403, "This account is suspended. Contact Travellex support.");
   }
 
   if (user.emailVerified === false) {
@@ -232,15 +217,13 @@ const verifyEmail = asyncHandler(async (req, res) => {
   user.emailVerificationExpiresAt = undefined;
   await user.save();
 
-  runInBackground(() =>
-    notifyOwner(`New Travellex user registered: ${user.name}`, [
-      `Name: ${user.name}`,
-      `Email: ${user.email}`,
-      `Role: ${normalizeRole(user.role)}`,
-      `Country: ${user.country || "Not provided"}`,
-      `Email verified at: ${user.emailVerifiedAt.toISOString()}`
-    ])
-  );
+  await notifyOwner(`Travellex user email verified: ${user.name}`, [
+    `Name: ${user.name}`,
+    `Email: ${user.email}`,
+    `Role: ${normalizeRole(user.role)}`,
+    `Country: ${user.country || "Not provided"}`,
+    `Email verified at: ${user.emailVerifiedAt.toISOString()}`
+  ]);
 
   sendResponse(res, 200, {
     token: signToken(user),
@@ -290,7 +273,7 @@ const requestPasswordReset = asyncHandler(async (req, res) => {
   if (user) {
     const token = assignPasswordResetToken(user);
     await user.save();
-    runInBackground(() => sendPasswordResetEmail(user, token));
+    await sendPasswordResetEmail(user, token);
   }
 
   sendResponse(res, 200, {
@@ -326,7 +309,7 @@ const resetPassword = asyncHandler(async (req, res) => {
   user.emailVerifiedAt = user.emailVerifiedAt || new Date();
   await user.save();
 
-  runInBackground(() => sendPasswordChangedEmail(user));
+  await sendPasswordChangedEmail(user);
 
   sendResponse(res, 200, {
     message: "Password reset successful. You can now log in with your new password."

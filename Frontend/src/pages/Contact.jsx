@@ -45,7 +45,7 @@ export default function Contact() {
         </a>
         <a className="touch-action email" href="mailto:experience@travellex.tours">
           <span>✉️</span>
-          Email Our Team
+          experience@travellex.tours
         </a>
       </section>
       <section className="section narrow">
