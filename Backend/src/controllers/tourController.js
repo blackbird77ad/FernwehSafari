@@ -134,6 +134,20 @@ async function buildTourQuery(query, includeInactive = false) {
       { startLocation: search },
       { endLocation: search },
       { inclusions: search },
+      { exclusions: search },
+      { languages: search },
+      { meetingPoint: search },
+      { pickupDetails: search },
+      { difficulty: search },
+      { transport: search },
+      { accommodation: search },
+      { meals: search },
+      { cancellationPolicy: search },
+      { paymentTerms: search },
+      { whatToBring: search },
+      { notSuitableFor: search },
+      { "itinerary.title": search },
+      { "itinerary.description": search },
       { comfortLevel: search },
       { tourType: search },
       ...(partnerIds.length ? [{ partner: { $in: partnerIds } }] : [])
@@ -185,6 +199,24 @@ function stripAdminOnlyTourFields(payload) {
   delete payload.vrMediaUrl;
   delete payload.vrMediaType;
   delete payload.vrCaption;
+}
+
+function nextNumber(value, fallback) {
+  if (value === undefined || value === null || value === "") {
+    return fallback;
+  }
+
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function ensureValidGroupSizeRange(payload, existingTour = {}) {
+  const min = nextNumber(payload.groupSizeMin, existingTour.groupSizeMin);
+  const max = nextNumber(payload.groupSizeMax, existingTour.groupSizeMax);
+
+  if (min && max && max < min) {
+    throw new ApiError(400, "Maximum group size must be greater than or equal to minimum group size.");
+  }
 }
 
 async function getOwnedPartner(userId) {
@@ -270,6 +302,8 @@ const createTour = asyncHandler(async (req, res) => {
     stripAdminOnlyTourFields(payload);
   }
 
+  ensureValidGroupSizeRange(payload);
+
   const tour = await Tour.create(payload);
   await tour.populate("partner");
 
@@ -321,6 +355,8 @@ const updateTour = asyncHandler(async (req, res) => {
   if (payload.title && !payload.slug) {
     payload.slug = await uniqueSlug(payload.title, req.params.id);
   }
+
+  ensureValidGroupSizeRange(payload, existingTour);
 
   const wasInactive = existingTour.isActive === false;
   const tour = await Tour.findByIdAndUpdate(req.params.id, payload, {

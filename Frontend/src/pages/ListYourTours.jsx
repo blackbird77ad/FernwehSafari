@@ -4,10 +4,57 @@ import useAuth from "../hooks/useAuth";
 import { createTourCompanyApplication } from "../services/applicationService";
 
 const steps = [
-  { key: "companyName", label: "Company Name", placeholder: "Example: Kilimanjaro Coast Adventures" },
-  { key: "tourTypes", label: "Tour Types Offered", placeholder: "Safari, mountain, beach, culture, adventure..." },
-  { key: "email", label: "Contact Email", placeholder: "partnerships@example.com" }
+  {
+    key: "company",
+    fields: [
+      { key: "companyName", label: "Company name", placeholder: "Example: Kilimanjaro Coast Adventures" },
+      { key: "contactName", label: "Contact person", placeholder: "Full name" },
+      { key: "email", label: "Contact email", placeholder: "partnerships@example.com", type: "email" }
+    ]
+  },
+  {
+    key: "contact",
+    fields: [
+      { key: "phone", label: "Phone", placeholder: "+255..." },
+      { key: "whatsapp", label: "WhatsApp", placeholder: "+255..." }
+    ]
+  },
+  {
+    key: "coverage",
+    fields: [
+      { key: "headquarters", label: "Location", placeholder: "City, country" },
+      { key: "operatingRegions", label: "Regions", placeholder: "Tanzania, Zanzibar, Kenya, all..." }
+    ]
+  },
+  {
+    key: "operations",
+    fields: [
+      { key: "tourTypes", label: "Tour types offered", placeholder: "Safari, mountain, beach, culture, adventure..." },
+      {
+        key: "hasInHouseGuides",
+        label: "Has in-house guides",
+        type: "select",
+        options: [
+          { value: "", label: "Choose one" },
+          { value: "true", label: "Yes" },
+          { value: "false", label: "No" }
+        ]
+      }
+    ]
+  }
 ];
+
+const initialPartnerApplication = {
+  companyName: "",
+  contactName: "",
+  email: "",
+  phone: "",
+  whatsapp: "",
+  headquarters: "",
+  operatingRegions: "",
+  tourTypes: "",
+  hasInHouseGuides: ""
+};
 
 const benefits = [
   ["High Traffic", "Reach travellers already searching for Africa tours, safari routes, coast trips and adventure travel."],
@@ -19,15 +66,15 @@ const benefits = [
 export default function ListYourTours() {
   const { user } = useAuth();
   const [stepIndex, setStepIndex] = useState(0);
-  const [form, setForm] = useState({ companyName: "", tourTypes: "", email: "" });
+  const [form, setForm] = useState(initialPartnerApplication);
   const [status, setStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const isTourCompany = user?.role === "tour_company";
   const currentStep = steps[stepIndex];
-  const canGoNext = form[currentStep.key]?.trim();
+  const canGoNext = currentStep.fields.every((field) => String(form[field.key] || "").trim());
 
-  function update(value) {
-    setForm((current) => ({ ...current, [currentStep.key]: value }));
+  function update(field, value) {
+    setForm((current) => ({ ...current, [field]: value }));
   }
 
   async function submitApplication() {
@@ -37,15 +84,18 @@ export default function ListYourTours() {
     try {
       await createTourCompanyApplication({
         companyName: form.companyName,
-        contactName: form.companyName,
+        contactName: form.contactName,
         email: form.email,
-        headquarters: "To be discussed",
-        operatingRegions: form.tourTypes,
+        phone: form.phone,
+        whatsapp: form.whatsapp,
+        headquarters: form.headquarters,
+        operatingRegions: form.operatingRegions,
         tourCategories: form.tourTypes,
+        hasInHouseGuides: form.hasInHouseGuides === "true",
         commissionExpectation: "Open to discussion"
       });
       setStatus("Application received. Travellex will contact you to review fit and commission terms.");
-      setForm({ companyName: "", tourTypes: "", email: "" });
+      setForm(initialPartnerApplication);
       setStepIndex(0);
     } catch (error) {
       setStatus(error.message);
@@ -102,7 +152,7 @@ export default function ListYourTours() {
       <section className="section partner-intro" id="partner-application">
         <div>
           <p className="eyebrow">Simple onboarding</p>
-          <h2>Three quick details start the conversation.</h2>
+          <h2>Partner details start the conversation.</h2>
           <p className="lead">
             After the lead form, Travellex reviews the company, schedules a call or WhatsApp discussion, and only
             approved tour companies receive dashboard access to post listings for staff review.
@@ -126,16 +176,30 @@ export default function ListYourTours() {
                 </span>
               ))}
             </div>
-            <label className="field">
-              <span>{currentStep.label}</span>
-              <input
-                type={currentStep.key === "email" ? "email" : "text"}
-                value={form[currentStep.key]}
-                onChange={(event) => update(event.target.value)}
-                placeholder={currentStep.placeholder}
-                required
-              />
-            </label>
+            <div className="partner-step-fields">
+              {currentStep.fields.map((field) => (
+                <label className="field" key={field.key}>
+                  <span>{field.label}</span>
+                  {field.type === "select" ? (
+                    <select value={form[field.key]} onChange={(event) => update(field.key, event.target.value)} required>
+                      {field.options.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type={field.type || "text"}
+                      value={form[field.key]}
+                      onChange={(event) => update(field.key, event.target.value)}
+                      placeholder={field.placeholder}
+                      required
+                    />
+                  )}
+                </label>
+              ))}
+            </div>
             <div className="button-row">
               {stepIndex > 0 && (
                 <button className="button secondary" type="button" onClick={() => setStepIndex((current) => current - 1)}>

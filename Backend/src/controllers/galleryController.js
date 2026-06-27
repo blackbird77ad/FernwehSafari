@@ -127,8 +127,10 @@ const reviewMedia = asyncHandler(async (req, res) => {
 
   const recipient = media.creditEmail || media.submittedBy?.email;
 
+  let emailStatus = null;
+
   if (recipient) {
-    await notifyUser(recipient, `Travellex gallery submission ${status}`, [
+    emailStatus = await notifyUser(recipient, `Travellex gallery submission ${status}`, [
       `Hello ${media.creditName || media.submittedBy?.name || "traveller"},`,
       "",
       `Your gallery submission "${media.title}" is now ${status}.`,
@@ -139,7 +141,7 @@ const reviewMedia = asyncHandler(async (req, res) => {
   }
 
   await media.populate(["submittedBy", "reviewedBy"]);
-  sendResponse(res, 200, { media });
+  sendResponse(res, 200, { media, emailStatus });
 });
 
 const deleteMedia = asyncHandler(async (req, res) => {

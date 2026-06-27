@@ -10,7 +10,6 @@ const tourPartnerSchema = new mongoose.Schema(
     },
     bookingURL: {
       type: String,
-      required: [true, "Partner booking URL is required."],
       trim: true
     },
     location: {

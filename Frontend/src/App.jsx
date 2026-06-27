@@ -29,15 +29,17 @@ const VirtualTour = lazy(() => import("./pages/VirtualTour"));
 
 export default function App() {
   const location = useLocation();
-  const { isStaff, loading, token } = useAuth();
+  const { isStaff, loading, token, user } = useAuth();
   const isDashboardPath = location.pathname === "/dashboard";
-  const isStaffDashboard = isDashboardPath && (isStaff || (loading && token));
-  const isAdminWorkspace = location.pathname.startsWith("/admin") || isStaffDashboard;
+  const isRoleDashboard =
+    isDashboardPath && (isStaff || user?.role === "tour_company" || user?.role === "tour_guide");
+  const isDashboardLoading = isDashboardPath && loading && token;
+  const isWorkspace = location.pathname.startsWith("/admin") || isRoleDashboard || isDashboardLoading;
 
   return (
-    <div className={isAdminWorkspace ? "app-shell admin-app-shell" : "app-shell"}>
-      {!isAdminWorkspace && <Navbar />}
-      <main className={isAdminWorkspace ? "admin-main" : ""}>
+    <div className={isWorkspace ? "app-shell admin-app-shell" : "app-shell"}>
+      {!isWorkspace && <Navbar />}
+      <main className={isWorkspace ? "admin-main" : ""}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/tours" element={<Tours />} />
@@ -82,7 +84,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
-      {!isAdminWorkspace && <Footer />}
+      {!isWorkspace && <Footer />}
     </div>
   );
 }

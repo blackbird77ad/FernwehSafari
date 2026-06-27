@@ -13,6 +13,22 @@ import { destinationStories } from "../utils/staticContent";
 
 const VirtualTourCanvas = lazy(() => import("../components/VirtualTourCanvas"));
 
+function formatGroupSize(tour) {
+  if (tour.groupSizeMin && tour.groupSizeMax) {
+    return `${tour.groupSizeMin}-${tour.groupSizeMax} guests`;
+  }
+
+  if (tour.groupSizeMin) {
+    return `From ${tour.groupSizeMin} guests`;
+  }
+
+  if (tour.groupSizeMax) {
+    return `Up to ${tour.groupSizeMax} guests`;
+  }
+
+  return "";
+}
+
 export default function TourDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -195,6 +211,38 @@ export default function TourDetail() {
   const rating = Number(tour.reviewRating || tour.partner?.rating || 0);
   const reviewCount = Number(tour.reviewCount || tour.partner?.reviewCount || 0);
   const routePoints = [tour.startLocation, tour.routeSummary, tour.endLocation].filter(Boolean);
+  const groupSize = formatGroupSize(tour);
+  const languages = tour.languages?.filter(Boolean).join(", ");
+  const ageMinimum = tour.minimumAge === 0 ? "All ages" : tour.minimumAge ? `${tour.minimumAge}+` : "";
+  const timeWindow = [tour.departureTime, tour.returnTime].filter(Boolean).join(" - ");
+  const pickupText =
+    tour.pickupIncluded || tour.pickupDetails
+      ? tour.pickupIncluded
+        ? tour.pickupDetails || "Included"
+        : tour.pickupDetails || "Not included"
+      : "";
+  const comparisonItems = [
+    { label: "Company", value: tour.partner?.name || "Approved operator" },
+    { label: "Comfort", value: tour.comfortLevel || "Ask operator" },
+    { label: "Tour type", value: tour.tourType || "Private or shared" },
+    { label: "Route", value: routePoints.length ? routePoints.join(" - ") : tour.location },
+    { label: "Group size", value: groupSize },
+    { label: "Languages", value: languages },
+    { label: "Minimum age", value: ageMinimum },
+    { label: "Timing", value: timeWindow }
+  ].filter((item) => item.value);
+  const logisticsItems = [
+    { label: "Meeting point", value: tour.meetingPoint },
+    { label: "Pickup", value: pickupText },
+    { label: "Difficulty", value: tour.difficulty },
+    { label: "Transport", value: tour.transport },
+    { label: "Accommodation", value: tour.accommodation },
+    { label: "Meals", value: tour.meals }
+  ].filter((item) => item.value);
+  const policyItems = [
+    { label: "Cancellation policy", value: tour.cancellationPolicy },
+    { label: "Payment terms", value: tour.paymentTerms }
+  ].filter((item) => item.value);
   const canApplyAsGuide = !user || user.role === "traveller" || user.role === "tour_guide";
 
   return (
@@ -256,22 +304,12 @@ export default function TourDetail() {
               <h2>Operator, route, comfort and inclusions.</h2>
             </div>
             <div className="comparison-grid">
-              <span>
-                <strong>Company</strong>
-                {tour.partner?.name || "Approved operator"}
-              </span>
-              <span>
-                <strong>Comfort</strong>
-                {tour.comfortLevel || "Ask operator"}
-              </span>
-              <span>
-                <strong>Tour type</strong>
-                {tour.tourType || "Private or shared"}
-              </span>
-              <span>
-                <strong>Route</strong>
-                {routePoints.length ? routePoints.join(" - ") : tour.location}
-              </span>
+              {comparisonItems.map((item) => (
+                <span key={item.label}>
+                  <strong>{item.label}</strong>
+                  {item.value}
+                </span>
+              ))}
             </div>
             {tour.inclusions?.length > 0 && (
               <>
@@ -283,7 +321,33 @@ export default function TourDetail() {
                 </ul>
               </>
             )}
+            {tour.exclusions?.length > 0 && (
+              <>
+                <h3>Excluded</h3>
+                <ul className="check-list compact">
+                  {tour.exclusions.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
+          {logisticsItems.length > 0 && (
+            <div className="tour-comparison-panel">
+              <div>
+                <p className="eyebrow">Tour logistics</p>
+                <h2>Meeting, movement and daily comfort.</h2>
+              </div>
+              <div className="comparison-grid">
+                {logisticsItems.map((item) => (
+                  <span key={item.label}>
+                    <strong>{item.label}</strong>
+                    {item.value}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           <ImageGallery images={tour.images} />
           {vrScene && (
             <div className="tour-vr-preview" id="tour-vr">
@@ -299,22 +363,68 @@ export default function TourDetail() {
               </Suspense>
             </div>
           )}
-          <h2>Highlights</h2>
-          <ul className="check-list">
-            {tour.highlights?.map((highlight) => (
-              <li key={highlight}>{highlight}</li>
-            ))}
-          </ul>
-          <h2>Itinerary</h2>
-          <div className="timeline">
-            {tour.itinerary?.map((item) => (
-              <article key={`${item.day}-${item.title}`}>
-                <span>Day {item.day}</span>
-                <h3>{item.title}</h3>
-                <p>{item.description}</p>
-              </article>
-            ))}
-          </div>
+          {tour.highlights?.length > 0 && (
+            <>
+              <h2>Highlights</h2>
+              <ul className="check-list">
+                {tour.highlights.map((highlight) => (
+                  <li key={highlight}>{highlight}</li>
+                ))}
+              </ul>
+            </>
+          )}
+          {tour.itinerary?.length > 0 && (
+            <>
+              <h2>Itinerary</h2>
+              <div className="timeline">
+                {tour.itinerary.map((item) => (
+                  <article key={`${item.day}-${item.title}`}>
+                    <span>Day {item.day}</span>
+                    <h3>{item.title}</h3>
+                    <p>{item.description}</p>
+                  </article>
+                ))}
+              </div>
+            </>
+          )}
+          {(tour.whatToBring?.length > 0 || tour.notSuitableFor?.length > 0 || policyItems.length > 0) && (
+            <div className="tour-comparison-panel">
+              <div>
+                <p className="eyebrow">Before you book</p>
+                <h2>Preparation notes and terms.</h2>
+              </div>
+              {tour.whatToBring?.length > 0 && (
+                <>
+                  <h3>What to bring</h3>
+                  <ul className="check-list compact">
+                    {tour.whatToBring.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {tour.notSuitableFor?.length > 0 && (
+                <>
+                  <h3>Not suitable for</h3>
+                  <ul className="check-list compact">
+                    {tour.notSuitableFor.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {policyItems.length > 0 && (
+                <div className="comparison-grid">
+                  {policyItems.map((item) => (
+                    <span key={item.label}>
+                      <strong>{item.label}</strong>
+                      {item.value}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {tour.approvedGuides?.length > 0 && (
             <>
               <h2>Available tour guides</h2>

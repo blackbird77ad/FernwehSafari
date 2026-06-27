@@ -120,12 +120,7 @@ const createReferral = asyncHandler(async (req, res) => {
   const trackingCode = crypto.randomUUID();
   const commissionRatePercent = resolveCommissionRate(tour);
   const baseBookingURL = tour.referralLink || tour.partner.bookingURL;
-
-  if (!baseBookingURL) {
-    throw new ApiError(422, "This tour does not have a booking URL configured yet.");
-  }
-
-  const bookingURL = appendTrackingParams(baseBookingURL, trackingCode, tour);
+  const bookingURL = baseBookingURL ? appendTrackingParams(baseBookingURL, trackingCode, tour) : "";
   const estimatedCommissionEUR = roundMoney((toNumber(tour.priceEUR) * commissionRatePercent) / 100);
 
   const referral = await Referral.create({
@@ -133,7 +128,7 @@ const createReferral = asyncHandler(async (req, res) => {
     user: req.user?._id,
     tour: tour._id,
     partner: tour.partner._id,
-    outboundUrl: bookingURL,
+    outboundUrl: bookingURL || undefined,
     commissionRatePercent,
     estimatedCommissionEUR,
     ipAddress: req.ip,
@@ -167,6 +162,7 @@ const getBookingSession = asyncHandler(async (req, res) => {
       status: referral.status,
       converted: referral.converted,
       clickedAt: referral.clickedAt,
+      hasExternalBooking: Boolean(referral.outboundUrl),
       tour: referral.tour,
       partner: referral.partner
     }

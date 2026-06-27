@@ -53,6 +53,32 @@ function normalizeApplicationPayload(body) {
   };
 }
 
+function requirePartnerApplicationDetails(payload, body) {
+  const requiredFields = [
+    ["companyName", "Company name"],
+    ["contactName", "Contact person"],
+    ["email", "Contact email"],
+    ["phone", "Phone"],
+    ["whatsapp", "WhatsApp"],
+    ["headquarters", "Location"]
+  ];
+  const missingFields = requiredFields
+    .filter(([field]) => !String(payload[field] || "").trim())
+    .map(([, label]) => label);
+
+  if (!payload.operatingRegions.length) {
+    missingFields.push("Regions");
+  }
+
+  if (body.hasInHouseGuides === undefined || body.hasInHouseGuides === "") {
+    missingFields.push("Has in-house guides");
+  }
+
+  if (missingFields.length) {
+    throw new ApiError(422, `${missingFields.join(", ")} ${missingFields.length === 1 ? "is" : "are"} required.`);
+  }
+}
+
 function randomAccountPassword() {
   return crypto.randomBytes(32).toString("hex");
 }
@@ -103,7 +129,7 @@ async function approveCompanyApplication(application, adminUser, reviewNotes) {
 
   const partnerPayload = {
     name: application.companyName,
-    bookingURL: application.bookingURL || application.website || "https://example.com",
+    bookingURL: application.bookingURL || application.website || "",
     location: application.headquarters,
     contactEmail: application.email,
     contactPhone: application.whatsapp || application.phone,
@@ -158,6 +184,7 @@ async function approveCompanyApplication(application, adminUser, reviewNotes) {
 
 const createCompanyApplication = asyncHandler(async (req, res) => {
   const payload = normalizeApplicationPayload(req.body);
+  requirePartnerApplicationDetails(payload, req.body);
   const application = await TourCompanyApplication.create({
     ...payload,
     submittedBy: req.user?._id

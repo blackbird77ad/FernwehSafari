@@ -51,6 +51,7 @@ import {
   updateUserRole
 } from "../services/userService";
 import { eur, formatDate } from "../utils/formatters";
+import { formatItineraryText, formatListText, numberOrUndefined, parseItineraryText, splitLines } from "../utils/tourFormHelpers";
 
 const userRoles = ["traveller", "tour_company", "tour_guide", "moderator", "admin"];
 
@@ -77,7 +78,7 @@ const ADMIN_USER_PAGE_SIZE_OPTIONS = [50, 100, 200];
 
 const partnerFieldLabels = {
   name: "Partner name",
-  bookingURL: "Default booking URL",
+  bookingURL: "Default booking URL (optional)",
   location: "Location",
   contactEmail: "Contact email",
   contactPhone: "Contact phone",
@@ -167,6 +168,23 @@ const emptyTour = {
   category: "Safari",
   comfortLevel: "Midrange",
   tourType: "Private or shared",
+  groupSizeMin: "",
+  groupSizeMax: "",
+  minimumAge: "",
+  languages: "",
+  meetingPoint: "",
+  pickupIncluded: false,
+  pickupDetails: "",
+  departureTime: "",
+  returnTime: "",
+  difficulty: "",
+  transport: "",
+  accommodation: "",
+  meals: "",
+  cancellationPolicy: "",
+  paymentTerms: "",
+  whatToBring: "",
+  notSuitableFor: "",
   routeSummary: "",
   startLocation: "",
   endLocation: "",
@@ -185,6 +203,7 @@ const emptyTour = {
   vrMediaType: "image",
   vrCaption: "",
   highlights: "",
+  itinerary: "",
   featured: false,
   isActive: true
 };
@@ -294,8 +313,12 @@ function emailDeliveryMessage(baseMessage, emailStatus) {
   if (emailStatus && emailStatus.sent === false) {
     return {
       tone: "error",
-      message: `${baseMessage} Email notification failed: ${emailStatus.reason || "Check Resend configuration."}`
+      message: `${baseMessage} Decision saved, but email notification failed: ${emailStatus.reason || "Check Resend configuration."}`
     };
+  }
+
+  if (emailStatus?.sent) {
+    return { message: `${baseMessage} Email sent automatically.` };
   }
 
   return { message: baseMessage };
@@ -1003,25 +1026,21 @@ export default function Admin() {
     const payload = {
       ...tourForm,
       priceEUR: Number(tourForm.priceEUR),
-      durationDays: tourForm.durationDays === "" ? undefined : Number(tourForm.durationDays),
+      durationDays: numberOrUndefined(tourForm.durationDays),
+      groupSizeMin: numberOrUndefined(tourForm.groupSizeMin),
+      groupSizeMax: numberOrUndefined(tourForm.groupSizeMax),
+      minimumAge: numberOrUndefined(tourForm.minimumAge),
+      languages: splitLines(tourForm.languages),
+      pickupIncluded: Boolean(tourForm.pickupIncluded),
+      whatToBring: splitLines(tourForm.whatToBring),
+      notSuitableFor: splitLines(tourForm.notSuitableFor),
       commissionRatePercent:
         tourForm.commissionRatePercent === "" ? undefined : Number(tourForm.commissionRatePercent),
-      images: tourForm.images
-        .split("\n")
-        .map((item) => item.trim())
-        .filter(Boolean),
-      highlights: tourForm.highlights
-        .split("\n")
-        .map((item) => item.trim())
-        .filter(Boolean),
-      inclusions: tourForm.inclusions
-        .split("\n")
-        .map((item) => item.trim())
-        .filter(Boolean),
-      exclusions: tourForm.exclusions
-        .split("\n")
-        .map((item) => item.trim())
-        .filter(Boolean),
+      images: splitLines(tourForm.images),
+      highlights: splitLines(tourForm.highlights),
+      inclusions: splitLines(tourForm.inclusions),
+      exclusions: splitLines(tourForm.exclusions),
+      itinerary: parseItineraryText(tourForm.itinerary),
       availableFrom: tourForm.availableFrom || undefined,
       availableTo: tourForm.availableTo || undefined,
       reviewRating: tourForm.reviewRating === "" ? 0 : Number(tourForm.reviewRating),
@@ -1071,15 +1090,32 @@ export default function Admin() {
       category: tour.category || "Safari",
       comfortLevel: tour.comfortLevel || "Midrange",
       tourType: tour.tourType || "Private or shared",
+      groupSizeMin: tour.groupSizeMin ?? "",
+      groupSizeMax: tour.groupSizeMax ?? "",
+      minimumAge: tour.minimumAge ?? "",
+      languages: formatListText(tour.languages),
+      meetingPoint: tour.meetingPoint || "",
+      pickupIncluded: Boolean(tour.pickupIncluded),
+      pickupDetails: tour.pickupDetails || "",
+      departureTime: tour.departureTime || "",
+      returnTime: tour.returnTime || "",
+      difficulty: tour.difficulty || "",
+      transport: tour.transport || "",
+      accommodation: tour.accommodation || "",
+      meals: tour.meals || "",
+      cancellationPolicy: tour.cancellationPolicy || "",
+      paymentTerms: tour.paymentTerms || "",
+      whatToBring: formatListText(tour.whatToBring),
+      notSuitableFor: formatListText(tour.notSuitableFor),
       routeSummary: tour.routeSummary || "",
       startLocation: tour.startLocation || "",
       endLocation: tour.endLocation || "",
       partner: tour.partner?._id || tour.partner || "",
       referralLink: tour.referralLink || "",
       commissionRatePercent: tour.commissionRatePercent ?? "",
-      images: (tour.images || []).join("\n"),
-      inclusions: (tour.inclusions || []).join("\n"),
-      exclusions: (tour.exclusions || []).join("\n"),
+      images: formatListText(tour.images),
+      inclusions: formatListText(tour.inclusions),
+      exclusions: formatListText(tour.exclusions),
       availableFrom: tour.availableFrom ? tour.availableFrom.slice(0, 10) : "",
       availableTo: tour.availableTo ? tour.availableTo.slice(0, 10) : "",
       reviewRating: tour.reviewRating ?? "",
@@ -1088,7 +1124,8 @@ export default function Admin() {
       vrMediaUrl: tour.vrMediaUrl || "",
       vrMediaType: tour.vrMediaType || "image",
       vrCaption: tour.vrCaption || "",
-      highlights: (tour.highlights || []).join("\n"),
+      highlights: formatListText(tour.highlights),
+      itinerary: formatItineraryText(tour.itinerary),
       featured: Boolean(tour.featured),
       isActive: Boolean(tour.isActive)
     });
@@ -1217,11 +1254,9 @@ export default function Admin() {
   }
 
   async function handleGalleryReview(id, status) {
-    const reviewNotes = window.prompt("Review notes for this gallery decision?") || "";
-
     try {
-      await reviewGalleryMedia(id, { status, reviewNotes });
-      setToast({ message: `Gallery media ${status}.` });
+      const response = await reviewGalleryMedia(id, { status, reviewNotes: "" });
+      setToast(emailDeliveryMessage(`Gallery media ${status}.`, response.data.emailStatus));
       await loadAdminData();
     } catch (error) {
       setToast({ tone: "error", message: error.message });
@@ -1358,10 +1393,8 @@ export default function Admin() {
   }
 
   async function handleCompanyApplicationStatus(id, status) {
-    const reviewNotes = window.prompt("Review notes for this decision?") || "";
-
     try {
-      const response = await updateTourCompanyApplicationStatus(id, { status, reviewNotes });
+      const response = await updateTourCompanyApplicationStatus(id, { status, reviewNotes: "" });
       setToast(emailDeliveryMessage(`Company application ${status}.`, response.data.emailStatus));
       await loadAdminData();
     } catch (error) {
@@ -1380,10 +1413,8 @@ export default function Admin() {
   }
 
   async function handleGuideAdminDecision(id, decision) {
-    const notes = window.prompt("Admin notes for this guide decision?") || "";
-
     try {
-      const response = await decideGuideApplicationByAdmin(id, { decision, notes });
+      const response = await decideGuideApplicationByAdmin(id, { decision, notes: "" });
       setToast(emailDeliveryMessage(`Guide application ${decision}.`, response.data.emailStatus));
       await loadAdminData();
     } catch (error) {
@@ -1451,15 +1482,33 @@ export default function Admin() {
           <span>
             {application.contactName} - {application.email}
           </span>
-          <p>
-            {application.headquarters} - Regions: {application.operatingRegions?.join(", ") || "Not provided"} -
-            Guides: {application.hasInHouseGuides ? "In-house" : "External/none listed"}
-          </p>
+          <div className="partner-application-detail-grid">
+            <span>
+              <strong>Phone</strong>
+              {application.phone || "Not provided"}
+            </span>
+            <span>
+              <strong>WhatsApp</strong>
+              {application.whatsapp || "Not provided"}
+            </span>
+            <span>
+              <strong>Location</strong>
+              {application.headquarters || "Not provided"}
+            </span>
+            <span>
+              <strong>Regions</strong>
+              {application.operatingRegions?.join(", ") || "Not provided"}
+            </span>
+            <span>
+              <strong>Has in-house guides</strong>
+              {application.hasInHouseGuides ? "Yes" : "No"}
+            </span>
+          </div>
           <p>{notes}</p>
         </div>
         <div className="button-row">
           <a className="button secondary compact" href={`mailto:${application.email}`}>
-            Email
+            Manual email
           </a>
           {application.phone && (
             <a className="button secondary compact" href={`tel:${application.phone}`}>
@@ -1482,7 +1531,7 @@ export default function Admin() {
               type="button"
               onClick={() => handleCompanyApplicationStatus(application._id, "under_review")}
             >
-              Under review
+              Under review & email
             </button>
           )}
           {canReview && currentStatus !== "call_scheduled" && (
@@ -1491,7 +1540,7 @@ export default function Admin() {
               type="button"
               onClick={() => handleCompanyApplicationStatus(application._id, "call_scheduled")}
             >
-              Call scheduled
+              Call scheduled & email
             </button>
           )}
           {canReview && (
@@ -1501,14 +1550,14 @@ export default function Admin() {
                 type="button"
                 onClick={() => handleCompanyApplicationStatus(application._id, "approved")}
               >
-                Approve
+                Approve & email
               </button>
               <button
                 className="button danger compact"
                 type="button"
                 onClick={() => handleCompanyApplicationStatus(application._id, "rejected")}
               >
-                Reject
+                Reject & email
               </button>
             </>
           )}
@@ -1787,7 +1836,7 @@ export default function Admin() {
                     </form>
                   )}
                 </section>
-                <div className="admin-list">
+                <div className="admin-list users-admin-list">
                   <div className="tab-row user-role-tabs" role="tablist" aria-label="User roles">
                     <button
                       className={userRoleFilter === "all" ? "active" : ""}
@@ -2141,7 +2190,7 @@ export default function Admin() {
                     </div>
                     <div className="button-row">
                       <a className="button secondary compact" href={`mailto:${application.email}`}>
-                        Email
+                        Manual email
                       </a>
                       {application.whatsapp && (
                         <a
@@ -2159,14 +2208,14 @@ export default function Admin() {
                         disabled={application.status !== "company_approved"}
                         onClick={() => handleGuideAdminDecision(application._id, "approved")}
                       >
-                        Confirm guide
+                        Confirm & email
                       </button>
                       <button
                         className="button danger compact"
                         type="button"
                         onClick={() => handleGuideAdminDecision(application._id, "rejected")}
                       >
-                        Reject
+                        Reject & email
                       </button>
                     </div>
                   </article>
@@ -2359,13 +2408,13 @@ export default function Admin() {
                           Edit
                         </button>
                         <button className="button primary compact" type="button" onClick={() => handleGalleryReview(item._id, "approved")}>
-                          Approve
+                          Approve & email
                         </button>
                         <button className="button secondary compact" type="button" onClick={() => handleGalleryReview(item._id, "pending")}>
                           Pending
                         </button>
                         <button className="button danger compact" type="button" onClick={() => handleGalleryReview(item._id, "rejected")}>
-                          Reject
+                          Reject & email
                         </button>
                         <ConfirmActionButton
                           actionLabel={`Delete ${item.title}`}
@@ -2467,6 +2516,39 @@ export default function Admin() {
                       <input value={tourForm.endLocation} onChange={(event) => updateTourField("endLocation", event.target.value)} />
                     </label>
                   </div>
+                  <div className="form-grid">
+                    <label className="field">
+                      <span>Group size min</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={tourForm.groupSizeMin}
+                        onChange={(event) => updateTourField("groupSizeMin", event.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Group size max</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={tourForm.groupSizeMax}
+                        onChange={(event) => updateTourField("groupSizeMax", event.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Minimum age</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={tourForm.minimumAge}
+                        onChange={(event) => updateTourField("minimumAge", event.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <label className="field">
+                    <span>Languages, one per line</span>
+                    <textarea value={tourForm.languages} onChange={(event) => updateTourField("languages", event.target.value)} rows="3" />
+                  </label>
                   <label className="field">
                     <span>Route summary</span>
                     <input
@@ -2475,6 +2557,58 @@ export default function Admin() {
                       placeholder="Arusha - Tarangire - Ngorongoro - Zanzibar"
                     />
                   </label>
+                  <div className="form-grid">
+                    <label className="field">
+                      <span>Meeting point</span>
+                      <input value={tourForm.meetingPoint} onChange={(event) => updateTourField("meetingPoint", event.target.value)} />
+                    </label>
+                    <label className="field">
+                      <span>Departure time</span>
+                      <input
+                        value={tourForm.departureTime}
+                        onChange={(event) => updateTourField("departureTime", event.target.value)}
+                        placeholder="08:00 or Flexible"
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Return time</span>
+                      <input
+                        value={tourForm.returnTime}
+                        onChange={(event) => updateTourField("returnTime", event.target.value)}
+                        placeholder="17:30 or Flexible"
+                      />
+                    </label>
+                  </div>
+                  <label className="checkbox-inline">
+                    <input
+                      type="checkbox"
+                      checked={tourForm.pickupIncluded}
+                      onChange={(event) => updateTourField("pickupIncluded", event.target.checked)}
+                    />
+                    Pickup included
+                  </label>
+                  <label className="field">
+                    <span>Pickup details</span>
+                    <textarea value={tourForm.pickupDetails} onChange={(event) => updateTourField("pickupDetails", event.target.value)} rows="2" />
+                  </label>
+                  <div className="form-grid">
+                    <label className="field">
+                      <span>Difficulty</span>
+                      <input value={tourForm.difficulty} onChange={(event) => updateTourField("difficulty", event.target.value)} />
+                    </label>
+                    <label className="field">
+                      <span>Transport</span>
+                      <input value={tourForm.transport} onChange={(event) => updateTourField("transport", event.target.value)} />
+                    </label>
+                    <label className="field">
+                      <span>Accommodation</span>
+                      <input value={tourForm.accommodation} onChange={(event) => updateTourField("accommodation", event.target.value)} />
+                    </label>
+                    <label className="field">
+                      <span>Meals</span>
+                      <input value={tourForm.meals} onChange={(event) => updateTourField("meals", event.target.value)} />
+                    </label>
+                  </div>
                   <div className="form-grid">
                     <label className="field">
                       <span>Available from</span>
@@ -2585,6 +2719,35 @@ export default function Admin() {
                     <span>Highlights, one per line</span>
                     <textarea value={tourForm.highlights} onChange={(event) => updateTourField("highlights", event.target.value)} />
                   </label>
+                  <label className="field">
+                    <span>What to bring, one per line</span>
+                    <textarea value={tourForm.whatToBring} onChange={(event) => updateTourField("whatToBring", event.target.value)} />
+                  </label>
+                  <label className="field">
+                    <span>Not suitable for, one per line</span>
+                    <textarea value={tourForm.notSuitableFor} onChange={(event) => updateTourField("notSuitableFor", event.target.value)} />
+                  </label>
+                  <label className="field">
+                    <span>Cancellation policy</span>
+                    <textarea
+                      value={tourForm.cancellationPolicy}
+                      onChange={(event) => updateTourField("cancellationPolicy", event.target.value)}
+                      rows="3"
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Payment terms</span>
+                    <textarea value={tourForm.paymentTerms} onChange={(event) => updateTourField("paymentTerms", event.target.value)} rows="3" />
+                  </label>
+                  <label className="field">
+                    <span>Itinerary, one day per line</span>
+                    <textarea
+                      value={tourForm.itinerary}
+                      onChange={(event) => updateTourField("itinerary", event.target.value)}
+                      placeholder="Day 1 | Arrival in Arusha | Pickup, briefing and overnight stay"
+                      rows="4"
+                    />
+                  </label>
                   <div className="checkbox-row">
                     <label>
                       <input
@@ -2626,7 +2789,31 @@ export default function Admin() {
                   items={tours}
                   label="tours"
                   emptyText="No tours yet."
-                  searchKeys={["title", "location", "category", "partner.name", "shortDescription", "description", "comfortLevel", "tourType", "routeSummary", "inclusions"]}
+                  searchKeys={[
+                    "title",
+                    "location",
+                    "category",
+                    "partner.name",
+                    "shortDescription",
+                    "description",
+                    "comfortLevel",
+                    "tourType",
+                    "routeSummary",
+                    "inclusions",
+                    "exclusions",
+                    "languages",
+                    "meetingPoint",
+                    "pickupDetails",
+                    "difficulty",
+                    "transport",
+                    "accommodation",
+                    "meals",
+                    "cancellationPolicy",
+                    "paymentTerms",
+                    "whatToBring",
+                    "notSuitableFor",
+                    (tour) => (tour.itinerary || []).map((item) => `${item.title || ""} ${item.description || ""}`).join(" ")
+                  ]}
                   filterOptions={[
                     { value: "active", label: "Active", predicate: (tour) => tour.isActive },
                     { value: "pending", label: "Pending", predicate: (tour) => !tour.isActive },
@@ -2697,7 +2884,7 @@ export default function Admin() {
                             step={key === "rating" ? "0.1" : undefined}
                             value={partnerForm[key]}
                             onChange={(event) => updatePartnerField(key, event.target.value)}
-                            required={key === "name" || key === "bookingURL"}
+                            required={key === "name"}
                           />
                         )}
                       </label>

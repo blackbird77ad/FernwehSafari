@@ -117,6 +117,74 @@ const tourSchema = new mongoose.Schema(
       enum: TOUR_TYPES,
       default: "Private or shared"
     },
+    groupSizeMin: {
+      type: Number,
+      min: [1, "Minimum group size must be at least 1."]
+    },
+    groupSizeMax: {
+      type: Number,
+      min: [1, "Maximum group size must be at least 1."]
+    },
+    minimumAge: {
+      type: Number,
+      min: [0, "Minimum age cannot be negative."]
+    },
+    languages: {
+      type: [String],
+      default: []
+    },
+    meetingPoint: {
+      type: String,
+      trim: true
+    },
+    pickupIncluded: {
+      type: Boolean,
+      default: false
+    },
+    pickupDetails: {
+      type: String,
+      trim: true
+    },
+    departureTime: {
+      type: String,
+      trim: true
+    },
+    returnTime: {
+      type: String,
+      trim: true
+    },
+    difficulty: {
+      type: String,
+      trim: true
+    },
+    transport: {
+      type: String,
+      trim: true
+    },
+    accommodation: {
+      type: String,
+      trim: true
+    },
+    meals: {
+      type: String,
+      trim: true
+    },
+    cancellationPolicy: {
+      type: String,
+      trim: true
+    },
+    paymentTerms: {
+      type: String,
+      trim: true
+    },
+    whatToBring: {
+      type: [String],
+      default: []
+    },
+    notSuitableFor: {
+      type: [String],
+      default: []
+    },
     routeSummary: {
       type: String,
       trim: true
@@ -216,6 +284,10 @@ const tourSchema = new mongoose.Schema(
 tourSchema.pre("validate", function setSlug(next) {
   if (!this.slug && this.title) {
     this.slug = slugify(this.title);
+  }
+
+  if (this.groupSizeMin && this.groupSizeMax && this.groupSizeMax < this.groupSizeMin) {
+    this.invalidate("groupSizeMax", "Maximum group size must be greater than or equal to minimum group size.");
   }
 
   next();

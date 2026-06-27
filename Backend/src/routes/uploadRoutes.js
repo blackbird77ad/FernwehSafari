@@ -4,7 +4,7 @@ const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const { uploadImage } = require("../controllers/uploadController");
 const { cloudinary, isCloudinaryConfigured } = require("../lib/cloudinary");
 const { auth } = require("../middleware/auth");
-const staffOnly = require("../middleware/staffOnly");
+const ApiError = require("../utils/apiError");
 
 const router = express.Router();
 const storage = isCloudinaryConfigured
@@ -18,6 +18,15 @@ const storage = isCloudinaryConfigured
   : multer.memoryStorage();
 const upload = multer({ storage });
 
-router.post("/", auth, staffOnly, upload.single("image"), uploadImage);
+function mediaUploadAccess(req, res, next) {
+  if (!req.user || !["admin", "moderator", "tour_company"].includes(req.user.role)) {
+    next(new ApiError(403, "Approved partner or staff access required."));
+    return;
+  }
+
+  next();
+}
+
+router.post("/", auth, mediaUploadAccess, upload.single("image"), uploadImage);
 
 module.exports = router;
