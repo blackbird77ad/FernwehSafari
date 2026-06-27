@@ -4,6 +4,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/sendResponse");
 const Referral = require("../models/Referral");
 const Tour = require("../models/Tour");
+const { notifyOwner } = require("../lib/resend");
 
 function toNumber(value, fallback = 0) {
   if (value === undefined || value === null || value === "") {
@@ -95,6 +96,12 @@ function applyReferralReconciliation(referral, payload, method = "manual") {
   if (nextStatus === "paid" && !referral.paidAt) {
     referral.paidAt = new Date();
   }
+}
+
+function runInBackground(task) {
+  Promise.resolve()
+    .then(task)
+    .catch(() => null);
 }
 
 const createReferral = asyncHandler(async (req, res) => {
@@ -260,6 +267,22 @@ const receivePartnerPostback = asyncHandler(async (req, res) => {
 
   applyReferralReconciliation(referral, req.body, "partner_postback");
   await referral.save();
+
+  runInBackground(() =>
+    notifyOwner(`Partner postback received: ${referral.trackingCode}`, [
+      `Tracking code: ${referral.trackingCode}`,
+      `Tour: ${referral.tour?.title || "Not provided"}`,
+      `Partner: ${referral.partner?.name || "Not provided"}`,
+      `Traveller: ${referral.user ? `${referral.user.name} (${referral.user.email})` : "Not attached"}`,
+      `Status: ${referral.status}`,
+      `Booking value ${referral.bookingCurrency || "EUR"}: ${referral.bookingValueEUR || 0}`,
+      `Commission rate: ${referral.commissionRatePercent || 0}%`,
+      `Confirmed commission EUR: ${referral.confirmedCommissionEUR || 0}`,
+      `Paid commission EUR: ${referral.paidCommissionEUR || 0}`,
+      `Partner booking ID: ${referral.partnerBookingId || "Not provided"}`,
+      `Received at: ${referral.postbackReceivedAt ? referral.postbackReceivedAt.toISOString() : new Date().toISOString()}`
+    ])
+  );
 
   sendResponse(res, 200, {
     referral,

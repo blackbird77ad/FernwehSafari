@@ -52,6 +52,19 @@ function temporaryPassword() {
   return `Travellex-${crypto.randomBytes(4).toString("hex")}`;
 }
 
+function applicationStatusCopy(status, reviewNotes) {
+  const messages = {
+    under_review: "Travellex has moved your tour company application into review.",
+    call_scheduled: "Travellex has marked your application for a follow-up call. The team will contact you with the next step.",
+    rejected: "After review, Travellex cannot approve this listing application at the moment."
+  };
+
+  return [
+    messages[status] || `Your Travellex application status is now ${status.replace(/_/g, " ")}.`,
+    reviewNotes || (status === "rejected" ? "No additional reason was provided." : "")
+  ].filter(Boolean);
+}
+
 async function approveCompanyApplication(application, adminUser, reviewNotes) {
   let user = await User.findOne({ email: application.email.toLowerCase() });
   let generatedPassword = "";
@@ -177,16 +190,13 @@ const updateCompanyApplicationStatus = asyncHandler(async (req, res) => {
     application.reviewedAt = new Date();
     await application.save();
 
-    if (status === "rejected") {
-      await notifyUser(application.email, "Travellex tour company application update", [
-        `Hello ${application.contactName},`,
-        "",
-        "After review, Travellex cannot approve this listing application at the moment.",
-        reviewNotes || "No additional reason was provided.",
-        "",
-        "Travellex"
-      ]);
-    }
+    await notifyUser(application.email, "Travellex tour company application update", [
+      `Hello ${application.contactName},`,
+      "",
+      ...applicationStatusCopy(status, reviewNotes),
+      "",
+      "Travellex"
+    ]);
   }
 
   await application.populate(["submittedBy", "linkedUser", "partner", "reviewedBy"]);

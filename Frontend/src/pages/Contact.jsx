@@ -43,7 +43,7 @@ export default function Contact() {
           <span>💬</span>
           Chat on WhatsApp
         </a>
-        <a className="touch-action email" href="mailto:msamilashalom@gmail.com">
+        <a className="touch-action email" href="mailto:experience@travellex.tours">
           <span>✉️</span>
           Email Our Team
         </a>

@@ -8,6 +8,7 @@ const User = require("../models/User");
 const { notifyOwner, notifyUser } = require("../lib/resend");
 
 const VERIFICATION_TOKEN_TTL_HOURS = 24;
+const PASSWORD_RESET_TOKEN_TTL_MINUTES = 60;
 
 function normalizeRole(role) {
   return role === "user" ? User.DEFAULT_ROLE : role;
@@ -48,14 +49,21 @@ function buildClientUrl(path) {
   return `${clientUrl}${path}`;
 }
 
-function createVerificationToken() {
+function createSecureToken() {
   return crypto.randomBytes(32).toString("hex");
 }
 
 function assignVerificationToken(user) {
-  const token = createVerificationToken();
+  const token = createSecureToken();
   user.emailVerificationTokenHash = hashToken(token);
   user.emailVerificationExpiresAt = new Date(Date.now() + VERIFICATION_TOKEN_TTL_HOURS * 60 * 60 * 1000);
+  return token;
+}
+
+function assignPasswordResetToken(user) {
+  const token = createSecureToken();
+  user.passwordResetTokenHash = hashToken(token);
+  user.passwordResetExpiresAt = new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MINUTES * 60 * 1000);
   return token;
 }
 
@@ -76,6 +84,42 @@ async function sendVerificationEmail(user, token) {
     ]);
   } catch (error) {
     return { sent: false, reason: error.message || "Verification email could not be sent." };
+  }
+}
+
+async function sendPasswordResetEmail(user, token) {
+  const resetUrl = buildClientUrl(`/reset-password?token=${encodeURIComponent(token)}`);
+
+  try {
+    return await notifyUser(user.email, "Reset your Travellex password", [
+      `Hello ${user.name},`,
+      "",
+      "We received a request to reset the password for your Travellex account.",
+      `Reset password: ${resetUrl}`,
+      "",
+      `This link expires in ${PASSWORD_RESET_TOKEN_TTL_MINUTES} minutes. If you did not request it, you can ignore this email.`,
+      "",
+      "Warm regards,",
+      "Travellex"
+    ]);
+  } catch (error) {
+    return { sent: false, reason: error.message || "Password reset email could not be sent." };
+  }
+}
+
+async function sendPasswordChangedEmail(user) {
+  try {
+    return await notifyUser(user.email, "Your Travellex password was updated", [
+      `Hello ${user.name},`,
+      "",
+      "Your Travellex password was changed successfully.",
+      "If you did not make this change, contact Travellex immediately.",
+      "",
+      "Warm regards,",
+      "Travellex"
+    ]);
+  } catch (error) {
+    return { sent: false, reason: error.message || "Password update email could not be sent." };
   }
 }
 
@@ -127,15 +171,6 @@ const register = asyncHandler(async (req, res) => {
   const verificationToken = assignVerificationToken(user);
   await user.save();
   runInBackground(() => sendVerificationEmail(user, verificationToken));
-
-  runInBackground(() =>
-    notifyOwner(`New Travellex user registered: ${user.name}`, [
-      `Name: ${user.name}`,
-      `Email: ${user.email}`,
-      `Role: ${normalizeRole(user.role)}`,
-      `Country: ${user.country || "Not provided"}`
-    ])
-  );
 
   sendResponse(res, 201, {
     verificationRequired: true,
@@ -197,6 +232,16 @@ const verifyEmail = asyncHandler(async (req, res) => {
   user.emailVerificationExpiresAt = undefined;
   await user.save();
 
+  runInBackground(() =>
+    notifyOwner(`New Travellex user registered: ${user.name}`, [
+      `Name: ${user.name}`,
+      `Email: ${user.email}`,
+      `Role: ${normalizeRole(user.role)}`,
+      `Country: ${user.country || "Not provided"}`,
+      `Email verified at: ${user.emailVerifiedAt.toISOString()}`
+    ])
+  );
+
   sendResponse(res, 200, {
     token: signToken(user),
     user: serializeUser(user),
@@ -233,6 +278,61 @@ const resendVerification = asyncHandler(async (req, res) => {
   });
 });
 
+const requestPasswordReset = asyncHandler(async (req, res) => {
+  const email = req.body.email?.toLowerCase();
+
+  if (!email) {
+    throw new ApiError(422, "Email is required.");
+  }
+
+  const user = await User.findOne({ email }).select("+passwordResetTokenHash +passwordResetExpiresAt");
+
+  if (user) {
+    const token = assignPasswordResetToken(user);
+    await user.save();
+    runInBackground(() => sendPasswordResetEmail(user, token));
+  }
+
+  sendResponse(res, 200, {
+    message: "If this email belongs to a Travellex account, a password reset link will be sent shortly."
+  });
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+  const token = req.body.token || req.query.token;
+  const { password } = req.body;
+
+  if (!token || !password) {
+    throw new ApiError(422, "Reset token and new password are required.");
+  }
+
+  if (password.length < 8) {
+    throw new ApiError(422, "Password must be at least 8 characters.");
+  }
+
+  const user = await User.findOne({
+    passwordResetTokenHash: hashToken(token),
+    passwordResetExpiresAt: { $gt: new Date() }
+  }).select("+passwordResetTokenHash +passwordResetExpiresAt");
+
+  if (!user) {
+    throw new ApiError(400, "Password reset link is invalid or expired.");
+  }
+
+  user.passwordHash = await bcrypt.hash(password, 12);
+  user.passwordResetTokenHash = undefined;
+  user.passwordResetExpiresAt = undefined;
+  user.emailVerified = true;
+  user.emailVerifiedAt = user.emailVerifiedAt || new Date();
+  await user.save();
+
+  runInBackground(() => sendPasswordChangedEmail(user));
+
+  sendResponse(res, 200, {
+    message: "Password reset successful. You can now log in with your new password."
+  });
+});
+
 const me = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id)
     .select("-passwordHash")
@@ -248,6 +348,8 @@ module.exports = {
   login,
   me,
   register,
+  requestPasswordReset,
+  resetPassword,
   resendVerification,
   serializeUser,
   verifyEmail

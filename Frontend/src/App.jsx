@@ -11,12 +11,14 @@ import BookingSession from "./pages/BookingSession";
 import Contact from "./pages/Contact";
 import Dashboard from "./pages/Dashboard";
 import FAQ from "./pages/FAQ";
+import ForgotPassword from "./pages/ForgotPassword";
 import Gallery from "./pages/Gallery";
 import Home from "./pages/Home";
 import ListYourTours from "./pages/ListYourTours";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import Register from "./pages/Register";
+import ResetPassword from "./pages/ResetPassword";
 import Testimonials from "./pages/Testimonials";
 import TourDetail from "./pages/TourDetail";
 import Tours from "./pages/Tours";
@@ -59,6 +61,8 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route
             path="/dashboard"
             element={

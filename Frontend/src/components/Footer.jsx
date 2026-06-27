@@ -43,9 +43,9 @@ export default function Footer() {
       </div>
       <div>
         <h3>Contact</h3>
-        <a className="footer-contact-link" href="mailto:msamilashalom@gmail.com">
+        <a className="footer-contact-link" href="mailto:experience@travellex.tours">
           <MailIcon />
-          msamilashalom@gmail.com
+          experience@travellex.tours
         </a>
         <div className="footer-whatsapp-row">
           <a

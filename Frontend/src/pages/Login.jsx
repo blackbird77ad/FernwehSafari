@@ -10,12 +10,14 @@ export default function Login() {
   const location = useLocation();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState(location.state?.message || "");
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
     setSubmitting(true);
     setError("");
+    setNotice("");
 
     try {
       const loggedInUser = await login(form);
@@ -43,6 +45,7 @@ export default function Login() {
         <form className="auth-card login-panel" onSubmit={handleSubmit}>
           <p className="eyebrow">Login</p>
           <h1>Access your dashboard.</h1>
+          {notice && <p className="form-note">{notice}</p>}
           <label className="field">
             <span>Email</span>
             <input
@@ -69,6 +72,11 @@ export default function Login() {
               Need a new link? <Link to="/verify-email" state={{ email: form.email }}>Resend confirmation</Link>
             </p>
           )}
+          <p>
+            <Link to="/forgot-password" state={{ email: form.email }}>
+              Forgot password?
+            </Link>
+          </p>
           <p>
             No account yet? <Link to="/register">Register</Link>
           </p>
