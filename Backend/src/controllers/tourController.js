@@ -256,6 +256,9 @@ const listTours = asyncHandler(async (req, res) => {
     (isStaff(req.user) || req.query.mine === "true") && req.query.includeInactive === "true";
   const filters = await buildTourQuery(req.query, includeInactive);
   const sort = buildTourSort(req.query.sort);
+  const page = Math.max(Number(req.query.page) || 1, 1);
+  const requestedLimit = Number(req.query.limit);
+  const limit = Number.isFinite(requestedLimit) && requestedLimit > 0 ? Math.min(Math.floor(requestedLimit), 100) : 0;
 
   if (req.query.mine === "true") {
     if (!req.user) {
@@ -265,12 +268,27 @@ const listTours = asyncHandler(async (req, res) => {
     filters.owner = req.user._id;
   }
 
-  const tours = await Tour.find(filters)
+  const tourQuery = Tour.find(filters)
     .populate("partner")
     .populate("approvedGuides.guide", "name email country role")
     .sort(sort);
 
-  sendResponse(res, 200, { tours });
+  if (limit) {
+    tourQuery.skip((page - 1) * limit).limit(limit);
+  }
+
+  const tours = await tourQuery;
+  const total = limit ? await Tour.countDocuments(filters) : tours.length;
+
+  sendResponse(res, 200, {
+    tours,
+    pagination: {
+      page: limit ? page : 1,
+      limit: limit || total,
+      total,
+      totalPages: limit ? Math.max(Math.ceil(total / limit), 1) : 1
+    }
+  });
 });
 
 const getTourBySlug = asyncHandler(async (req, res) => {

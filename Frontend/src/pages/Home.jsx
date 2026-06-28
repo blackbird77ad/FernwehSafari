@@ -10,6 +10,8 @@ import { getTours } from "../services/tourService";
 import { destinationStories, testimonials } from "../utils/staticContent";
 import { activityOptions, destinationOptions, tourSortOptions } from "../utils/travelOptions";
 
+const HOME_FEATURED_LIMIT = 12;
+
 export default function Home() {
   const navigate = useNavigate();
   const [featuredTours, setFeaturedTours] = useState([]);
@@ -21,8 +23,8 @@ export default function Home() {
   ).length;
 
   useEffect(() => {
-    getTours({ featured: true })
-      .then((response) => setFeaturedTours(response.data.tours.slice(0, 4)))
+    getTours({ featured: true, limit: HOME_FEATURED_LIMIT })
+      .then((response) => setFeaturedTours((response.data.tours || []).slice(0, HOME_FEATURED_LIMIT)))
       .catch(() => setFeaturedTours([]))
       .finally(() => setLoading(false));
   }, []);
@@ -119,7 +121,7 @@ export default function Home() {
         <div className="section-heading split">
           <div>
             <p className="eyebrow">Featured tours</p>
-            <h2>Admin-featured listings from approved partners.</h2>
+            <h2>Listings from approved partners.</h2>
           </div>
           <Link className="button secondary" to="/tours?sort=featured">
             View all tours
@@ -129,7 +131,7 @@ export default function Home() {
           <Spinner />
         ) : featuredTours.length ? (
           <div className="deal-feed">
-            {featuredTours.slice(0, 3).map((tour) => (
+            {featuredTours.map((tour) => (
               <TourCard key={tour._id} tour={tour} />
             ))}
           </div>
@@ -173,28 +175,6 @@ export default function Home() {
             </Link>
           </div>
         </div>
-      </section>
-      <section className="section">
-        <div className="section-heading split">
-          <div>
-            <p className="eyebrow">Hosted tour listings</p>
-            <h2>Start with strong Africa routes, with Tanzania and Zanzibar ready first.</h2>
-          </div>
-          <Link className="button secondary" to="/tours">
-            View all tours
-          </Link>
-        </div>
-        {loading ? (
-          <Spinner />
-        ) : featuredTours.length ? (
-          <div className="card-grid tours-grid">
-            {featuredTours.map((tour) => (
-              <TourCard key={tour._id} tour={tour} />
-            ))}
-          </div>
-        ) : (
-          <p className="empty-state">Featured tours are being prepared.</p>
-        )}
       </section>
       <section className="section">
         <div className="section-heading">

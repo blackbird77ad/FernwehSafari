@@ -109,6 +109,7 @@ main {
 :root[data-theme="dark"] .testimonial-card,
 :root[data-theme="dark"] .destination-story-card,
 :root[data-theme="dark"] .tour-card,
+:root[data-theme="dark"] .tour-card-facts span,
 :root[data-theme="dark"] .media-card,
 :root[data-theme="dark"] .tab-row,
 :root[data-theme="dark"] .admin-row,
@@ -120,6 +121,7 @@ main {
 :root[data-theme="dark"] .tour-compare-table th,
 :root[data-theme="dark"] .tour-compare-table td,
 :root[data-theme="dark"] .tour-operator-row,
+:root[data-theme="dark"] .tour-results-head,
 :root[data-theme="dark"] .tour-comparison-panel,
 :root[data-theme="dark"] .comparison-grid span,
 :root[data-theme="dark"] .admin-kpi-card,
@@ -716,6 +718,11 @@ p {
   padding-top: clamp(1.4rem, 3vw, 2.2rem);
 }
 
+.featured-after-search .deal-feed {
+  width: min(92rem, 100%);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .quick-split-grid,
 .deal-feed,
 .benefits-matrix,
@@ -1226,12 +1233,16 @@ p {
   min-height: 2.8rem;
   align-items: center;
   justify-content: center;
+  gap: 0.45rem;
   border: 1px solid transparent;
   border-radius: 0.5rem;
   padding: 0.72rem 1.02rem;
   cursor: pointer;
   font-size: 0.94rem;
   font-weight: 820;
+  line-height: 1.08;
+  text-align: center;
+  text-decoration: none;
   transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
 }
 
@@ -1265,7 +1276,13 @@ p {
   transform: translateY(-1px);
 }
 
+.button:focus-visible {
+  outline: 3px solid rgba(14, 116, 144, 0.24);
+  outline-offset: 3px;
+}
+
 .button.primary {
+  border-color: rgba(7, 13, 22, 0.08);
   background: var(--gold);
   color: var(--ink);
   box-shadow: 0 0.9rem 1.8rem rgba(200, 162, 74, 0.2);
@@ -1558,6 +1575,70 @@ p {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.tour-catalog-section {
+  padding-top: clamp(1.6rem, 4vw, 3rem);
+}
+
+.tour-catalog-shell {
+  display: grid;
+  width: min(92rem, 100%);
+  gap: clamp(1rem, 2.4vw, 1.5rem);
+  margin: 0 auto;
+}
+
+.tour-catalog-heading {
+  width: 100%;
+  align-items: center;
+  margin-bottom: 0;
+}
+
+.tour-catalog-heading h2 {
+  width: min(45rem, 100%);
+}
+
+.tour-catalog-section .filter-bar {
+  width: 100%;
+  margin-bottom: 0;
+  border-left: 4px solid rgba(14, 116, 144, 0.24);
+}
+
+.tour-results-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  padding: 0.72rem 0.85rem;
+  background: var(--surface);
+  box-shadow: 0 0.65rem 1.45rem rgba(11, 19, 32, 0.05);
+}
+
+.tour-results-head div {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.tour-results-head strong {
+  color: var(--forest);
+  font-size: 1rem;
+}
+
+.tour-results-head span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 850;
+}
+
+.public-tour-grid {
+  width: 100%;
+  margin: 0;
+}
+
+.tour-pagination {
+  width: 100%;
+}
+
 .tour-card,
 .testimonial-card,
 .step-card,
@@ -1647,6 +1728,16 @@ p {
   display: grid;
   gap: 0.9rem;
   padding: 1rem;
+}
+
+.tour-card .button-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+.tour-card .button {
+  width: 100%;
 }
 
 .card-body h3,
@@ -4804,6 +4895,10 @@ textarea:focus {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .featured-after-search .deal-feed {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .admin-console,
   .admin-console.sidebar-open,
   .admin-console.sidebar-collapsed {
@@ -4875,6 +4970,15 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 
+  .featured-after-search .deal-feed {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tour-results-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .detail-side {
     position: static;
   }
@@ -4940,6 +5044,10 @@ textarea:focus {
 }
 
 @media (max-width: 720px) {
+  .featured-after-search .deal-feed {
+    grid-template-columns: 1fr;
+  }
+
   h1 {
     font-size: clamp(2.2rem, 11vw, 3.55rem);
   }
