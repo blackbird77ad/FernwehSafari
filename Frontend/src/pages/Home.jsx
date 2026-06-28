@@ -115,26 +115,14 @@ export default function Home() {
           </form>
         )}
       </section>
-      <section className="section fast-grid-section">
-        <div className="quick-split-grid">
-          <Link to="/tours?category=Safari" className="quick-split-card safari">
-            <span>🦁</span>
-            <strong>Africa Safaris</strong>
-          </Link>
-          <Link to="/tours?category=Beach" className="quick-split-card coast">
-            <span>🏖️</span>
-            <strong>Island & Coast</strong>
-          </Link>
-        </div>
-      </section>
-      <section className="section pt-0">
+      <section className="section featured-after-search">
         <div className="section-heading split">
           <div>
-            <p className="eyebrow">Travellex marketplace</p>
-            <h2>Top hosted tours worth checking first.</h2>
+            <p className="eyebrow">Featured tours</p>
+            <h2>Admin-featured listings from approved partners.</h2>
           </div>
-          <Link className="button secondary" to="/tours">
-            View all deals
+          <Link className="button secondary" to="/tours?sort=featured">
+            View all tours
           </Link>
         </div>
         {loading ? (
@@ -146,8 +134,20 @@ export default function Home() {
             ))}
           </div>
         ) : (
-          <p className="empty-state">Marketplace tours are being prepared.</p>
+          <p className="empty-state">Featured tours are being prepared.</p>
         )}
+      </section>
+      <section className="section fast-grid-section">
+        <div className="quick-split-grid">
+          <Link to="/tours?category=Safari" className="quick-split-card safari">
+            <span>🦁</span>
+            <strong>Africa Safaris</strong>
+          </Link>
+          <Link to="/tours?category=Beach" className="quick-split-card coast">
+            <span>🏖️</span>
+            <strong>Island & Coast</strong>
+          </Link>
+        </div>
       </section>
       <section className="section story-band">
         <div className="story-media">

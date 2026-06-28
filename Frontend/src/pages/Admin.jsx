@@ -6,7 +6,7 @@ import Spinner from "../components/Spinner";
 import Toast from "../components/Toast";
 import travellexLogo from "../assets/photos/Travellex-logo-wordmark.png";
 import useAuth from "../hooks/useAuth";
-import { activityOptions, comfortLevelOptions, tourTypeOptions } from "../utils/travelOptions";
+import { activityOptions, comfortLevelOptions, confirmationTypeOptions, priceBasisOptions, tourTypeOptions } from "../utils/travelOptions";
 import {
   createPartner,
   deletePartner,
@@ -162,12 +162,20 @@ const emptyTour = {
   shortDescription: "",
   description: "",
   priceEUR: "",
+  priceBasis: "Per person",
+  childPriceEUR: "",
+  singleSupplementEUR: "",
+  depositPercent: "",
+  bookingCutoffDays: "",
+  confirmationType: "On request",
   duration: "",
   durationDays: "",
   location: "",
   category: "Safari",
   comfortLevel: "Midrange",
   tourType: "Private or shared",
+  guideIncluded: true,
+  customizable: true,
   groupSizeMin: "",
   groupSizeMax: "",
   minimumAge: "",
@@ -178,6 +186,7 @@ const emptyTour = {
   departureTime: "",
   returnTime: "",
   difficulty: "",
+  accessibility: "",
   transport: "",
   accommodation: "",
   meals: "",
@@ -196,6 +205,7 @@ const emptyTour = {
   exclusions: "",
   availableFrom: "",
   availableTo: "",
+  availableWeekdays: "",
   reviewRating: "",
   reviewCount: "",
   vrEnabled: false,
@@ -1026,14 +1036,21 @@ export default function Admin() {
     const payload = {
       ...tourForm,
       priceEUR: Number(tourForm.priceEUR),
+      childPriceEUR: numberOrUndefined(tourForm.childPriceEUR),
+      singleSupplementEUR: numberOrUndefined(tourForm.singleSupplementEUR),
+      depositPercent: numberOrUndefined(tourForm.depositPercent),
+      bookingCutoffDays: numberOrUndefined(tourForm.bookingCutoffDays),
       durationDays: numberOrUndefined(tourForm.durationDays),
       groupSizeMin: numberOrUndefined(tourForm.groupSizeMin),
       groupSizeMax: numberOrUndefined(tourForm.groupSizeMax),
       minimumAge: numberOrUndefined(tourForm.minimumAge),
       languages: splitLines(tourForm.languages),
       pickupIncluded: Boolean(tourForm.pickupIncluded),
+      guideIncluded: Boolean(tourForm.guideIncluded),
+      customizable: Boolean(tourForm.customizable),
       whatToBring: splitLines(tourForm.whatToBring),
       notSuitableFor: splitLines(tourForm.notSuitableFor),
+      availableWeekdays: splitLines(tourForm.availableWeekdays),
       commissionRatePercent:
         tourForm.commissionRatePercent === "" ? undefined : Number(tourForm.commissionRatePercent),
       images: splitLines(tourForm.images),
@@ -1084,12 +1101,20 @@ export default function Admin() {
       shortDescription: tour.shortDescription || "",
       description: tour.description || "",
       priceEUR: tour.priceEUR || "",
+      priceBasis: tour.priceBasis || "Per person",
+      childPriceEUR: tour.childPriceEUR ?? "",
+      singleSupplementEUR: tour.singleSupplementEUR ?? "",
+      depositPercent: tour.depositPercent ?? "",
+      bookingCutoffDays: tour.bookingCutoffDays ?? "",
+      confirmationType: tour.confirmationType || "On request",
       duration: tour.duration || "",
       durationDays: tour.durationDays || "",
       location: tour.location || "",
       category: tour.category || "Safari",
       comfortLevel: tour.comfortLevel || "Midrange",
       tourType: tour.tourType || "Private or shared",
+      guideIncluded: tour.guideIncluded !== false,
+      customizable: tour.customizable !== false,
       groupSizeMin: tour.groupSizeMin ?? "",
       groupSizeMax: tour.groupSizeMax ?? "",
       minimumAge: tour.minimumAge ?? "",
@@ -1100,6 +1125,7 @@ export default function Admin() {
       departureTime: tour.departureTime || "",
       returnTime: tour.returnTime || "",
       difficulty: tour.difficulty || "",
+      accessibility: tour.accessibility || "",
       transport: tour.transport || "",
       accommodation: tour.accommodation || "",
       meals: tour.meals || "",
@@ -1118,6 +1144,7 @@ export default function Admin() {
       exclusions: formatListText(tour.exclusions),
       availableFrom: tour.availableFrom ? tour.availableFrom.slice(0, 10) : "",
       availableTo: tour.availableTo ? tour.availableTo.slice(0, 10) : "",
+      availableWeekdays: formatListText(tour.availableWeekdays),
       reviewRating: tour.reviewRating ?? "",
       reviewCount: tour.reviewCount ?? "",
       vrEnabled: Boolean(tour.vrEnabled),
@@ -1137,6 +1164,18 @@ export default function Admin() {
       await deleteTour(id);
       setToast({ message: "Tour deleted." });
       await loadAdminData();
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    }
+  }
+
+  async function handleTourQuickToggle(id, field, checked) {
+    try {
+      const response = await updateTour(id, { [field]: checked });
+      const updatedTour = response.data.tour;
+
+      setTours((current) => current.map((tour) => (tour._id === id ? { ...tour, ...updatedTour } : tour)));
+      setToast({ message: `${field === "featured" ? "Homepage featured" : "Public listing"} ${checked ? "enabled" : "disabled"}.` });
     } catch (error) {
       setToast({ tone: "error", message: error.message });
     }
@@ -2459,6 +2498,16 @@ export default function Admin() {
                       />
                     </label>
                     <label className="field">
+                      <span>Price basis</span>
+                      <select value={tourForm.priceBasis} onChange={(event) => updateTourField("priceBasis", event.target.value)}>
+                        {priceBasisOptions.map((basis) => (
+                          <option key={basis} value={basis}>
+                            {basis}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field">
                       <span>Duration</span>
                       <input value={tourForm.duration} onChange={(event) => updateTourField("duration", event.target.value)} required />
                     </label>
@@ -2484,6 +2533,45 @@ export default function Admin() {
                           </option>
                         ))}
                       </select>
+                    </label>
+                  </div>
+                  <div className="form-grid">
+                    <label className="field">
+                      <span>Child price EUR</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={tourForm.childPriceEUR}
+                        onChange={(event) => updateTourField("childPriceEUR", event.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Single supplement EUR</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={tourForm.singleSupplementEUR}
+                        onChange={(event) => updateTourField("singleSupplementEUR", event.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Deposit %</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={tourForm.depositPercent}
+                        onChange={(event) => updateTourField("depositPercent", event.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Booking cutoff days</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={tourForm.bookingCutoffDays}
+                        onChange={(event) => updateTourField("bookingCutoffDays", event.target.value)}
+                      />
                     </label>
                   </div>
                   <div className="form-grid">
@@ -2514,6 +2602,24 @@ export default function Admin() {
                     <label className="field">
                       <span>End location</span>
                       <input value={tourForm.endLocation} onChange={(event) => updateTourField("endLocation", event.target.value)} />
+                    </label>
+                  </div>
+                  <div className="checkbox-row">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={tourForm.guideIncluded}
+                        onChange={(event) => updateTourField("guideIncluded", event.target.checked)}
+                      />
+                      Guide included
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={tourForm.customizable}
+                        onChange={(event) => updateTourField("customizable", event.target.checked)}
+                      />
+                      Customizable
                     </label>
                   </div>
                   <div className="form-grid">
@@ -2557,6 +2663,15 @@ export default function Admin() {
                       placeholder="Arusha - Tarangire - Ngorongoro - Zanzibar"
                     />
                   </label>
+                  <label className="field">
+                    <span>Daily itinerary, one day per line</span>
+                    <textarea
+                      value={tourForm.itinerary}
+                      onChange={(event) => updateTourField("itinerary", event.target.value)}
+                      placeholder="Day 1 | Arrival in Arusha | Pickup, briefing and overnight stay"
+                      rows="5"
+                    />
+                  </label>
                   <div className="form-grid">
                     <label className="field">
                       <span>Meeting point</span>
@@ -2597,6 +2712,14 @@ export default function Admin() {
                       <input value={tourForm.difficulty} onChange={(event) => updateTourField("difficulty", event.target.value)} />
                     </label>
                     <label className="field">
+                      <span>Accessibility notes</span>
+                      <input
+                        value={tourForm.accessibility}
+                        onChange={(event) => updateTourField("accessibility", event.target.value)}
+                        placeholder="Wheelchair access, mobility limits, steps"
+                      />
+                    </label>
+                    <label className="field">
                       <span>Transport</span>
                       <input value={tourForm.transport} onChange={(event) => updateTourField("transport", event.target.value)} />
                     </label>
@@ -2619,6 +2742,16 @@ export default function Admin() {
                       <input type="date" value={tourForm.availableTo} onChange={(event) => updateTourField("availableTo", event.target.value)} />
                     </label>
                     <label className="field">
+                      <span>Confirmation type</span>
+                      <select value={tourForm.confirmationType} onChange={(event) => updateTourField("confirmationType", event.target.value)}>
+                        {confirmationTypeOptions.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field">
                       <span>Review rating</span>
                       <input
                         type="number"
@@ -2639,6 +2772,15 @@ export default function Admin() {
                       />
                     </label>
                   </div>
+                  <label className="field">
+                    <span>Available weekdays, one per line</span>
+                    <textarea
+                      value={tourForm.availableWeekdays}
+                      onChange={(event) => updateTourField("availableWeekdays", event.target.value)}
+                      placeholder={"Daily\nMonday\nFriday"}
+                      rows="3"
+                    />
+                  </label>
                   <label className="field">
                     <span>Partner</span>
                     <select value={tourForm.partner} onChange={(event) => updateTourField("partner", event.target.value)} required>
@@ -2739,15 +2881,6 @@ export default function Admin() {
                     <span>Payment terms</span>
                     <textarea value={tourForm.paymentTerms} onChange={(event) => updateTourField("paymentTerms", event.target.value)} rows="3" />
                   </label>
-                  <label className="field">
-                    <span>Itinerary, one day per line</span>
-                    <textarea
-                      value={tourForm.itinerary}
-                      onChange={(event) => updateTourField("itinerary", event.target.value)}
-                      placeholder="Day 1 | Arrival in Arusha | Pickup, briefing and overnight stay"
-                      rows="4"
-                    />
-                  </label>
                   <div className="checkbox-row">
                     <label>
                       <input
@@ -2801,13 +2934,17 @@ export default function Admin() {
                     "routeSummary",
                     "inclusions",
                     "exclusions",
+                    "priceBasis",
+                    "confirmationType",
                     "languages",
                     "meetingPoint",
                     "pickupDetails",
                     "difficulty",
+                    "accessibility",
                     "transport",
                     "accommodation",
                     "meals",
+                    "availableWeekdays",
                     "cancellationPolicy",
                     "paymentTerms",
                     "whatToBring",
@@ -2848,6 +2985,24 @@ export default function Admin() {
                         <span>
                           {tour.location} - {tour.category} - {eur.format(tour.priceEUR)}
                         </span>
+                        <div className="admin-inline-flags">
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={Boolean(tour.featured)}
+                              onChange={(event) => handleTourQuickToggle(tour._id, "featured", event.target.checked)}
+                            />
+                            Featured homepage
+                          </label>
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={Boolean(tour.isActive)}
+                              onChange={(event) => handleTourQuickToggle(tour._id, "isActive", event.target.checked)}
+                            />
+                            Public tours
+                          </label>
+                        </div>
                       </div>
                       <div className="button-row">
                         <button className="button secondary compact" type="button" onClick={() => editTour(tour)}>

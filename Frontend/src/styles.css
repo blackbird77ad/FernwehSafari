@@ -712,6 +712,10 @@ p {
   padding-bottom: clamp(1.2rem, 3vw, 2rem);
 }
 
+.featured-after-search {
+  padding-top: clamp(1.4rem, 3vw, 2.2rem);
+}
+
 .quick-split-grid,
 .deal-feed,
 .benefits-matrix,
@@ -1596,15 +1600,25 @@ p {
   position: absolute;
   top: 0.75rem;
   right: 0.75rem;
+  display: grid;
+  gap: 0.05rem;
   border-radius: 999px;
   padding: 0.35rem 0.75rem;
   background: var(--gold);
   color: var(--forest-2);
   font-size: 0.9rem;
   font-weight: 950;
+  line-height: 1.05;
   box-shadow: 0 0.6rem 1.4rem rgba(11, 19, 32, 0.16);
 }
 
+.tour-price-badge small {
+  color: rgba(7, 13, 22, 0.72);
+  font-size: 0.62rem;
+  font-weight: 850;
+}
+
+.tour-featured-badge,
 .tour-vr-badge {
   position: absolute;
   top: 0.75rem;
@@ -1618,6 +1632,15 @@ p {
   font-weight: 950;
   letter-spacing: 0;
   box-shadow: 0 0.6rem 1.4rem rgba(11, 19, 32, 0.18);
+}
+
+.tour-featured-badge {
+  background: rgba(200, 162, 74, 0.94);
+  color: var(--forest-2);
+}
+
+.tour-card-image .tour-featured-badge + .tour-vr-badge {
+  top: 2.9rem;
 }
 
 .card-body {
@@ -1667,6 +1690,31 @@ p {
   border: 1px solid var(--line);
 }
 
+.admin-inline-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.42rem;
+  margin-top: 0.42rem;
+}
+
+.admin-inline-flags label {
+  display: inline-flex;
+  min-height: 1.85rem;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.22rem 0.56rem;
+  background: var(--sky);
+  color: var(--forest);
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
+.admin-inline-flags input {
+  margin: 0;
+}
+
 .card-meta {
   display: flex;
   align-items: center;
@@ -1683,6 +1731,30 @@ p {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
   gap: 0.65rem;
   margin: 0 0 1rem;
+}
+
+.tour-card-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.tour-card-facts span {
+  display: grid;
+  gap: 0.1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  padding: 0.52rem;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.tour-card-facts strong {
+  color: var(--forest);
+  font-size: 0.66rem;
+  text-transform: uppercase;
 }
 
 .operator-comparison-strip article {

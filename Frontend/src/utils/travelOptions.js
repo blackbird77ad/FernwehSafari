@@ -55,3 +55,7 @@ export const tourSortOptions = [
 export const comfortLevelOptions = ["Budget", "Midrange", "Luxury", "Premium", "Mixed"];
 
 export const tourTypeOptions = ["Private", "Shared", "Private or shared"];
+
+export const priceBasisOptions = ["Per person", "Per group", "Per vehicle", "Per booking", "On request"];
+
+export const confirmationTypeOptions = ["On request", "Manual confirmation", "Instant confirmation"];

@@ -29,6 +29,14 @@ function formatGroupSize(tour) {
   return "";
 }
 
+function formatOptionalMoney(value) {
+  if (value === 0 || value) {
+    return eur.format(value);
+  }
+
+  return "";
+}
+
 export default function TourDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -215,6 +223,14 @@ export default function TourDetail() {
   const languages = tour.languages?.filter(Boolean).join(", ");
   const ageMinimum = tour.minimumAge === 0 ? "All ages" : tour.minimumAge ? `${tour.minimumAge}+` : "";
   const timeWindow = [tour.departureTime, tour.returnTime].filter(Boolean).join(" - ");
+  const availableWeekdays = tour.availableWeekdays?.filter(Boolean).join(", ");
+  const depositText = tour.depositPercent === 0 || tour.depositPercent ? `${tour.depositPercent}%` : "";
+  const bookingCutoffText =
+    tour.bookingCutoffDays === 0
+      ? "Same-day booking"
+      : tour.bookingCutoffDays
+        ? `${tour.bookingCutoffDays} days before start`
+        : "";
   const pickupText =
     tour.pickupIncluded || tour.pickupDetails
       ? tour.pickupIncluded
@@ -226,20 +242,30 @@ export default function TourDetail() {
     { label: "Comfort", value: tour.comfortLevel || "Ask operator" },
     { label: "Tour type", value: tour.tourType || "Private or shared" },
     { label: "Route", value: routePoints.length ? routePoints.join(" - ") : tour.location },
+    { label: "Price basis", value: tour.priceBasis },
     { label: "Group size", value: groupSize },
     { label: "Languages", value: languages },
     { label: "Minimum age", value: ageMinimum },
-    { label: "Timing", value: timeWindow }
+    { label: "Timing", value: timeWindow },
+    { label: "Guide included", value: tour.guideIncluded === false ? "No" : "Yes" },
+    { label: "Customizable", value: tour.customizable === false ? "No" : "Yes" }
   ].filter((item) => item.value);
   const logisticsItems = [
     { label: "Meeting point", value: tour.meetingPoint },
     { label: "Pickup", value: pickupText },
     { label: "Difficulty", value: tour.difficulty },
+    { label: "Accessibility", value: tour.accessibility },
     { label: "Transport", value: tour.transport },
     { label: "Accommodation", value: tour.accommodation },
     { label: "Meals", value: tour.meals }
   ].filter((item) => item.value);
   const policyItems = [
+    { label: "Confirmation", value: tour.confirmationType },
+    { label: "Available days", value: availableWeekdays },
+    { label: "Child price", value: formatOptionalMoney(tour.childPriceEUR) },
+    { label: "Single supplement", value: formatOptionalMoney(tour.singleSupplementEUR) },
+    { label: "Deposit", value: depositText },
+    { label: "Booking cutoff", value: bookingCutoffText },
     { label: "Cancellation policy", value: tour.cancellationPolicy },
     { label: "Payment terms", value: tour.paymentTerms }
   ].filter((item) => item.value);
@@ -296,7 +322,9 @@ export default function TourDetail() {
           </div>
           <div className="content-block">
             <p>📍 {compactDescription}</p>
-            <p>🧭 Duration: {tour.duration}. Route base: {tour.location}. Listed from {eur.format(tour.priceEUR)}.</p>
+            <p>
+              🧭 Duration: {tour.duration}. Route base: {tour.location}. Listed from {eur.format(tour.priceEUR)} {tour.priceBasis || "Per person"}.
+            </p>
           </div>
           <div className="tour-comparison-panel">
             <div>

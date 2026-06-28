@@ -4,6 +4,26 @@ import fallbackTourImage from "../assets/photos/ngorongoro-wide-with-tourists.jp
 import { createReferral } from "../services/referralService";
 import { eur } from "../utils/formatters";
 
+function routeLabel(tour) {
+  return [tour.startLocation, tour.routeSummary, tour.endLocation].filter(Boolean).join(" - ") || tour.location;
+}
+
+function groupLabel(tour) {
+  if (tour.groupSizeMin && tour.groupSizeMax) {
+    return `${tour.groupSizeMin}-${tour.groupSizeMax} guests`;
+  }
+
+  if (tour.groupSizeMax) {
+    return `Up to ${tour.groupSizeMax}`;
+  }
+
+  if (tour.groupSizeMin) {
+    return `From ${tour.groupSizeMin}`;
+  }
+
+  return "";
+}
+
 export default function TourCard({ tour }) {
   const navigate = useNavigate();
   const [bookingLoading, setBookingLoading] = useState(false);
@@ -12,6 +32,10 @@ export default function TourCard({ tour }) {
   const rating = Number(tour.reviewRating || tour.partner?.rating || 0);
   const reviewCount = Number(tour.reviewCount || tour.partner?.reviewCount || 0);
   const inclusions = tour.inclusions?.slice(0, 2) || [];
+  const route = routeLabel(tour);
+  const group = groupLabel(tour);
+  const itineraryDays = tour.itinerary?.length || tour.durationDays || "";
+  const confirmation = tour.confirmationType && tour.confirmationType !== "On request" ? tour.confirmationType : "";
 
   async function handleBook() {
     if (bookingLoading) {
@@ -44,7 +68,11 @@ export default function TourCard({ tour }) {
     <article className="tour-card">
       <div className="tour-card-image">
         <img src={image} alt={`${tour.title} preview`} loading="lazy" />
-        <strong className="tour-price-badge">{eur.format(tour.priceEUR)}</strong>
+        <strong className="tour-price-badge">
+          {eur.format(tour.priceEUR)}
+          <small>{tour.priceBasis || "Per person"}</small>
+        </strong>
+        {tour.featured && <span className="tour-featured-badge">Featured</span>}
         {tour.vrEnabled && <span className="tour-vr-badge">VR</span>}
       </div>
       <div className="card-body">
@@ -66,6 +94,30 @@ export default function TourCard({ tour }) {
           <span>{tour.partner?.name || "Approved operator"}</span>
           <strong>{rating ? `${rating.toFixed(1)} / 5` : "New"}</strong>
           <small>{reviewCount ? `${reviewCount} reviews` : "Operator reviewed by Travellex"}</small>
+        </div>
+        <div className="tour-card-facts">
+          <span>
+            <strong>Route</strong>
+            {route}
+          </span>
+          {group && (
+            <span>
+              <strong>Group</strong>
+              {group}
+            </span>
+          )}
+          {itineraryDays && (
+            <span>
+              <strong>Itinerary</strong>
+              {itineraryDays} {Number(itineraryDays) === 1 ? "day" : "days"}
+            </span>
+          )}
+          {confirmation && (
+            <span>
+              <strong>Confirm</strong>
+              {confirmation}
+            </span>
+          )}
         </div>
         {(tour.routeSummary || inclusions.length > 0) && (
           <div className="tour-compare-notes">

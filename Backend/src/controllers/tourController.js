@@ -136,12 +136,16 @@ async function buildTourQuery(query, includeInactive = false) {
       { inclusions: search },
       { exclusions: search },
       { languages: search },
+      { priceBasis: search },
+      { confirmationType: search },
       { meetingPoint: search },
       { pickupDetails: search },
       { difficulty: search },
+      { accessibility: search },
       { transport: search },
       { accommodation: search },
       { meals: search },
+      { availableWeekdays: search },
       { cancellationPolicy: search },
       { paymentTerms: search },
       { whatToBring: search },
@@ -227,6 +231,12 @@ function partnerNotificationEmail(tour, fallbackUser) {
   return tour.partner?.contactEmail || tour.owner?.email || fallbackUser?.email;
 }
 
+function queueTourNotification(promise) {
+  promise.catch((error) => {
+    console.warn("Tour notification failed:", error.message);
+  });
+}
+
 async function ensureCanManageTour(req, tour) {
   if (isStaff(req.user)) {
     return;
@@ -294,7 +304,7 @@ const createTour = asyncHandler(async (req, res) => {
 
     payload.partner = partner._id;
     payload.owner = req.user._id;
-    payload.isActive = false;
+    payload.isActive = true;
     payload.featured = false;
   }
 
@@ -307,24 +317,24 @@ const createTour = asyncHandler(async (req, res) => {
   const tour = await Tour.create(payload);
   await tour.populate("partner");
 
-  await notifyOwner(`New tour posted: ${tour.title}`, [
+  queueTourNotification(notifyOwner(`New tour posted: ${tour.title}`, [
     `Tour: ${tour.title}`,
     `Posted by: ${req.user.name} (${req.user.email})`,
     `Role: ${req.user.role}`,
-    `Status: ${tour.isActive ? "Active" : "Pending staff review"}`,
+    `Status: ${tour.isActive ? "Active on public tours" : "Inactive"}`,
     `Location: ${tour.location}`,
     `Price EUR: ${tour.priceEUR}`
-  ]);
+  ]));
 
   if (req.user.role === "tour_company") {
-    await notifyUser(partnerNotificationEmail(tour, req.user), "Travellex received your tour listing", [
+    queueTourNotification(notifyUser(partnerNotificationEmail(tour, req.user), "Travellex published your tour listing", [
       `Hello ${req.user.name},`,
       "",
-      `Travellex received your tour listing for ${tour.title}.`,
-      "The listing is pending staff review before it appears publicly.",
+      `Your tour listing for ${tour.title} is now live on Travellex.`,
+      `View listing: ${clientUrl}/tours/${tour.slug}`,
       "",
       "Travellex"
-    ]);
+    ]));
   }
 
   sendResponse(res, 201, { tour });
@@ -345,7 +355,7 @@ const updateTour = asyncHandler(async (req, res) => {
     delete payload.partner;
     delete payload.owner;
     delete payload.featured;
-    payload.isActive = false;
+    payload.isActive = true;
   }
 
   if (!canManageTourVr(req.user)) {
@@ -368,26 +378,25 @@ const updateTour = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Tour not found.");
   }
 
-  const approvedNow = isStaff(req.user) && wasInactive && tour.isActive === true;
+  const approvedNow = wasInactive && tour.isActive === true;
 
-  await notifyOwner(`${approvedNow ? "Tour listing approved" : "Tour updated"}: ${tour.title}`, [
+  queueTourNotification(notifyOwner(`${approvedNow ? "Tour listing published" : "Tour updated"}: ${tour.title}`, [
     `Tour: ${tour.title}`,
     `Updated by: ${req.user.name} (${req.user.email})`,
     `Role: ${req.user.role}`,
-    `Status: ${tour.isActive ? "Active" : "Pending staff review"}`,
+    `Status: ${tour.isActive ? "Active on public tours" : "Inactive"}`,
     `Partner: ${tour.partner?.name || "Not provided"}`
-  ]);
+  ]));
 
   if (approvedNow) {
-    await notifyUser(partnerNotificationEmail(tour), "Travellex approved your tour listing", [
+    queueTourNotification(notifyUser(partnerNotificationEmail(tour), "Travellex published your tour listing", [
       `Hello ${tour.owner?.name || tour.partner?.name || "partner"},`,
       "",
-      `Travellex approved your tour listing for ${tour.title}.`,
-      "The listing is now active on the Travellex website.",
+      `Your tour listing for ${tour.title} is now active on the Travellex website.`,
       `View listing: ${clientUrl}/tours/${tour.slug}`,
       "",
       "Travellex"
-    ]);
+    ]));
   }
 
   sendResponse(res, 200, { tour });
@@ -403,11 +412,11 @@ const deleteTour = asyncHandler(async (req, res) => {
   await ensureCanManageTour(req, tour);
   await Tour.findByIdAndDelete(req.params.id);
 
-  await notifyOwner(`Tour deleted: ${tour.title}`, [
+  queueTourNotification(notifyOwner(`Tour deleted: ${tour.title}`, [
     `Tour: ${tour.title}`,
     `Deleted by: ${req.user.name} (${req.user.email})`,
     `Role: ${req.user.role}`
-  ]);
+  ]));
 
   sendResponse(res, 200, { id: req.params.id });
 });

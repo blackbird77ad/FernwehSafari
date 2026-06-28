@@ -57,6 +57,8 @@ const approvedGuideSchema = new mongoose.Schema(
 
 const COMFORT_LEVELS = ["Budget", "Midrange", "Luxury", "Premium", "Mixed"];
 const TOUR_TYPES = ["Private", "Shared", "Private or shared"];
+const PRICE_BASIS = ["Per person", "Per group", "Per vehicle", "Per booking", "On request"];
+const CONFIRMATION_TYPES = ["On request", "Manual confirmation", "Instant confirmation"];
 
 const tourSchema = new mongoose.Schema(
   {
@@ -83,6 +85,33 @@ const tourSchema = new mongoose.Schema(
       type: Number,
       required: [true, "Tour price in EUR is required."],
       min: [0, "Tour price must be positive."]
+    },
+    priceBasis: {
+      type: String,
+      enum: PRICE_BASIS,
+      default: "Per person"
+    },
+    childPriceEUR: {
+      type: Number,
+      min: [0, "Child price must be positive."]
+    },
+    singleSupplementEUR: {
+      type: Number,
+      min: [0, "Single supplement must be positive."]
+    },
+    depositPercent: {
+      type: Number,
+      min: [0, "Deposit percent must be positive."],
+      max: [100, "Deposit percent cannot exceed 100%."]
+    },
+    bookingCutoffDays: {
+      type: Number,
+      min: [0, "Booking cutoff days cannot be negative."]
+    },
+    confirmationType: {
+      type: String,
+      enum: CONFIRMATION_TYPES,
+      default: "On request"
     },
     duration: {
       type: String,
@@ -116,6 +145,14 @@ const tourSchema = new mongoose.Schema(
       type: String,
       enum: TOUR_TYPES,
       default: "Private or shared"
+    },
+    guideIncluded: {
+      type: Boolean,
+      default: true
+    },
+    customizable: {
+      type: Boolean,
+      default: true
     },
     groupSizeMin: {
       type: Number,
@@ -154,6 +191,10 @@ const tourSchema = new mongoose.Schema(
       trim: true
     },
     difficulty: {
+      type: String,
+      trim: true
+    },
+    accessibility: {
       type: String,
       trim: true
     },
@@ -210,6 +251,10 @@ const tourSchema = new mongoose.Schema(
     },
     availableTo: {
       type: Date
+    },
+    availableWeekdays: {
+      type: [String],
+      default: []
     },
     reviewRating: {
       type: Number,
@@ -296,3 +341,5 @@ tourSchema.pre("validate", function setSlug(next) {
 module.exports = mongoose.model("Tour", tourSchema);
 module.exports.COMFORT_LEVELS = COMFORT_LEVELS;
 module.exports.TOUR_TYPES = TOUR_TYPES;
+module.exports.PRICE_BASIS = PRICE_BASIS;
+module.exports.CONFIRMATION_TYPES = CONFIRMATION_TYPES;
