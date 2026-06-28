@@ -103,6 +103,29 @@ function compareDateNewest(left, right) {
   return new Date(right || 0).getTime() - new Date(left || 0).getTime();
 }
 
+function guideApplicationStatusLabel(status) {
+  const labels = {
+    submitted: "Awaiting partner review",
+    company_approved: "Awaiting Travellex confirmation",
+    company_rejected: "Rejected by partner",
+    admin_approved: "Approved",
+    admin_rejected: "Rejected by Travellex"
+  };
+
+  return labels[status] || String(status || "Not set").replace(/_/g, " ");
+}
+
+function guideBookingStatusLabel(status) {
+  const labels = {
+    requested: "New request",
+    accepted: "Accepted",
+    declined: "Declined",
+    closed: "Closed"
+  };
+
+  return labels[status] || String(status || "Not set").replace(/_/g, " ");
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { logout, removeSavedTour, user } = useAuth();
@@ -121,6 +144,7 @@ export default function Dashboard() {
   const [partnerListingView, setPartnerListingView] = useState("list");
   const [uploadingTourImage, setUploadingTourImage] = useState(false);
   const [dashboardSidebarOpen, setDashboardSidebarOpen] = useState(false);
+  const [showDashboardGreeting, setShowDashboardGreeting] = useState(true);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
@@ -137,7 +161,13 @@ export default function Dashboard() {
           { href: "#guide-requests", label: "Guide requests" }
         ]
       : []),
-    ...(isTourGuide ? [{ href: "#guide-tools", label: "Guide tools" }] : []),
+    ...(isTourGuide
+      ? [
+          { href: "#guide-tools", label: "Guide overview" },
+          { href: "#guide-applications", label: "Applications" },
+          { href: "#guide-bookings", label: "Booking requests" }
+        ]
+      : []),
     { href: "#saved-tours", label: "Saved tours" },
     { href: "#profile", label: "Profile" },
     { href: "#booking-activity", label: "Booking activity" },
@@ -157,6 +187,33 @@ export default function Dashboard() {
       bookingQueue
     };
   }, [companyTours, guideApplications, guideBookings]);
+  const guideDashboardStats = useMemo(() => {
+    const awaitingPartner = guideApplications.filter((application) => application.status === "submitted").length;
+    const awaitingTravellex = guideApplications.filter((application) => application.status === "company_approved").length;
+    const approved = guideApplications.filter((application) => application.status === "admin_approved").length;
+    const rejected = guideApplications.filter((application) =>
+      ["company_rejected", "admin_rejected"].includes(application.status)
+    ).length;
+    const openRequests = guideBookings.filter((booking) => booking.status === "requested").length;
+
+    return {
+      applications: guideApplications.length,
+      awaitingPartner,
+      awaitingTravellex,
+      approved,
+      rejected,
+      openRequests,
+      bookings: guideBookings.length
+    };
+  }, [guideApplications, guideBookings]);
+  const sortedGuideApplications = useMemo(
+    () => [...guideApplications].sort((left, right) => compareDateNewest(left.createdAt, right.createdAt)),
+    [guideApplications]
+  );
+  const sortedGuideBookings = useMemo(
+    () => [...guideBookings].sort((left, right) => compareDateNewest(left.createdAt, right.createdAt)),
+    [guideBookings]
+  );
   const visibleCompanyTours = useMemo(() => {
     const search = partnerListingSearch.trim().toLowerCase();
     const filtered = companyTours.filter((tour) => {
@@ -280,6 +337,13 @@ export default function Dashboard() {
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
+
+  useEffect(() => {
+    setShowDashboardGreeting(true);
+    const timer = window.setTimeout(() => setShowDashboardGreeting(false), 60000);
+
+    return () => window.clearTimeout(timer);
+  }, [user?._id]);
 
   async function handleRemove(tourId) {
     try {
@@ -479,7 +543,7 @@ export default function Dashboard() {
             </button>
             <div>
               <p className="eyebrow">{dashboardRoleLabel}</p>
-              <h1>Welcome, {user?.name}.</h1>
+              <h1>{showDashboardGreeting ? `Welcome, ${user?.name}.` : dashboardRoleLabel}</h1>
             </div>
             <div className="button-row">
               <Link className="button secondary compact" to="/tours">
@@ -494,7 +558,7 @@ export default function Dashboard() {
       ) : (
         <section className="page-hero compact-hero dashboard-hero">
           <p className="eyebrow">Dashboard</p>
-          <h1>Welcome, {user?.name}.</h1>
+          <h1>{showDashboardGreeting ? `Welcome, ${user?.name}.` : "Dashboard"}</h1>
         </section>
       )}
       <section className={isOperationsDashboard ? "section dashboard-layout dashboard-operations-layout" : "section dashboard-layout"}>
@@ -1013,35 +1077,104 @@ export default function Dashboard() {
           )}
 
           {isTourGuide && (
-            <section className="side-panel" id="guide-tools">
-              <p className="eyebrow">Tour guide tools</p>
-              <h2>Your guide applications and requests.</h2>
-              <PaginatedList className="admin-list" items={guideApplications} label="guide applications" emptyText="No guide applications yet. Open a tour page to apply.">
-                {(application) => (
-                  <article className="mini-row" key={application._id}>
-                    <strong>{application.tour?.title}</strong>
-                    <span>{application.status} - {formatDate(application.createdAt)}</span>
-                  </article>
-                )}
-              </PaginatedList>
-              <PaginatedList className="admin-list" items={guideBookings} label="guide bookings" emptyText="No guide booking requests yet.">
-                {(booking) => (
-                  <article className="admin-row" key={booking._id}>
+            <section className="guide-dashboard-shell" id="guide-tools">
+              <div className="guide-dashboard-head">
+                <div>
+                  <p className="eyebrow">Tour guide dashboard</p>
+                  <h2>Track tour applications and traveller guide requests.</h2>
+                </div>
+                <Link className="button primary" to="/tours">
+                  Find tours
+                </Link>
+              </div>
+
+              <div className="guide-dashboard-metrics">
+                <span>
+                  <strong>{guideDashboardStats.applications}</strong>
+                  Applications
+                </span>
+                <span>
+                  <strong>{guideDashboardStats.awaitingPartner}</strong>
+                  Partner review
+                </span>
+                <span>
+                  <strong>{guideDashboardStats.awaitingTravellex}</strong>
+                  Travellex review
+                </span>
+                <span>
+                  <strong>{guideDashboardStats.approved}</strong>
+                  Approved tours
+                </span>
+                <span>
+                  <strong>{guideDashboardStats.openRequests}</strong>
+                  New requests
+                </span>
+              </div>
+
+              <div className="guide-dashboard-grid">
+                <section className="side-panel guide-work-panel" id="guide-applications">
+                  <div className="section-heading split small-heading">
                     <div>
-                      <strong>{booking.tour?.title}</strong>
-                      <span>
-                        {booking.name} - {booking.travelDates || "No dates"} - {booking.status}
-                      </span>
+                      <p className="eyebrow">Applications</p>
+                      <h2>Your tour guide applications.</h2>
                     </div>
-                    <select value={booking.status} onChange={(event) => changeGuideBookingStatus(booking._id, event.target.value)}>
-                      <option value="requested">requested</option>
-                      <option value="accepted">accepted</option>
-                      <option value="declined">declined</option>
-                      <option value="closed">closed</option>
-                    </select>
-                  </article>
-                )}
-              </PaginatedList>
+                    <span className="guide-panel-count">{guideDashboardStats.rejected} rejected</span>
+                  </div>
+                  <PaginatedList
+                    className="admin-list"
+                    items={sortedGuideApplications}
+                    label="guide applications"
+                    emptyText="No guide applications yet. Open a tour page to apply."
+                  >
+                    {(application) => (
+                      <article className="guide-work-card" key={application._id}>
+                        <div>
+                          <strong>{application.tour?.title || "Tour application"}</strong>
+                          <span>
+                            {application.tour?.location || "Location not listed"} - {formatDate(application.createdAt)}
+                          </span>
+                          {application.dailyRateEUR && <p>{eur.format(application.dailyRateEUR)} per day</p>}
+                        </div>
+                        <span className={`guide-status guide-status-${application.status}`}>
+                          {guideApplicationStatusLabel(application.status)}
+                        </span>
+                      </article>
+                    )}
+                  </PaginatedList>
+                </section>
+
+                <section className="side-panel guide-work-panel" id="guide-bookings">
+                  <div className="section-heading split small-heading">
+                    <div>
+                      <p className="eyebrow">Booking requests</p>
+                      <h2>Traveller requests for your guide service.</h2>
+                    </div>
+                    <span className="guide-panel-count">{guideDashboardStats.bookings} total</span>
+                  </div>
+                  <PaginatedList className="admin-list" items={sortedGuideBookings} label="guide bookings" emptyText="No guide booking requests yet.">
+                    {(booking) => (
+                      <article className="guide-work-card guide-booking-card" key={booking._id}>
+                        <div>
+                          <strong>{booking.tour?.title || "Guide request"}</strong>
+                          <span>
+                            {booking.name} - {booking.travelDates || "No dates"} - {booking.groupSize || "Group size not listed"}
+                          </span>
+                          {booking.message && <p>{booking.message}</p>}
+                        </div>
+                        <label className="field compact-select">
+                          <span>Status</span>
+                          <select value={booking.status} onChange={(event) => changeGuideBookingStatus(booking._id, event.target.value)}>
+                            <option value="requested">{guideBookingStatusLabel("requested")}</option>
+                            <option value="accepted">{guideBookingStatusLabel("accepted")}</option>
+                            <option value="declined">{guideBookingStatusLabel("declined")}</option>
+                            <option value="closed">{guideBookingStatusLabel("closed")}</option>
+                          </select>
+                        </label>
+                      </article>
+                    )}
+                  </PaginatedList>
+                </section>
+              </div>
             </section>
           )}
 

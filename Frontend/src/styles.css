@@ -2851,6 +2851,132 @@ textarea:focus {
   gap: 0.8rem;
 }
 
+.guide-dashboard-shell {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.guide-dashboard-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  padding: clamp(1rem, 3vw, 1.25rem);
+  background: white;
+  box-shadow: 0 14px 34px rgba(11, 19, 32, 0.07);
+}
+
+.guide-dashboard-head h2 {
+  margin: 0.15rem 0 0;
+}
+
+.guide-dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.guide-dashboard-metrics span {
+  display: grid;
+  gap: 0.18rem;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  padding: 0.75rem;
+  background: white;
+  color: var(--muted);
+  font-size: 0.8rem;
+  box-shadow: 0 10px 24px rgba(11, 19, 32, 0.05);
+}
+
+.guide-dashboard-metrics strong {
+  color: var(--forest);
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.guide-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.guide-work-panel {
+  box-shadow: 0 12px 28px rgba(11, 19, 32, 0.055);
+}
+
+.guide-work-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: start;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  padding: 0.72rem;
+  background: white;
+}
+
+.guide-work-card strong {
+  display: block;
+  color: var(--forest);
+}
+
+.guide-work-card span,
+.guide-work-card p {
+  color: var(--muted);
+}
+
+.guide-work-card p {
+  margin: 0.28rem 0 0;
+}
+
+.guide-status,
+.guide-panel-count {
+  display: inline-flex;
+  min-height: 1.7rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.24rem 0.58rem;
+  background: var(--sky);
+  color: var(--forest);
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.guide-status-admin_approved {
+  border-color: rgba(4, 120, 87, 0.22);
+  background: rgba(220, 252, 231, 0.92);
+  color: #047857;
+}
+
+.guide-status-company_approved {
+  border-color: rgba(14, 116, 144, 0.22);
+  background: rgba(237, 245, 248, 0.96);
+  color: #0e7490;
+}
+
+.guide-status-company_rejected,
+.guide-status-admin_rejected {
+  border-color: rgba(190, 18, 60, 0.22);
+  background: rgba(255, 228, 230, 0.92);
+  color: #be123c;
+}
+
+.guide-status-submitted {
+  border-color: rgba(180, 83, 9, 0.22);
+  background: rgba(254, 243, 199, 0.94);
+  color: #92400e;
+}
+
+.compact-select {
+  min-width: 10rem;
+}
+
 .side-panel,
 .panel-form,
 .auth-card {
@@ -4626,7 +4752,8 @@ textarea:focus {
     grid-template-columns: repeat(2, minmax(7.5rem, 1fr));
   }
 
-  .partner-crm-metrics {
+  .partner-crm-metrics,
+  .guide-dashboard-metrics {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
@@ -4728,7 +4855,8 @@ textarea:focus {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .partner-crm-operations {
+  .partner-crm-operations,
+  .guide-dashboard-grid {
     grid-template-columns: 1fr;
   }
 
@@ -4822,18 +4950,23 @@ textarea:focus {
     background: var(--paper);
   }
 
-  .partner-crm-head {
+  .partner-crm-head,
+  .guide-dashboard-head {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .partner-crm-head .button {
+  .partner-crm-head .button,
+  .guide-dashboard-head .button {
     width: 100%;
   }
 
   .partner-crm-metrics,
+  .guide-dashboard-metrics,
   .partner-crm-toolbar,
-  .partner-listing-row {
+  .partner-listing-row,
+  .guide-work-card,
+  .guide-booking-card {
     grid-template-columns: 1fr;
   }
 
