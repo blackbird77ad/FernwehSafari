@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import Spinner from "../components/Spinner";
-import { getBookingFrameURL, getBookingSession } from "../services/referralService";
+import { getBookingOpenURL, getBookingSession } from "../services/referralService";
 
 export default function BookingSession() {
   const { trackingCode } = useParams();
@@ -10,11 +10,12 @@ export default function BookingSession() {
   const [session, setSession] = useState(initialSession);
   const [loading, setLoading] = useState(!initialSession);
   const [message, setMessage] = useState("");
+  const [copied, setCopied] = useState(false);
   const tour = session?.referral?.tour;
   const partner = session?.referral?.partner;
   const bookingTitle = useMemo(() => tour?.title || "Travellex booking session", [tour?.title]);
   const hasExternalBooking = Boolean(session?.referral?.hasExternalBooking ?? session?.referral?.outboundUrl);
-  const bookingFrameURL = trackingCode && hasExternalBooking ? getBookingFrameURL(trackingCode) : "";
+  const bookingOpenURL = trackingCode && hasExternalBooking ? getBookingOpenURL(trackingCode) : "";
 
   useEffect(() => {
     if (session || !trackingCode) {
@@ -26,6 +27,16 @@ export default function BookingSession() {
       .catch((error) => setMessage(error.message))
       .finally(() => setLoading(false));
   }, [session, trackingCode]);
+
+  async function copyTrackingCode() {
+    try {
+      await navigator.clipboard.writeText(trackingCode);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch (error) {
+      setMessage("Copy failed. You can still select and copy the booking code manually.");
+    }
+  }
 
   if (loading) {
     return (
@@ -57,7 +68,7 @@ export default function BookingSession() {
           <p className="eyebrow">Travellex booking session</p>
           <h1>{bookingTitle}</h1>
           <p>
-            Your booking stays inside Travellex while the approved operator confirms live availability and payment details.
+            Travellex has created your booking code. Continue on the partner website in a normal browser tab so security checks can work properly.
           </p>
         </div>
         <div className="booking-session-meta" aria-label="Booking session details">
@@ -76,14 +87,32 @@ export default function BookingSession() {
         </div>
       </div>
       {hasExternalBooking ? (
-        <div className="booking-frame-shell">
-          <iframe
-            src={bookingFrameURL}
-            title={`${bookingTitle} booking window`}
-            loading="eager"
-            referrerPolicy="origin"
-            sandbox="allow-forms allow-popups allow-same-origin allow-scripts"
-          />
+        <div className="booking-handoff-panel">
+          <div>
+            <p className="eyebrow">Partner booking handoff</p>
+            <h2>Open the partner booking page in a new tab.</h2>
+            <p>
+              Some partner websites use security pages such as “confirm you are not a robot.” Opening the booking page
+              outside an embedded window prevents those checks from looping or getting stuck.
+            </p>
+          </div>
+          <div className="booking-code-box">
+            <span>Travellex booking code</span>
+            <strong>{trackingCode}</strong>
+            <small>Keep this code with the booking so Travellex can track support and commission.</small>
+          </div>
+          <div className="button-row">
+            <a className="button primary" href={bookingOpenURL} target="_blank" rel="noopener noreferrer">
+              Open partner booking
+            </a>
+            <button className="button secondary" type="button" onClick={copyTrackingCode}>
+              {copied ? "Copied" : "Copy booking code"}
+            </button>
+            <Link className="button secondary" to={tour?.slug ? `/tours/${tour.slug}#quote` : "/contact"}>
+              Ask Travellex to help
+            </Link>
+          </div>
+          {message && <p className="form-note error">{message}</p>}
         </div>
       ) : (
         <div className="booking-internal-panel">
@@ -119,7 +148,7 @@ export default function BookingSession() {
       )}
       <div className="booking-session-help">
         <p>
-          If the booking window cannot load, or this partner has no external website, ask Travellex to complete the handoff using this active tracking session.
+          If the partner page asks for a robot check, complete it in the new tab. If it keeps looping, send the booking code to Travellex and we will help complete the handoff.
         </p>
         <Link className="button secondary compact" to={tour?.slug ? `/tours/${tour.slug}` : "/tours"}>
           Back to tour

@@ -12,8 +12,8 @@ const faqGroups = [
   {
     category: "Booking & Refunds",
     items: [
-      ["Does Travellex take payment?", "Travellex keeps the booking session onsite and tracks the handoff. The approved operator confirms payment details inside that session."],
-      ["Who confirms availability?", "The approved tour operator confirms live availability, inclusions, terms and payment details while Travellex keeps the booking tracked."],
+      ["Does Travellex take payment?", "Travellex tracks the handoff with a booking code. The approved operator confirms payment details on their own booking page or through Travellex support."],
+      ["Who confirms availability?", "The approved tour operator confirms live availability, inclusions, terms and payment details while Travellex keeps the booking code tracked."],
       ["Can I ask questions before booking?", "Yes. Use the contact form or tour enquiry flow with dates, group size and destination priorities."]
     ]
   },

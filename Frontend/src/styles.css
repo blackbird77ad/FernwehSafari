@@ -130,6 +130,8 @@ main {
 :root[data-theme="dark"] .booking-session-header,
 :root[data-theme="dark"] .booking-session-help,
 :root[data-theme="dark"] .booking-session-empty,
+:root[data-theme="dark"] .booking-handoff-panel,
+:root[data-theme="dark"] .booking-code-box,
 :root[data-theme="dark"] .dashboard-profile-popover,
 :root[data-theme="dark"] .tour-vr-preview,
 :root[data-theme="dark"] .vr-admin-panel,
@@ -1051,26 +1053,7 @@ p {
   text-transform: uppercase;
 }
 
-.booking-frame-shell {
-  width: min(90rem, 100%);
-  min-height: min(78vh, 58rem);
-  overflow: hidden;
-  margin: 0 auto;
-  border: 1px solid var(--line);
-  border-radius: 0.65rem;
-  background: white;
-  box-shadow: var(--shadow);
-}
-
-.booking-frame-shell iframe {
-  display: block;
-  width: 100%;
-  height: min(78vh, 58rem);
-  min-height: 38rem;
-  border: 0;
-  background: white;
-}
-
+.booking-handoff-panel,
 .booking-internal-panel {
   display: grid;
   width: min(58rem, calc(100% - 2rem));
@@ -1083,12 +1066,44 @@ p {
   box-shadow: var(--shadow);
 }
 
+.booking-handoff-panel {
+  width: min(68rem, calc(100% - 2rem));
+}
+
+.booking-handoff-panel h2,
 .booking-internal-panel h2 {
   margin: 0;
 }
 
+.booking-handoff-panel p,
 .booking-internal-panel p {
   margin: 0;
+  color: var(--muted);
+}
+
+.booking-code-box {
+  display: grid;
+  gap: 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  padding: 0.85rem;
+  background: var(--paper);
+}
+
+.booking-code-box span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.booking-code-box strong {
+  color: var(--forest);
+  overflow-wrap: anywhere;
+  font-size: clamp(0.95rem, 2vw, 1.2rem);
+}
+
+.booking-code-box small {
   color: var(--muted);
 }
 
@@ -3884,6 +3899,10 @@ textarea:focus {
   width: 100%;
 }
 
+.tours-admin-grid .admin-list {
+  width: 100%;
+}
+
 .user-admin-row {
   grid-template-columns: 1fr;
 }
@@ -5582,11 +5601,6 @@ textarea:focus {
 
   .booking-session-meta {
     grid-template-columns: 1fr;
-  }
-
-  .booking-frame-shell,
-  .booking-frame-shell iframe {
-    min-height: 32rem;
   }
 
   .destination-story-card.featured {

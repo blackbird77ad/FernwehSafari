@@ -505,6 +505,7 @@ export default function Admin() {
   const [galleryMedia, setGalleryMedia] = useState([]);
   const [tourForm, setTourForm] = useState(emptyTour);
   const [editingTourId, setEditingTourId] = useState("");
+  const [tourFormOpen, setTourFormOpen] = useState(false);
   const [partnerForm, setPartnerForm] = useState(emptyPartner);
   const [editingPartnerId, setEditingPartnerId] = useState("");
   const [userForm, setUserForm] = useState(emptyUser);
@@ -1128,6 +1129,7 @@ export default function Admin() {
 
       setTourForm(emptyTour);
       setEditingTourId("");
+      setTourFormOpen(false);
       await loadAdminData();
     } catch (error) {
       setToast({ tone: "error", message: error.message });
@@ -1196,6 +1198,7 @@ export default function Admin() {
       featured: Boolean(tour.featured),
       isActive: Boolean(tour.isActive)
     });
+    setTourFormOpen(true);
     setActiveTab("tours");
   }
 
@@ -2645,9 +2648,20 @@ export default function Admin() {
               </div>
             )}
             {activeTab === "tours" && (
-              <div className="admin-grid">
-                <form className="panel-form admin-form" onSubmit={handleTourSubmit}>
-                  <h2>{editingTourId ? "Edit tour" : "Add tour"}</h2>
+              <div className="admin-grid users-admin-grid tours-admin-grid">
+                <section className="side-panel user-form-fold">
+                  <button
+                    className="user-form-toggle"
+                    type="button"
+                    onClick={() => setTourFormOpen((current) => !current)}
+                    aria-expanded={tourFormOpen}
+                  >
+                    <span>{editingTourId ? "Editing tour" : "Create tour"}</span>
+                    <strong>{tourFormOpen ? "Hide" : "Open"}</strong>
+                  </button>
+                  {tourFormOpen && (
+                    <form className="panel-form admin-form user-form-panel" onSubmit={handleTourSubmit}>
+                      <h2>{editingTourId ? "Edit tour" : "Create tour"}</h2>
                   <label className="field">
                     <span>Title</span>
                     <input value={tourForm.title} onChange={(event) => updateTourField("title", event.target.value)} required />
@@ -3087,13 +3101,16 @@ export default function Admin() {
                         onClick={() => {
                           setEditingTourId("");
                           setTourForm(emptyTour);
+                          setTourFormOpen(false);
                         }}
                       >
                         Cancel
                       </button>
                     )}
                   </div>
-                </form>
+                    </form>
+                  )}
+                </section>
                 <AdminCollection
                   className="admin-list"
                   items={tours}

@@ -16,7 +16,7 @@ export function getBookingSession(trackingCode) {
   return api.get(`/referrals/booking/${encodeURIComponent(trackingCode)}`);
 }
 
-export function getBookingFrameURL(trackingCode) {
+export function getBookingOpenURL(trackingCode) {
   const baseURL = api.defaults.baseURL || "";
   return `${baseURL}/referrals/booking/${encodeURIComponent(trackingCode)}/open`;
 }
