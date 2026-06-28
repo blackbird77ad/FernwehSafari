@@ -126,7 +126,7 @@ export default function Tours() {
 
               <div className="card-grid tours-grid public-tour-grid">
                 {tours.map((tour) => (
-                  <TourCard key={tour._id} tour={tour} />
+                  <TourCard compact key={tour._id} tour={tour} />
                 ))}
               </div>
 

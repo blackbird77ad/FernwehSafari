@@ -3,6 +3,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/sendResponse");
 const TourPartner = require("../models/TourPartner");
 const crypto = require("node:crypto");
+const { getCommissionSettings, normalizeCommissionRate } = require("../lib/commissionSettings");
 
 function isStaff(user) {
   return user?.role === "admin" || user?.role === "moderator";
@@ -31,7 +32,12 @@ const listPartners = asyncHandler(async (req, res) => {
 });
 
 const createPartner = asyncHandler(async (req, res) => {
-  const partner = await TourPartner.create(req.body);
+  const settings = await getCommissionSettings();
+  const payload = {
+    ...req.body,
+    commissionRatePercent: normalizeCommissionRate(req.body.commissionRatePercent, settings.defaultCommissionRatePercent)
+  };
+  const partner = await TourPartner.create(payload);
   sendResponse(res, 201, { partner: serializePartner(partner, true) });
 });
 

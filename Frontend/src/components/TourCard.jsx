@@ -24,7 +24,7 @@ function groupLabel(tour) {
   return "";
 }
 
-export default function TourCard({ tour }) {
+export default function TourCard({ compact = false, tour }) {
   const navigate = useNavigate();
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingMessage, setBookingMessage] = useState("");
@@ -65,7 +65,7 @@ export default function TourCard({ tour }) {
   }
 
   return (
-    <article className="tour-card">
+    <article className={compact ? "tour-card compact-tour-card" : "tour-card"}>
       <div className="tour-card-image">
         <img src={image} alt={`${tour.title} preview`} loading="lazy" />
         <strong className="tour-price-badge">
@@ -131,10 +131,10 @@ export default function TourCard({ tour }) {
         </div>
         <div className="button-row">
           <button className="button primary compact" type="button" onClick={handleBook} disabled={bookingLoading}>
-            {bookingLoading ? "Starting..." : "Book with Travellex"}
+            {bookingLoading ? "Starting..." : compact ? "Book" : "Book with Travellex"}
           </button>
-          <Link className="button secondary compact" to={`/tours/${tour.slug}#quote`}>
-            Request quote
+          <Link className="button secondary compact" to={compact ? `/tours/${tour.slug}` : `/tours/${tour.slug}#quote`}>
+            {compact ? "Details" : "Request quote"}
           </Link>
         </div>
         {bookingMessage && <p className="form-note error">{bookingMessage}</p>}

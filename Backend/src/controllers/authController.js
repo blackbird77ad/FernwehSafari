@@ -14,6 +14,8 @@ const {
 } = require("../lib/accountTokens");
 const { notifyOwner, notifyUser } = require("../lib/resend");
 
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
+
 function normalizeRole(role) {
   return role === "user" ? User.DEFAULT_ROLE : role;
 }
@@ -25,7 +27,7 @@ function signToken(user) {
       role: normalizeRole(user.role)
     },
     process.env.JWT_SECRET || "development-secret-change-me",
-    { expiresIn: "7d" }
+    { expiresIn: JWT_EXPIRES_IN }
   );
 }
 

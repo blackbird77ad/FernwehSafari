@@ -40,6 +40,7 @@ import {
 } from "../services/tourService";
 import { getEnquiries, updateEnquiryStatus } from "../services/enquiryService";
 import { getReferrals, markReferralConverted, reconcileReferralByTrackingCode } from "../services/referralService";
+import { getCommissionSettings, updateCommissionSettings } from "../services/settingsService";
 import { uploadImage } from "../services/uploadService";
 import { apiBaseURL } from "../services/api";
 import {
@@ -87,63 +88,68 @@ const partnerFieldLabels = {
   reviewCount: "Operator reviews",
   licenseInfo: "Licence / trust note",
   logo: "Logo URL",
-  commissionRatePercent: "Default commission %",
+  commissionRatePercent: "Partner commission % (optional)",
   commissionTerms: "Commission terms"
 };
 
 const tabMeta = {
   overview: {
-    title: "Analytics",
-    description: "Production numbers, commission pipeline and operational queues."
+    title: "Dashboard",
+    description: "A quick view of tours, users, bookings and work waiting for review."
+  },
+  commissions: {
+    title: "Commission Settings",
+    description: "Set the normal commission rate and see how booking payments are tracked."
   },
   referrals: {
-    title: "Referral Commissions",
-    description: "Track outbound booking clicks, partner codes, conversion status and earned commission."
+    title: "Bookings & Payments",
+    description: "Record partner bookings, check payment status and confirm earned commission."
   },
   users: {
     title: "Users",
-    description: "Search, promote and manage traveller, partner, guide, moderator and admin accounts."
+    description: "Find people, update accounts and manage access."
   },
   "role dashboards": {
-    title: "Role Dashboards",
-    description: "Preview what each account type is doing without changing login sessions."
+    title: "User Overview",
+    description: "See what travellers, partners, guides and staff are doing."
   },
   "company applications": {
     title: "Partner Applications",
-    description: "Review tour company applications and move approved operators into the partner system."
+    description: "Approve or reject companies that want to list tours."
   },
   tours: {
     title: "Tours",
-    description: "Approve, edit and publish the tour inventory that powers the public site."
+    description: "Edit tour listings, homepage features and public visibility."
   },
   partners: {
     title: "Partners",
-    description: "Manage partner booking URLs, commission rates and commercial terms."
+    description: "Manage approved tour companies and their booking details."
   },
   "guide applications": {
     title: "Guide Applications",
-    description: "Confirm company-approved tour guides before they appear on tours."
+    description: "Review tour guides connected to partner tours."
   },
   "guide bookings": {
     title: "Guide Bookings",
-    description: "Monitor traveller requests sent to approved tour guides."
+    description: "Monitor traveller requests sent to tour guides."
   },
   "gallery media": {
-    title: "Gallery Media",
-    description: "Approve, schedule, switch off and remove public travel media."
+    title: "Gallery",
+    description: "Approve, schedule, switch off and remove public travel photos."
   },
   enquiries: {
     title: "Enquiries",
-    description: "Track public questions and traveller contact requests."
+    description: "Read and update traveller messages."
   },
   uploads: {
-    title: "Uploads",
-    description: "Add Cloudinary media into tour and gallery workflows."
+    title: "Media Uploads",
+    description: "Upload images for tours and gallery pages."
   }
 };
 
 const tabAccentColors = {
   overview: "#0e7490",
+  commissions: "#047857",
   referrals: "#c8a24a",
   users: "#047857",
   "role dashboards": "#6366f1",
@@ -269,6 +275,11 @@ const emptyTrackingReconcileForm = {
   notes: ""
 };
 
+const emptyCommissionSettings = {
+  defaultCommissionRatePercent: "",
+  commissionTerms: ""
+};
+
 function getEntityId(value) {
   if (!value) {
     return "";
@@ -294,6 +305,18 @@ function sumCurrency(items, field) {
 }
 
 function statusLabel(status) {
+  const labels = {
+    clicked: "Booking started",
+    converted: "Booking confirmed",
+    paid: "Paid",
+    cancelled: "Cancelled",
+    disputed: "Disputed"
+  };
+
+  if (labels[status]) {
+    return labels[status];
+  }
+
   return String(status || "not set").replace(/_/g, " ");
 }
 
@@ -496,6 +519,8 @@ export default function Admin() {
   const [userPagination, setUserPagination] = useState({ page: 1, limit: ADMIN_USER_PAGE_SIZE, total: 0, totalPages: 1, roleCounts: {} });
   const [referralForms, setReferralForms] = useState({});
   const [trackingReconcileForm, setTrackingReconcileForm] = useState(emptyTrackingReconcileForm);
+  const [commissionSettings, setCommissionSettings] = useState(emptyCommissionSettings);
+  const [commissionSettingsForm, setCommissionSettingsForm] = useState(emptyCommissionSettings);
   const [galleryForm, setGalleryForm] = useState(emptyGalleryMedia);
   const [editingGalleryMediaId, setEditingGalleryMediaId] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -511,7 +536,7 @@ export default function Admin() {
   const tabs = useMemo(
     () => [
       "overview",
-      ...(isAdmin ? ["referrals", "users", "role dashboards", "company applications"] : []),
+      ...(isAdmin ? ["commissions", "referrals", "users", "role dashboards", "company applications"] : []),
       ...(isStaff ? ["tours", "guide applications", "guide bookings", "gallery media"] : []),
       ...(isAdmin ? ["partners", "enquiries"] : []),
       ...(isStaff ? ["uploads"] : [])
@@ -536,6 +561,11 @@ export default function Admin() {
       conversionRate
     };
   }, [referrals]);
+
+  const tourCommissionOverrideCount = useMemo(
+    () => tours.filter((tour) => tour.commissionRatePercent !== undefined && tour.commissionRatePercent !== null && tour.commissionRatePercent !== "").length,
+    [tours]
+  );
 
   const filteredUsers = useMemo(() => {
     const search = userSearch.trim().toLowerCase();
@@ -613,7 +643,7 @@ export default function Admin() {
       ...(isAdmin
         ? [
             { label: "Open enquiries", value: enquiries.filter((enquiry) => enquiry.status !== "closed").length },
-            { label: "Booking clicks", value: referrals.length },
+            { label: "Booking starts", value: referrals.length },
             { label: "Converted", value: commissionStats.converted }
           ]
         : [])
@@ -624,6 +654,7 @@ export default function Admin() {
   const tabCounts = useMemo(
     () => ({
       overview: crmStats.length,
+      commissions: 1,
       referrals: referrals.length,
       users: userPagination.total || users.length,
       "role dashboards": users.length,
@@ -704,8 +735,8 @@ export default function Admin() {
       meta: `${enquiry.status || "open"} - ${formatDate(enquiry.createdAt)}`
     }));
     const referralItems = travellerReferrals.slice(0, 3).map((referral) => ({
-      title: referral.tour?.title || "Referral click",
-      meta: `${referral.converted ? "converted" : "not converted"} - ${formatDate(referral.clickedAt)}`
+      title: referral.tour?.title || "Booking start",
+      meta: `${referral.converted ? "Booking confirmed" : "Booking started"} - ${formatDate(referral.clickedAt)}`
     }));
     const travellerBookingItems = travellerBookings.slice(0, 3).map((booking) => ({
       title: booking.tour?.title || "Guide request",
@@ -763,10 +794,10 @@ export default function Admin() {
           items: compactList(enquiryItems, "No enquiries")
         },
         {
-          eyebrow: "Referral activity",
+          eyebrow: "Booking activity",
           value: travellerReferrals.length,
-          note: "External booking clicks from this account.",
-          items: compactList(referralItems, "No referral clicks")
+          note: "Booking starts from this account.",
+          items: compactList(referralItems, "No booking starts")
         },
         {
           eyebrow: "Guide requests",
@@ -873,15 +904,15 @@ export default function Admin() {
           items: compactList(moderationItems, "Nothing pending")
         },
         {
-          eyebrow: "Referral clicks",
+          eyebrow: "Booking starts",
           value: referrals.length,
-          note: "All tracked outbound booking clicks.",
+          note: "All booking starts sent through Travellex.",
           items: compactList(
             referrals.slice(0, 3).map((referral) => ({
-              title: referral.tour?.title || "Referral click",
-              meta: `${referral.user?.email || "Guest"} - ${referral.converted ? "converted" : "open"}`
+              title: referral.tour?.title || "Booking start",
+              meta: `${referral.user?.email || "Guest"} - ${referral.converted ? "Booking confirmed" : "Open"}`
             })),
-            "No referrals"
+            "No bookings"
           )
         }
       ]
@@ -921,12 +952,14 @@ export default function Admin() {
       setGalleryMedia(galleryMediaResponse.data.media);
 
       if (isAdmin) {
-        const [userResponse, enquiryResponse, referralResponse, companyApplicationResponse] = await Promise.all([
+        const [userResponse, enquiryResponse, referralResponse, companyApplicationResponse, commissionSettingsResponse] = await Promise.all([
           getUsers({ limit: ADMIN_USER_PAGE_SIZE, page: 1 }),
           getEnquiries(),
           getReferrals(),
-          getTourCompanyApplications()
+          getTourCompanyApplications(),
+          getCommissionSettings()
         ]);
+        const nextCommissionSettings = commissionSettingsResponse.data.settings || emptyCommissionSettings;
 
         setUsers(userResponse.data.users);
         setUserPagination({
@@ -936,12 +969,19 @@ export default function Admin() {
         setEnquiries(enquiryResponse.data.enquiries);
         setReferrals(referralResponse.data.referrals);
         setCompanyApplications(companyApplicationResponse.data.applications);
+        setCommissionSettings(nextCommissionSettings);
+        setCommissionSettingsForm({
+          defaultCommissionRatePercent: nextCommissionSettings.defaultCommissionRatePercent ?? "",
+          commissionTerms: nextCommissionSettings.commissionTerms || ""
+        });
       } else {
         setUsers([]);
         setUserPagination({ page: 1, limit: ADMIN_USER_PAGE_SIZE, total: 0, totalPages: 1, roleCounts: {} });
         setEnquiries([]);
         setReferrals([]);
         setCompanyApplications([]);
+        setCommissionSettings(emptyCommissionSettings);
+        setCommissionSettingsForm(emptyCommissionSettings);
       }
     } catch (error) {
       setToast({ tone: "error", message: error.message });
@@ -1026,7 +1066,7 @@ export default function Admin() {
     return {
       ...partnerForm,
       commissionRatePercent:
-        partnerForm.commissionRatePercent === "" ? 0 : Number(partnerForm.commissionRatePercent),
+        partnerForm.commissionRatePercent === "" ? undefined : Number(partnerForm.commissionRatePercent),
       rating: partnerForm.rating === "" ? 0 : Number(partnerForm.rating),
       reviewCount: partnerForm.reviewCount === "" ? 0 : Number(partnerForm.reviewCount)
     };
@@ -1373,7 +1413,7 @@ export default function Admin() {
 
     try {
       await markReferralConverted(id, payload);
-      setToast({ message: "Referral commission updated." });
+      setToast({ message: "Booking commission updated." });
       await loadAdminData();
     } catch (error) {
       setToast({ tone: "error", message: error.message });
@@ -1403,6 +1443,35 @@ export default function Admin() {
     setTrackingReconcileForm((current) => ({ ...current, [field]: value }));
   }
 
+  function updateCommissionSettingsField(field, value) {
+    setCommissionSettingsForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function handleCommissionSettingsSubmit(event) {
+    event.preventDefault();
+
+    try {
+      const response = await updateCommissionSettings({
+        defaultCommissionRatePercent:
+          commissionSettingsForm.defaultCommissionRatePercent === "" ? 0 : Number(commissionSettingsForm.defaultCommissionRatePercent),
+        commissionTerms: commissionSettingsForm.commissionTerms
+      });
+      const nextSettings = response.data.settings || emptyCommissionSettings;
+
+      setCommissionSettings(nextSettings);
+      setCommissionSettingsForm({
+        defaultCommissionRatePercent: nextSettings.defaultCommissionRatePercent ?? "",
+        commissionTerms: nextSettings.commissionTerms || ""
+      });
+      setToast({
+        message: `Default commission saved. ${response.data.partnersUpdated || 0} partner account${response.data.partnersUpdated === 1 ? "" : "s"} updated.`
+      });
+      await loadAdminData();
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    }
+  }
+
   async function handleTrackingReconcileSubmit(event) {
     event.preventDefault();
 
@@ -1410,7 +1479,7 @@ export default function Admin() {
       const { trackingCode, ...payload } = trackingReconcileForm;
       await reconcileReferralByTrackingCode(trackingCode, payload);
       setTrackingReconcileForm(emptyTrackingReconcileForm);
-      setToast({ message: "Referral reconciled by tracking code." });
+      setToast({ message: "Booking saved." });
       await loadAdminData();
     } catch (error) {
       setToast({ tone: "error", message: error.message });
@@ -1418,13 +1487,13 @@ export default function Admin() {
   }
 
   async function rotatePartnerSecret(id) {
-    if (!window.confirm("Rotate this partner postback secret? Their old integration secret will stop working.")) {
+    if (!window.confirm("Reset this partner booking-report key? Their old automatic setup key will stop working.")) {
       return;
     }
 
     try {
       await rotatePartnerPostbackSecret(id);
-      setToast({ message: "Partner postback secret rotated." });
+      setToast({ message: "Partner booking-report key reset." });
       await loadAdminData();
     } catch (error) {
       setToast({ tone: "error", message: error.message });
@@ -1620,7 +1689,7 @@ export default function Admin() {
           <Link className="admin-brand" to="/">
             <img className="brand-logo admin-brand-logo" src={travellexLogo} alt="Travellex" />
             <span>
-              <small>Production CRM</small>
+              <small>Admin dashboard</small>
             </span>
           </Link>
           <button
@@ -1796,12 +1865,120 @@ export default function Admin() {
                   </article>
                 </div>
                 <div className="side-panel">
-                  <p className="eyebrow">Referral protection</p>
-                  <h2>Every partner handoff now carries a Travellex tracking code.</h2>
+                  <p className="eyebrow">Booking tracking</p>
+                  <h2>Every booking click gets a Travellex booking code.</h2>
                   <p>
-                    Booking clicks receive a unique code before the traveller lands on the partner website. Use the
-                    Referral Commissions tab to reconcile partner bookings, confirmed commission and payouts.
+                    When a traveller starts booking, Travellex creates a code for that enquiry. If the partner website
+                    sends the booking result back, the commission updates automatically. If not, use Bookings & Payments
+                    to enter the booking from the partner report.
                   </p>
+                </div>
+              </div>
+            )}
+            {activeTab === "commissions" && (
+              <div className="admin-list full">
+                <div className="commission-settings-grid">
+                  <form className="panel-form commission-settings-panel" onSubmit={handleCommissionSettingsSubmit}>
+                    <div>
+                      <p className="eyebrow">Normal commission</p>
+                      <h2>Set the default Travellex commission.</h2>
+                      <p>
+                        This rate is used for partner tours unless a specific tour has its own commission rate. Saving
+                        here also updates the default rate on partner accounts.
+                      </p>
+                    </div>
+                    <div className="commission-default-control">
+                      <label className="field">
+                        <span>Default commission %</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.1"
+                          value={commissionSettingsForm.defaultCommissionRatePercent}
+                          onChange={(event) => updateCommissionSettingsField("defaultCommissionRatePercent", event.target.value)}
+                        />
+                      </label>
+                      <button className="button primary" type="submit">
+                        Save default commission
+                      </button>
+                    </div>
+                    <label className="field">
+                      <span>Commission note for the team</span>
+                      <textarea
+                        value={commissionSettingsForm.commissionTerms}
+                        onChange={(event) => updateCommissionSettingsField("commissionTerms", event.target.value)}
+                        placeholder="Example: Commission is calculated on confirmed booking value before payouts."
+                      />
+                    </label>
+                  </form>
+
+                  <article className="side-panel commission-explain-panel">
+                    <p className="eyebrow">How it works</p>
+                    <h2>Automatic when partners report back.</h2>
+                    <div className="plain-help-list">
+                      <span>
+                        <strong>1</strong>
+                        Traveller clicks Book with Travellex.
+                      </span>
+                      <span>
+                        <strong>2</strong>
+                        Travellex creates a booking code.
+                      </span>
+                      <span>
+                        <strong>3</strong>
+                        Partner confirms the booking automatically or sends a booking report.
+                      </span>
+                      <span>
+                        <strong>4</strong>
+                        Travellex calculates the commission.
+                      </span>
+                    </div>
+                  </article>
+                </div>
+
+                <div className="admin-kpi-grid compact">
+                  <article className="admin-kpi-card">
+                    <p className="eyebrow">Current default</p>
+                    <h2>{commissionSettings.defaultCommissionRatePercent || 0}%</h2>
+                  </article>
+                  <article className="admin-kpi-card">
+                    <p className="eyebrow">Tour exceptions</p>
+                    <h2>{tourCommissionOverrideCount}</h2>
+                  </article>
+                  <article className="admin-kpi-card">
+                    <p className="eyebrow">Confirmed commission</p>
+                    <h2>{eur.format(commissionStats.confirmed)}</h2>
+                  </article>
+                  <article className="admin-kpi-card">
+                    <p className="eyebrow">Waiting for payout</p>
+                    <h2>{eur.format(commissionStats.open)}</h2>
+                  </article>
+                </div>
+
+                <div className="commission-action-grid">
+                  <article className="side-panel">
+                    <p className="eyebrow">One tour needs a special rate?</p>
+                    <h2>Edit that tour only.</h2>
+                    <p>
+                      Open Tours, edit the listing, and set the special commission for that tour. That tour rate will
+                      be used instead of the normal default.
+                    </p>
+                    <button className="button secondary" type="button" onClick={() => setActiveTab("tours")}>
+                      Open tours
+                    </button>
+                  </article>
+                  <article className="side-panel">
+                    <p className="eyebrow">A partner sent a booking report?</p>
+                    <h2>Enter it under Bookings & Payments.</h2>
+                    <p>
+                      Use the Travellex booking code from the partner report. The system will calculate commission from
+                      the booking amount and rate.
+                    </p>
+                    <button className="button secondary" type="button" onClick={() => setActiveTab("referrals")}>
+                      Open bookings
+                    </button>
+                  </article>
                 </div>
               </div>
             )}
@@ -2797,14 +2974,14 @@ export default function Admin() {
                     <input value={tourForm.referralLink} onChange={(event) => updateTourField("referralLink", event.target.value)} />
                   </label>
                   <label className="field">
-                    <span>Tour commission override %</span>
+                    <span>Special commission for this tour %</span>
                     <input
                       type="number"
                       min="0"
                       max="100"
                       value={tourForm.commissionRatePercent}
                       onChange={(event) => updateTourField("commissionRatePercent", event.target.value)}
-                      placeholder="Leave blank to use partner rate"
+                      placeholder={`${commissionSettings.defaultCommissionRatePercent || 0}% normal rate`}
                     />
                   </label>
                   <label className="field">
@@ -3066,7 +3243,7 @@ export default function Admin() {
                     { value: "active", label: "Active", predicate: (partner) => partner.isActive },
                     { value: "inactive", label: "Inactive", predicate: (partner) => !partner.isActive },
                     { value: "reviewed", label: "Reviewed", predicate: (partner) => Number(partner.rating || 0) > 0 },
-                    { value: "has-secret", label: "Has postback secret", predicate: (partner) => Boolean(partner.postbackSecret) }
+                    { value: "has-secret", label: "Automatic report key ready", predicate: (partner) => Boolean(partner.postbackSecret) }
                   ]}
                   sortOptions={[
                     { value: "name", label: "Name A-Z", compare: (left, right) => compareText(left.name, right.name) },
@@ -3082,23 +3259,27 @@ export default function Admin() {
                       <div>
                         <strong>{partner.name}</strong>
                         <span>
-                          {partner.location} - {partner.rating ? `${Number(partner.rating).toFixed(1)} / 5` : "No rating"} - Default commission {partner.commissionRatePercent || 0}%
+                          {partner.location || "Location not set"} - {partner.rating ? `${Number(partner.rating).toFixed(1)} / 5` : "No rating"} - Commission {partner.commissionRatePercent || 0}%
                         </span>
                         {partner.licenseInfo && <p>{partner.licenseInfo}</p>}
                         <p>{partner.commissionTerms || "No commission terms saved yet."}</p>
-                        <div className="postback-box">
-                          <p className="eyebrow">Partner postback setup</p>
+                        <details className="postback-box">
+                          <summary>Advanced: automatic booking report setup</summary>
+                          <p>
+                            Share this only with the partner&apos;s website team. It lets their booking system tell
+                            Travellex when a tracked booking is confirmed.
+                          </p>
                           <code>{`${apiBaseURL}/referrals/postback`}</code>
-                          <code>{`x-travellex-partner-secret: ${partner.postbackSecret || "Generate by rotating secret"}`}</code>
-                          <code>{`{"travellex_ref":"TRACKING_CODE","bookingValueEUR":2000,"partnerBookingId":"BOOKING-123","status":"converted"}`}</code>
-                        </div>
+                          <code>{`Booking-report key: ${partner.postbackSecret || "Use Reset key to generate one"}`}</code>
+                          <code>{`Example report: {"travellex_ref":"BOOKING_CODE","bookingValueEUR":2000,"partnerBookingId":"BOOKING-123","status":"converted"}`}</code>
+                        </details>
                       </div>
                       <div className="button-row">
                         <button className="button secondary compact" type="button" onClick={() => editPartner(partner)}>
                           Edit
                         </button>
                         <button className="button secondary compact" type="button" onClick={() => rotatePartnerSecret(partner._id)}>
-                          Rotate secret
+                          Reset key
                         </button>
                         <ConfirmActionButton
                           actionLabel={`Delete ${partner.name}`}
@@ -3159,11 +3340,11 @@ export default function Admin() {
               <div className="admin-list full">
                 <div className="admin-kpi-grid compact">
                   <article className="admin-kpi-card">
-                    <p className="eyebrow">Tracked clicks</p>
+                    <p className="eyebrow">Booking starts</p>
                     <h2>{referrals.length}</h2>
                   </article>
                   <article className="admin-kpi-card">
-                    <p className="eyebrow">Converted</p>
+                    <p className="eyebrow">Bookings confirmed</p>
                     <h2>{commissionStats.converted}</h2>
                   </article>
                   <article className="admin-kpi-card">
@@ -3178,15 +3359,15 @@ export default function Admin() {
                 <form className="panel-form tracking-reconcile-form" onSubmit={handleTrackingReconcileSubmit}>
                   <div>
                     <p className="eyebrow">Partner booking report</p>
-                    <h2>Reconcile a booking by Travellex tracking code.</h2>
+                    <h2>Record a partner booking.</h2>
                     <p>
-                      Use this when a partner sends a booking report with the traveller&apos;s <strong>travellex_ref</strong>{" "}
-                      code from their own booking website.
+                      Use this when the partner confirms a booking by email, WhatsApp or invoice. If the partner&apos;s
+                      website is connected, this can happen automatically.
                     </p>
                   </div>
                   <div className="commission-edit-grid">
                     <label className="field">
-                      <span>travellex_ref / tracking code</span>
+                      <span>Travellex booking code</span>
                       <input
                         value={trackingReconcileForm.trackingCode}
                         onChange={(event) => updateTrackingReconcileField("trackingCode", event.target.value)}
@@ -3201,7 +3382,7 @@ export default function Admin() {
                       />
                     </label>
                     <label className="field">
-                      <span>Booking EUR</span>
+                      <span>Booking amount EUR</span>
                       <input
                         type="number"
                         min="0"
@@ -3211,7 +3392,7 @@ export default function Admin() {
                       />
                     </label>
                     <label className="field">
-                      <span>Rate %</span>
+                      <span>Commission %</span>
                       <input
                         type="number"
                         min="0"
@@ -3237,7 +3418,7 @@ export default function Admin() {
                       >
                         {referralStatuses.map((status) => (
                           <option key={status} value={status}>
-                            {status}
+                            {statusLabel(status)}
                           </option>
                         ))}
                       </select>
@@ -3251,15 +3432,15 @@ export default function Admin() {
                       />
                     </label>
                     <button className="button primary compact" type="submit">
-                      Reconcile booking
+                      Save booking
                     </button>
                   </div>
                 </form>
                 <AdminCollection
                   className="admin-list embedded referral-top-collection"
                   items={referrals}
-                  label="referrals"
-                  emptyText="No referral clicks tracked yet."
+                  label="booking records"
+                  emptyText="No booking starts tracked yet."
                   searchKeys={["trackingCode", "tour.title", "partner.name", "user.email", "partnerBookingId", "status", "notes"]}
                   filterOptions={[
                     ...referralStatuses.map((status) => ({
@@ -3268,7 +3449,7 @@ export default function Admin() {
                       predicate: (referral) => (referral.status || (referral.converted ? "converted" : "clicked")) === status
                     })),
                     { value: "unpaid", label: "Unpaid commission", predicate: (referral) => Number(referral.confirmedCommissionEUR || 0) > Number(referral.paidCommissionEUR || 0) },
-                    { value: "guest", label: "Guest clicks", predicate: (referral) => !referral.user }
+                    { value: "guest", label: "Guest travellers", predicate: (referral) => !referral.user }
                   ]}
                   sortOptions={[
                     { value: "newest", label: "Newest", compare: (left, right) => compareDateNewest(left.clickedAt, right.clickedAt) },
@@ -3277,19 +3458,19 @@ export default function Admin() {
                     { value: "confirmed-high", label: "Confirmed high-low", compare: (left, right) => compareNumber(right.confirmedCommissionEUR, left.confirmedCommissionEUR) },
                     { value: "status", label: "Status", compare: (left, right) => compareText(left.status, right.status) }
                   ]}
-                  searchPlaceholder="Search tracking code, tour, partner or traveller"
+                  searchPlaceholder="Search booking code, tour, partner or traveller"
                   pageSize={12}
                 >
                   {(referral) => (
                     <article className="admin-row referral-row" key={referral._id}>
                       <div>
-                        <strong>{referral.tour?.title || "Tour referral"}</strong>
+                        <strong>{referral.tour?.title || "Tour booking"}</strong>
                         <span>
                           {referral.partner?.name || "Partner"} - {formatDate(referral.clickedAt)} -{" "}
-                          {referral.status || (referral.converted ? "converted" : "clicked")}
+                          {statusLabel(referral.status || (referral.converted ? "converted" : "clicked"))}
                         </span>
                         <p>
-                          Code: <strong>{referral.trackingCode || "legacy-click"}</strong> - Traveller:{" "}
+                          Booking code: <strong>{referral.trackingCode || "legacy booking"}</strong> - Traveller:{" "}
                           {referral.user?.email || "guest / not logged in"}
                         </p>
                         <p>
@@ -3299,13 +3480,13 @@ export default function Admin() {
                         </p>
                         {referral.outboundUrl && (
                           <a href={referral.outboundUrl} target="_blank" rel="noreferrer">
-                            Open tracked partner URL
+                            Open partner booking page
                           </a>
                         )}
                       </div>
                       <div className="commission-edit-grid">
                         <label className="field">
-                          <span>Booking EUR</span>
+                          <span>Booking amount EUR</span>
                           <input
                             type="number"
                             min="0"
@@ -3314,7 +3495,7 @@ export default function Admin() {
                           />
                         </label>
                         <label className="field">
-                          <span>Rate %</span>
+                          <span>Commission %</span>
                           <input
                             type="number"
                             min="0"
@@ -3349,7 +3530,7 @@ export default function Admin() {
                           >
                             {referralStatuses.map((status) => (
                               <option key={status} value={status}>
-                                {status}
+                                {statusLabel(status)}
                               </option>
                             ))}
                           </select>
@@ -3363,7 +3544,7 @@ export default function Admin() {
                           />
                         </label>
                         <button className="button primary compact" type="button" onClick={() => handleReferralConversion(referral._id)}>
-                          Save commission
+                          Save booking status
                         </button>
                       </div>
                     </article>

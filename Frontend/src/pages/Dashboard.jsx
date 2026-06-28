@@ -586,6 +586,16 @@ export default function Dashboard() {
               <h1>{showDashboardGreeting ? `Welcome, ${user?.name}.` : dashboardRoleLabel}</h1>
             </div>
             <div className="button-row">
+              <details className="dashboard-profile-menu" id="profile">
+                <summary aria-label="Open profile">
+                  <span>{user?.name?.slice(0, 1) || "U"}</span>
+                </summary>
+                <div className="dashboard-profile-popover">
+                  <strong>{user?.name || "Travellex user"}</strong>
+                  <small>{user?.email || "Email not provided"}</small>
+                  <small>{user?.country || "Country not provided"}</small>
+                </div>
+              </details>
               <Link className="button secondary compact" to="/tours">
                 Browse tours
               </Link>
@@ -1343,24 +1353,26 @@ export default function Dashboard() {
           )}
         </div>
         <aside className="dashboard-side">
-          <section className="side-panel" id="profile">
-            <p className="eyebrow">Profile</p>
-            <h2>{user?.name || "Travellex traveller"}</h2>
-            <div className="profile-summary-list">
-              <span>
-                <strong>Email</strong>
-                {user?.email || "Not provided"}
-              </span>
-              <span>
-                <strong>Country</strong>
-                {user?.country || "Not provided"}
-              </span>
-              <span>
-                <strong>Account type</strong>
-                {user?.role?.replace("_", " ") || "traveller"}
-              </span>
-            </div>
-          </section>
+          {!isOperationsDashboard && (
+            <section className="side-panel" id="profile">
+              <p className="eyebrow">Profile</p>
+              <h2>{user?.name || "Travellex traveller"}</h2>
+              <div className="profile-summary-list">
+                <span>
+                  <strong>Email</strong>
+                  {user?.email || "Not provided"}
+                </span>
+                <span>
+                  <strong>Country</strong>
+                  {user?.country || "Not provided"}
+                </span>
+                <span>
+                  <strong>Account type</strong>
+                  {user?.role?.replace("_", " ") || "traveller"}
+                </span>
+              </div>
+            </section>
+          )}
           {loading ? (
             <Spinner />
           ) : (

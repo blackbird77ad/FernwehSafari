@@ -7,6 +7,7 @@ const galleryRoutes = require("./routes/galleryRoutes");
 const guideRoutes = require("./routes/guideRoutes");
 const partnerRoutes = require("./routes/partnerRoutes");
 const referralRoutes = require("./routes/referralRoutes");
+const settingsRoutes = require("./routes/settingsRoutes");
 const tourRoutes = require("./routes/tourRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -95,6 +96,7 @@ app.use("/api/enquiries", enquiryRoutes);
 app.use("/api/gallery", galleryRoutes);
 app.use("/api/guides", guideRoutes);
 app.use("/api/referrals", referralRoutes);
+app.use("/api/settings", settingsRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/users", userRoutes);
 
