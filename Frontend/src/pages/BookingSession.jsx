@@ -30,10 +30,10 @@ export default function BookingSession() {
 
   async function copyTrackingCode() {
     try {
-      await navigator.clipboard.writeText(trackingCode);
+      await window.navigator.clipboard.writeText(trackingCode);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
-    } catch (error) {
+    } catch {
       setMessage("Copy failed. You can still select and copy the booking code manually.");
     }
   }
@@ -92,7 +92,7 @@ export default function BookingSession() {
             <p className="eyebrow">Partner booking handoff</p>
             <h2>Open the partner booking page in a new tab.</h2>
             <p>
-              Some partner websites use security pages such as “confirm you are not a robot.” Opening the booking page
+              Some partner websites use security pages that ask visitors to confirm they are not a robot. Opening the booking page
               outside an embedded window prevents those checks from looping or getting stuck.
             </p>
           </div>

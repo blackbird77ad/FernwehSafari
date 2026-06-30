@@ -3,6 +3,16 @@ import { Link, useLocation } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
 import { resendVerification } from "../services/authService";
 
+const verificationRequests = new Map();
+
+function verifyTokenOnce(token, verifyEmail) {
+  if (!verificationRequests.has(token)) {
+    verificationRequests.set(token, verifyEmail(token));
+  }
+
+  return verificationRequests.get(token);
+}
+
 export default function VerifyEmail() {
   const { verifyEmail } = useAuth();
   const location = useLocation();
@@ -22,7 +32,7 @@ export default function VerifyEmail() {
 
     let alive = true;
 
-    verifyEmail(token)
+    verifyTokenOnce(token, verifyEmail)
       .then(() => {
         if (alive) {
           setVerified(true);

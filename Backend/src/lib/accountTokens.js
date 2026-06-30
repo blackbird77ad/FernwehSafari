@@ -19,11 +19,25 @@ function createSecureToken() {
   return crypto.randomBytes(32).toString("hex");
 }
 
+function createVerificationCode() {
+  return String(crypto.randomInt(100000, 1000000));
+}
+
 function assignVerificationToken(user) {
   const token = createSecureToken();
   user.emailVerificationTokenHash = hashToken(token);
   user.emailVerificationExpiresAt = new Date(Date.now() + VERIFICATION_TOKEN_TTL_HOURS * 60 * 60 * 1000);
   return token;
+}
+
+function assignVerificationCredentials(user) {
+  const token = assignVerificationToken(user);
+  const code = createVerificationCode();
+
+  user.emailVerificationCodeHash = hashToken(code);
+  user.emailVerificationCodeExpiresAt = new Date(Date.now() + VERIFICATION_TOKEN_TTL_HOURS * 60 * 60 * 1000);
+
+  return { token, code };
 }
 
 function assignPasswordResetToken(user) {
@@ -35,6 +49,7 @@ function assignPasswordResetToken(user) {
 
 module.exports = {
   assignPasswordResetToken,
+  assignVerificationCredentials,
   assignVerificationToken,
   buildClientUrl,
   hashToken,

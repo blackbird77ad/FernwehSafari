@@ -50,7 +50,7 @@ export function parseItineraryText(value) {
         };
       }
 
-      const labelledDay = line.match(/^day\s*(\d+)\s*[:\-]\s*(.+)$/i);
+      const labelledDay = line.match(/^day\s*(\d+)\s*[:-]\s*(.+)$/i);
 
       if (labelledDay) {
         return {

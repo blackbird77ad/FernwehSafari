@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const adminRoutes = require("./routes/adminRoutes");
 const authRoutes = require("./routes/authRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
 const enquiryRoutes = require("./routes/enquiryRoutes");
@@ -89,6 +90,7 @@ app.get("/api/health", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/tours", tourRoutes);
 app.use("/api/partners", partnerRoutes);

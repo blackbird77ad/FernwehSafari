@@ -54,6 +54,14 @@ const userSchema = new mongoose.Schema(
       type: Date,
       select: false
     },
+    emailVerificationCodeHash: {
+      type: String,
+      select: false
+    },
+    emailVerificationCodeExpiresAt: {
+      type: Date,
+      select: false
+    },
     passwordResetTokenHash: {
       type: String,
       select: false

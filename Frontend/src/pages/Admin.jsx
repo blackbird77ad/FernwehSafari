@@ -7,6 +7,7 @@ import Toast from "../components/Toast";
 import travellexLogo from "../assets/photos/Travellex-logo-wordmark.png";
 import useAuth from "../hooks/useAuth";
 import { activityOptions, comfortLevelOptions, confirmationTypeOptions, priceBasisOptions, tourTypeOptions } from "../utils/travelOptions";
+import { getAdminDashboardSummary } from "../services/adminService";
 import {
   createPartner,
   deletePartner,
@@ -76,6 +77,14 @@ const referralStatuses = ["clicked", "converted", "paid", "cancelled", "disputed
 const ADMIN_COLLECTION_PAGE_SIZE = 40;
 const ADMIN_USER_PAGE_SIZE = 50;
 const ADMIN_USER_PAGE_SIZE_OPTIONS = [50, 100, 200];
+const emptyDashboardCounts = {};
+const emptyDashboardCommissions = {};
+const emptyDashboardSummary = { counts: emptyDashboardCounts, commissions: emptyDashboardCommissions };
+
+function countValue(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
 
 const partnerFieldLabels = {
   name: "Partner name",
@@ -493,6 +502,7 @@ export default function Admin() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [dashboardSummary, setDashboardSummary] = useState(emptyDashboardSummary);
   const [users, setUsers] = useState([]);
   const [tours, setTours] = useState([]);
   const [partners, setPartners] = useState([]);
@@ -533,6 +543,8 @@ export default function Admin() {
 
   const isAdmin = user?.role === "admin";
   const isStaff = user?.role === "admin" || user?.role === "moderator";
+  const dashboardCounts = dashboardSummary.counts || emptyDashboardCounts;
+  const dashboardCommissions = dashboardSummary.commissions || emptyDashboardCommissions;
 
   const tabs = useMemo(
     () => [
@@ -546,22 +558,22 @@ export default function Admin() {
   );
 
   const commissionStats = useMemo(() => {
-    const estimated = sumCurrency(referrals, "estimatedCommissionEUR");
-    const confirmed = sumCurrency(referrals, "confirmedCommissionEUR");
-    const paid = sumCurrency(referrals, "paidCommissionEUR");
-    const converted = referrals.filter((referral) => referral.converted || ["converted", "paid"].includes(referral.status)).length;
-    const open = Math.max(confirmed - paid, 0);
-    const conversionRate = referrals.length ? Math.round((converted / referrals.length) * 100) : 0;
+    const localEstimated = sumCurrency(referrals, "estimatedCommissionEUR");
+    const localConfirmed = sumCurrency(referrals, "confirmedCommissionEUR");
+    const localPaid = sumCurrency(referrals, "paidCommissionEUR");
+    const localConverted = referrals.filter((referral) => referral.converted || ["converted", "paid"].includes(referral.status)).length;
+    const localOpen = Math.max(localConfirmed - localPaid, 0);
+    const localConversionRate = referrals.length ? Math.round((localConverted / referrals.length) * 100) : 0;
 
     return {
-      estimated,
-      confirmed,
-      paid,
-      open,
-      converted,
-      conversionRate
+      estimated: isAdmin ? countValue(dashboardCommissions.estimated, localEstimated) : localEstimated,
+      confirmed: isAdmin ? countValue(dashboardCommissions.confirmed, localConfirmed) : localConfirmed,
+      paid: isAdmin ? countValue(dashboardCommissions.paid, localPaid) : localPaid,
+      open: isAdmin ? countValue(dashboardCommissions.open, localOpen) : localOpen,
+      converted: isAdmin ? countValue(dashboardCommissions.converted, localConverted) : localConverted,
+      conversionRate: isAdmin ? countValue(dashboardCommissions.conversionRate, localConversionRate) : localConversionRate
     };
-  }, [referrals]);
+  }, [dashboardCommissions, isAdmin, referrals]);
 
   const tourCommissionOverrideCount = useMemo(
     () => tours.filter((tour) => tour.commissionRatePercent !== undefined && tour.commissionRatePercent !== null && tour.commissionRatePercent !== "").length,
@@ -611,20 +623,91 @@ export default function Admin() {
       userRoles.map((role) => ({
         role,
         label: userRoleTabLabels[role] || roleLabels[role],
-        count: userPagination.roleCounts?.[role] || 0
+        count: isAdmin ? countValue(dashboardCounts.userRoles?.[role], userPagination.roleCounts?.[role] || 0) : userPagination.roleCounts?.[role] || 0
       })),
-    [userPagination.roleCounts]
+    [dashboardCounts.userRoles, isAdmin, userPagination.roleCounts]
   );
-  const allUserRoleCount = useMemo(
-    () => Object.values(userPagination.roleCounts || {}).reduce((total, count) => total + (Number(count) || 0), 0),
-    [userPagination.roleCounts]
+  const pendingCompanyApplicationCount = useMemo(
+    () =>
+      isAdmin
+        ? countValue(
+            dashboardCounts.pendingCompanyApplications,
+            companyApplications.filter((application) => !["approved", "rejected"].includes(application.status)).length
+          )
+        : companyApplications.filter((application) => !["approved", "rejected"].includes(application.status)).length,
+    [companyApplications, dashboardCounts.pendingCompanyApplications, isAdmin]
   );
+  const pendingGuideConfirmationCount = useMemo(
+    () =>
+      isAdmin
+        ? countValue(
+            dashboardCounts.pendingGuideConfirmations,
+            guideApplications.filter((application) => application.status === "company_approved").length
+          )
+        : guideApplications.filter((application) => application.status === "company_approved").length,
+    [dashboardCounts.pendingGuideConfirmations, guideApplications, isAdmin]
+  );
+  const pendingGalleryCount = useMemo(
+    () =>
+      isAdmin
+        ? countValue(dashboardCounts.pendingGalleryMedia, galleryMedia.filter((item) => item.status === "pending").length)
+        : galleryMedia.filter((item) => item.status === "pending").length,
+    [dashboardCounts.pendingGalleryMedia, galleryMedia, isAdmin]
+  );
+  const openEnquiryCount = useMemo(
+    () =>
+      isAdmin
+        ? countValue(dashboardCounts.openEnquiries, enquiries.filter((enquiry) => enquiry.status !== "closed").length)
+        : enquiries.filter((enquiry) => enquiry.status !== "closed").length,
+    [dashboardCounts.openEnquiries, enquiries, isAdmin]
+  );
+  const unpaidCommissionCount = useMemo(
+    () =>
+      isAdmin
+        ? countValue(
+            dashboardCounts.unpaidCommissions,
+            referrals.filter((referral) => Number(referral.confirmedCommissionEUR || 0) > Number(referral.paidCommissionEUR || 0)).length
+          )
+        : referrals.filter((referral) => Number(referral.confirmedCommissionEUR || 0) > Number(referral.paidCommissionEUR || 0)).length,
+    [dashboardCounts.unpaidCommissions, isAdmin, referrals]
+  );
+  const dashboardActionCount = useMemo(
+    () =>
+      isAdmin
+        ? countValue(
+            dashboardCounts.dashboardActions,
+            pendingCompanyApplicationCount + pendingGuideConfirmationCount + pendingGalleryCount + openEnquiryCount + unpaidCommissionCount
+          )
+        : pendingCompanyApplicationCount + pendingGuideConfirmationCount + pendingGalleryCount,
+    [
+      dashboardCounts.dashboardActions,
+      isAdmin,
+      openEnquiryCount,
+      pendingCompanyApplicationCount,
+      pendingGalleryCount,
+      pendingGuideConfirmationCount,
+      unpaidCommissionCount
+    ]
+  );
+  const totalUserCount = isAdmin ? countValue(dashboardCounts.users, userPagination.total || users.length) : users.length;
+  const totalTourCount = isAdmin ? countValue(dashboardCounts.tours, tours.length) : tours.length;
+  const totalPartnerCount = isAdmin ? countValue(dashboardCounts.partners, partners.length) : partners.length;
+  const totalCompanyApplicationCount = isAdmin
+    ? countValue(dashboardCounts.companyApplications, companyApplications.length)
+    : companyApplications.length;
+  const totalGuideApplicationCount = isAdmin
+    ? countValue(dashboardCounts.guideApplications, guideApplications.length)
+    : guideApplications.length;
+  const totalGuideBookingCount = isAdmin ? countValue(dashboardCounts.guideBookings, guideBookings.length) : guideBookings.length;
+  const totalGalleryMediaCount = isAdmin ? countValue(dashboardCounts.galleryMedia, galleryMedia.length) : galleryMedia.length;
+  const totalEnquiryCount = isAdmin ? countValue(dashboardCounts.enquiries, enquiries.length) : enquiries.length;
+  const totalReferralCount = isAdmin ? countValue(dashboardCounts.referrals, referrals.length) : referrals.length;
 
   const crmStats = useMemo(
     () => [
-      ...(isAdmin ? [{ label: "Users", value: users.length }] : []),
-      { label: "Tours", value: tours.length },
-      { label: "Operators", value: partners.length },
+      ...(isAdmin ? [{ label: "Users", value: totalUserCount }] : []),
+      { label: "Tours", value: totalTourCount },
+      { label: "Operators", value: totalPartnerCount },
       ...(isAdmin ? [{ label: "Estimated commission", value: eur.format(commissionStats.estimated) }] : []),
       ...(isAdmin ? [{ label: "Confirmed commission", value: eur.format(commissionStats.confirmed) }] : []),
       ...(isAdmin ? [{ label: "Unpaid commission", value: eur.format(commissionStats.open) }] : []),
@@ -632,43 +715,67 @@ export default function Admin() {
         ? [
             {
               label: "Company applications",
-              value: companyApplications.filter((application) => !["approved", "rejected"].includes(application.status)).length
+              value: pendingCompanyApplicationCount
             }
           ]
         : []),
       {
         label: "Guide applications",
-        value: guideApplications.filter((application) => application.status === "company_approved").length
+        value: pendingGuideConfirmationCount
       },
-      { label: "Gallery pending", value: galleryMedia.filter((item) => item.status === "pending").length },
+      { label: "Gallery pending", value: pendingGalleryCount },
       ...(isAdmin
         ? [
-            { label: "Open enquiries", value: enquiries.filter((enquiry) => enquiry.status !== "closed").length },
-            { label: "Booking starts", value: referrals.length },
+            { label: "Open enquiries", value: openEnquiryCount },
+            { label: "Booking starts", value: totalReferralCount },
             { label: "Converted", value: commissionStats.converted }
           ]
         : [])
     ],
-    [commissionStats, companyApplications, enquiries, galleryMedia, guideApplications, isAdmin, partners, referrals, tours, users]
+    [
+      commissionStats,
+      isAdmin,
+      openEnquiryCount,
+      pendingCompanyApplicationCount,
+      pendingGalleryCount,
+      pendingGuideConfirmationCount,
+      totalPartnerCount,
+      totalReferralCount,
+      totalTourCount,
+      totalUserCount
+    ]
   );
 
   const tabCounts = useMemo(
     () => ({
-      overview: crmStats.length,
-      commissions: 1,
-      referrals: referrals.length,
-      users: userPagination.total || users.length,
-      "role dashboards": users.length,
-      "company applications": companyApplications.length,
-      tours: tours.length,
-      partners: partners.length,
-      "guide applications": guideApplications.length,
-      "guide bookings": guideBookings.length,
-      "gallery media": galleryMedia.length,
-      enquiries: enquiries.length,
+      overview: dashboardActionCount,
+      commissions: unpaidCommissionCount,
+      referrals: totalReferralCount,
+      users: totalUserCount,
+      "role dashboards": totalUserCount,
+      "company applications": totalCompanyApplicationCount,
+      tours: totalTourCount,
+      partners: totalPartnerCount,
+      "guide applications": totalGuideApplicationCount,
+      "guide bookings": totalGuideBookingCount,
+      "gallery media": totalGalleryMediaCount,
+      enquiries: totalEnquiryCount,
       uploads: uploading ? 1 : 0
     }),
-    [companyApplications, crmStats.length, enquiries, galleryMedia, guideApplications, guideBookings, partners, referrals, tours, uploading, userPagination.total, users.length]
+    [
+      dashboardActionCount,
+      totalCompanyApplicationCount,
+      totalEnquiryCount,
+      totalGalleryMediaCount,
+      totalGuideApplicationCount,
+      totalGuideBookingCount,
+      totalPartnerCount,
+      totalReferralCount,
+      totalTourCount,
+      totalUserCount,
+      unpaidCommissionCount,
+      uploading
+    ]
   );
 
   const pendingCompanyApplicationItems = useMemo(
@@ -684,10 +791,20 @@ export default function Admin() {
   );
   const partnerApplicationReviewCounts = useMemo(
     () => ({
-      approved: companyApplications.filter((application) => application.status === "approved").length,
-      rejected: companyApplications.filter((application) => application.status === "rejected").length
+      approved: isAdmin
+        ? countValue(
+            dashboardCounts.approvedCompanyApplications,
+            companyApplications.filter((application) => application.status === "approved").length
+          )
+        : companyApplications.filter((application) => application.status === "approved").length,
+      rejected: isAdmin
+        ? countValue(
+            dashboardCounts.rejectedCompanyApplications,
+            companyApplications.filter((application) => application.status === "rejected").length
+          )
+        : companyApplications.filter((application) => application.status === "rejected").length
     }),
-    [companyApplications]
+    [companyApplications, dashboardCounts.approvedCompanyApplications, dashboardCounts.rejectedCompanyApplications, isAdmin]
   );
 
   const previewUser = useMemo(() => {
@@ -888,7 +1005,7 @@ export default function Admin() {
       admin: [
         {
           eyebrow: "Full CRM",
-          value: users.length,
+          value: totalUserCount,
           note: "Users available for role management.",
           items: compactList(
             users.slice(0, 3).map((item) => ({
@@ -906,7 +1023,7 @@ export default function Admin() {
         },
         {
           eyebrow: "Booking starts",
-          value: referrals.length,
+          value: totalReferralCount,
           note: "All booking starts sent through Travellex.",
           items: compactList(
             referrals.slice(0, 3).map((referral) => ({
@@ -931,6 +1048,8 @@ export default function Admin() {
     previewUser,
     referrals,
     tours,
+    totalReferralCount,
+    totalUserCount,
     users
   ]);
 
@@ -953,19 +1072,37 @@ export default function Admin() {
       setGalleryMedia(galleryMediaResponse.data.media);
 
       if (isAdmin) {
-        const [userResponse, enquiryResponse, referralResponse, companyApplicationResponse, commissionSettingsResponse] = await Promise.all([
+        const [
+          userResponse,
+          enquiryResponse,
+          referralResponse,
+          companyApplicationResponse,
+          commissionSettingsResponse,
+          dashboardSummaryResponse
+        ] = await Promise.all([
           getUsers({ limit: ADMIN_USER_PAGE_SIZE, page: 1 }),
           getEnquiries(),
           getReferrals(),
           getTourCompanyApplications(),
-          getCommissionSettings()
+          getCommissionSettings(),
+          getAdminDashboardSummary()
         ]);
         const nextCommissionSettings = commissionSettingsResponse.data.settings || emptyCommissionSettings;
+        const nextDashboardSummary = dashboardSummaryResponse.data || emptyDashboardSummary;
+        const nextDashboardCounts = nextDashboardSummary.counts || {};
+        const nextUserPagination = userResponse.data.pagination || {
+          page: 1,
+          limit: ADMIN_USER_PAGE_SIZE,
+          total: userResponse.data.users.length,
+          totalPages: 1
+        };
 
+        setDashboardSummary(nextDashboardSummary);
         setUsers(userResponse.data.users);
         setUserPagination({
-          ...(userResponse.data.pagination || { page: 1, limit: ADMIN_USER_PAGE_SIZE, total: userResponse.data.users.length, totalPages: 1 }),
-          roleCounts: userResponse.data.roleCounts || {}
+          ...nextUserPagination,
+          total: countValue(nextDashboardCounts.users, nextUserPagination.total),
+          roleCounts: nextDashboardCounts.userRoles || userResponse.data.roleCounts || {}
         });
         setEnquiries(enquiryResponse.data.enquiries);
         setReferrals(referralResponse.data.referrals);
@@ -976,6 +1113,7 @@ export default function Admin() {
           commissionTerms: nextCommissionSettings.commissionTerms || ""
         });
       } else {
+        setDashboardSummary(emptyDashboardSummary);
         setUsers([]);
         setUserPagination({ page: 1, limit: ADMIN_USER_PAGE_SIZE, total: 0, totalPages: 1, roleCounts: {} });
         setEnquiries([]);
@@ -1855,15 +1993,15 @@ export default function Admin() {
                     <h2>Work that protects quality.</h2>
                     <div className="admin-metric-row">
                       <span>Partner applications</span>
-                      <strong>{companyApplications.filter((application) => !["approved", "rejected"].includes(application.status)).length}</strong>
+                      <strong>{pendingCompanyApplicationCount}</strong>
                     </div>
                     <div className="admin-metric-row">
                       <span>Guide confirmations</span>
-                      <strong>{guideApplications.filter((application) => application.status === "company_approved").length}</strong>
+                      <strong>{pendingGuideConfirmationCount}</strong>
                     </div>
                     <div className="admin-metric-row">
                       <span>Gallery pending</span>
-                      <strong>{galleryMedia.filter((item) => item.status === "pending").length}</strong>
+                      <strong>{pendingGalleryCount}</strong>
                     </div>
                   </article>
                 </div>
@@ -2065,7 +2203,7 @@ export default function Admin() {
                         loadUsersForFilters(1, { role: "all" });
                       }}
                     >
-                      All users ({allUserRoleCount || userPagination.total || users.length})
+                      All users ({totalUserCount})
                     </button>
                     {userRoles.map((role) => (
                       <button
@@ -2311,7 +2449,7 @@ export default function Admin() {
                       <p className="eyebrow">Pending partner requests</p>
                       <h2>Needs review</h2>
                     </div>
-                    <span className="partner-application-count">{pendingCompanyApplicationItems.length}</span>
+                    <span className="partner-application-count">{pendingCompanyApplicationCount}</span>
                   </div>
                   {pendingCompanyApplicationItems.length ? (
                     <div className="admin-list-grid view-list">
@@ -3358,7 +3496,7 @@ export default function Admin() {
                 <div className="admin-kpi-grid compact">
                   <article className="admin-kpi-card">
                     <p className="eyebrow">Booking starts</p>
-                    <h2>{referrals.length}</h2>
+                    <h2>{totalReferralCount}</h2>
                   </article>
                   <article className="admin-kpi-card">
                     <p className="eyebrow">Bookings confirmed</p>
