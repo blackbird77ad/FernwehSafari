@@ -3671,7 +3671,8 @@ export default function Admin() {
                   </div>
                 </form>
                 <AdminCollection
-                  className="admin-list embedded referral-top-collection"
+                  className="admin-list embedded referral-top-collection booking-card-collection"
+                  defaultView="cards"
                   items={referrals}
                   label="booking records"
                   emptyText="No booking starts tracked yet."
@@ -3694,92 +3695,127 @@ export default function Admin() {
                   ]}
                   searchPlaceholder="Search booking code, tour, partner or traveller"
                   pageSize={12}
+                  viewModes={[
+                    { value: "cards", label: "Cards" },
+                    { value: "compact", label: "Compact" },
+                    { value: "list", label: "List" }
+                  ]}
                 >
                   {(referral) => (
                     <article className="admin-row referral-row" key={referral._id}>
-                      <div>
-                        <strong>{referral.tour?.title || "Tour booking"}</strong>
-                        <span>
-                          {referral.partner?.name || "Partner"} - {formatDate(referral.clickedAt)} -{" "}
-                          {statusLabel(referral.status || (referral.converted ? "converted" : "clicked"))}
-                        </span>
-                        <p>
-                          Booking code: <strong>{referral.trackingCode || "legacy booking"}</strong> - Traveller:{" "}
-                          {referral.user?.email || "guest / not logged in"}
-                        </p>
-                        <p>
-                          Estimated: {eur.format(referral.estimatedCommissionEUR || 0)} - Confirmed:{" "}
-                          {eur.format(referral.confirmedCommissionEUR || 0)} - Paid:{" "}
-                          {eur.format(referral.paidCommissionEUR || 0)}
-                        </p>
-                        {referral.outboundUrl && (
-                          <a href={referral.outboundUrl} target="_blank" rel="noreferrer">
-                            Open partner booking page
-                          </a>
-                        )}
-                      </div>
-                      <div className="commission-edit-grid">
-                        <label className="field">
-                          <span>Booking amount EUR</span>
-                          <input
-                            type="number"
-                            min="0"
-                            value={referralField(referral, "bookingValueEUR")}
-                            onChange={(event) => updateReferralField(referral._id, "bookingValueEUR", event.target.value)}
-                          />
-                        </label>
-                        <label className="field">
-                          <span>Commission %</span>
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={referralField(referral, "commissionRatePercent")}
-                            onChange={(event) => updateReferralField(referral._id, "commissionRatePercent", event.target.value)}
-                          />
-                        </label>
-                        <label className="field">
-                          <span>Commission EUR</span>
-                          <input
-                            type="number"
-                            min="0"
-                            value={referralField(referral, "commissionEUR") || referral.confirmedCommissionEUR || ""}
-                            onChange={(event) => updateReferralField(referral._id, "commissionEUR", event.target.value)}
-                          />
-                        </label>
-                        <label className="field">
-                          <span>Paid EUR</span>
-                          <input
-                            type="number"
-                            min="0"
-                            value={referralField(referral, "paidCommissionEUR")}
-                            onChange={(event) => updateReferralField(referral._id, "paidCommissionEUR", event.target.value)}
-                          />
-                        </label>
-                        <label className="field">
-                          <span>Status</span>
-                          <select
-                            value={referralField(referral, "status") || referral.status || "clicked"}
-                            onChange={(event) => updateReferralField(referral._id, "status", event.target.value)}
-                          >
-                            {referralStatuses.map((status) => (
-                              <option key={status} value={status}>
-                                {statusLabel(status)}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label className="field">
-                          <span>Notes</span>
-                          <input
-                            value={referralField(referral, "notes")}
-                            onChange={(event) => updateReferralField(referral._id, "notes", event.target.value)}
-                            placeholder="Partner invoice, booking id, payout note"
-                          />
-                        </label>
-                        <button className="button primary compact" type="button" onClick={() => handleReferralConversion(referral._id)}>
-                          Save booking status
-                        </button>
+                      <div className="booking-card-summary">
+                        <div className="booking-card-head">
+                          <div>
+                            <strong>{referral.tour?.title || "Tour booking"}</strong>
+                            <span>
+                              {referral.partner?.name || "Partner"} - {formatDate(referral.clickedAt)}
+                            </span>
+                          </div>
+                          <span className={`booking-status-pill status-${referral.status || (referral.converted ? "converted" : "clicked")}`}>
+                            {statusLabel(referral.status || (referral.converted ? "converted" : "clicked"))}
+                          </span>
+                        </div>
+                        <div className="booking-mini-grid">
+                          <span>
+                            <strong>Traveller</strong>
+                            {referral.user?.email || "Signed-out guest"}
+                          </span>
+                          <span>
+                            <strong>Confirmed</strong>
+                            {eur.format(referral.confirmedCommissionEUR || 0)}
+                          </span>
+                          <span>
+                            <strong>Paid</strong>
+                            {eur.format(referral.paidCommissionEUR || 0)}
+                          </span>
+                        </div>
+                        <div className="booking-card-actions">
+                          {referral.outboundUrl && (
+                            <a className="button secondary compact" href={referral.outboundUrl} target="_blank" rel="noreferrer">
+                              Partner page
+                            </a>
+                          )}
+                        </div>
+                        <details className="booking-card-details">
+                          <summary>Details and update</summary>
+                          <div className="booking-detail-strip">
+                            <span>
+                              <strong>Travellex code</strong>
+                              {referral.trackingCode || "legacy booking"}
+                            </span>
+                            <span>
+                              <strong>Estimated</strong>
+                              {eur.format(referral.estimatedCommissionEUR || 0)}
+                            </span>
+                            <span>
+                              <strong>Booking ID</strong>
+                              {referral.partnerBookingId || "Not saved"}
+                            </span>
+                          </div>
+                          <div className="commission-edit-grid booking-edit-grid">
+                            <label className="field">
+                              <span>Booking amount EUR</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={referralField(referral, "bookingValueEUR")}
+                                onChange={(event) => updateReferralField(referral._id, "bookingValueEUR", event.target.value)}
+                              />
+                            </label>
+                            <label className="field">
+                              <span>Commission %</span>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={referralField(referral, "commissionRatePercent")}
+                                onChange={(event) => updateReferralField(referral._id, "commissionRatePercent", event.target.value)}
+                              />
+                            </label>
+                            <label className="field">
+                              <span>Commission EUR</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={referralField(referral, "commissionEUR") || referral.confirmedCommissionEUR || ""}
+                                onChange={(event) => updateReferralField(referral._id, "commissionEUR", event.target.value)}
+                              />
+                            </label>
+                            <label className="field">
+                              <span>Paid EUR</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={referralField(referral, "paidCommissionEUR")}
+                                onChange={(event) => updateReferralField(referral._id, "paidCommissionEUR", event.target.value)}
+                              />
+                            </label>
+                            <label className="field">
+                              <span>Status</span>
+                              <select
+                                value={referralField(referral, "status") || referral.status || "clicked"}
+                                onChange={(event) => updateReferralField(referral._id, "status", event.target.value)}
+                              >
+                                {referralStatuses.map((status) => (
+                                  <option key={status} value={status}>
+                                    {statusLabel(status)}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label className="field">
+                              <span>Notes</span>
+                              <input
+                                value={referralField(referral, "notes")}
+                                onChange={(event) => updateReferralField(referral._id, "notes", event.target.value)}
+                                placeholder="Partner invoice, booking id, payout note"
+                              />
+                            </label>
+                            <button className="button primary compact" type="button" onClick={() => handleReferralConversion(referral._id)}>
+                              Save booking
+                            </button>
+                          </div>
+                        </details>
                       </div>
                     </article>
                   )}

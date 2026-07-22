@@ -4725,7 +4725,9 @@ textarea:focus {
 }
 
 .referral-row {
+  display: block;
   align-items: flex-start;
+  overflow: hidden;
 }
 
 .referral-top-collection {
@@ -4733,7 +4735,174 @@ textarea:focus {
 }
 
 .referral-row > div:first-child {
-  flex: 1 1 20rem;
+  min-width: 0;
+}
+
+.booking-card-collection .admin-collection-results {
+  gap: 0.65rem;
+}
+
+.booking-card-collection .admin-list-grid.view-cards {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  align-items: start;
+}
+
+.booking-card-collection .admin-list-grid.view-list {
+  grid-template-columns: 1fr;
+}
+
+.booking-card-collection .admin-list-grid.view-compact {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
+}
+
+.booking-card-collection .admin-list-grid.view-cards .referral-row,
+.booking-card-collection .admin-list-grid.view-compact .referral-row {
+  min-height: 0;
+  padding: 0.72rem;
+}
+
+.booking-card-summary {
+  display: grid;
+  gap: 0.68rem;
+  min-width: 0;
+}
+
+.booking-card-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: start;
+}
+
+.booking-card-head strong {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--admin-deep);
+  line-height: 1.16;
+}
+
+.booking-card-head span:not(.booking-status-pill) {
+  display: block;
+  overflow: hidden;
+  color: var(--admin-muted);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.booking-status-pill {
+  border: 1px solid var(--admin-line);
+  border-radius: 999px;
+  padding: 0.24rem 0.48rem;
+  background: var(--admin-surface);
+  color: var(--admin-muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.booking-status-pill.status-converted,
+.booking-status-pill.status-paid {
+  border-color: rgba(34, 197, 94, 0.32);
+  background: rgba(34, 197, 94, 0.1);
+  color: #166534;
+}
+
+.booking-status-pill.status-cancelled,
+.booking-status-pill.status-disputed {
+  border-color: rgba(220, 38, 38, 0.28);
+  background: rgba(220, 38, 38, 0.08);
+  color: #991b1b;
+}
+
+.booking-mini-grid,
+.booking-detail-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.42rem;
+}
+
+.booking-mini-grid span,
+.booking-detail-strip span {
+  display: grid;
+  min-width: 0;
+  gap: 0.1rem;
+  border: 1px solid var(--admin-line);
+  border-radius: 0.48rem;
+  padding: 0.46rem;
+  background: color-mix(in srgb, var(--admin-surface) 84%, white);
+  color: var(--admin-muted);
+  font-size: 0.76rem;
+}
+
+.booking-mini-grid strong,
+.booking-detail-strip strong {
+  overflow: hidden;
+  color: var(--admin-deep);
+  font-size: 0.66rem;
+  font-weight: 920;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.booking-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.booking-card-details {
+  border-top: 1px solid var(--admin-line);
+  padding-top: 0.58rem;
+}
+
+.booking-card-details summary {
+  cursor: pointer;
+  color: var(--admin-deep);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.booking-card-details[open] {
+  display: grid;
+  gap: 0.62rem;
+}
+
+.booking-edit-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+}
+
+.booking-card-collection .admin-list-grid.view-compact .booking-card-details,
+.booking-card-collection .admin-list-grid.view-compact .booking-card-actions {
+  display: none;
+}
+
+.booking-card-collection .admin-list-grid.view-compact .booking-mini-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.booking-card-collection .admin-list-grid.view-list .referral-row {
+  padding: 0.62rem 0.72rem;
+}
+
+.booking-card-collection .admin-list-grid.view-list .booking-mini-grid {
+  grid-template-columns: repeat(3, minmax(8rem, 1fr));
+}
+
+@media (max-width: 680px) {
+  .booking-card-head,
+  .booking-mini-grid,
+  .booking-detail-strip,
+  .booking-edit-grid,
+  .booking-card-collection .admin-list-grid.view-list .booking-mini-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .commission-edit-grid {
@@ -5897,7 +6066,7 @@ textarea:focus {
 }
 
 .admin-list-grid.view-cards {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
   gap: 0.55rem;
 }
 
@@ -5905,6 +6074,13 @@ textarea:focus {
   align-content: start;
   align-items: stretch;
   grid-template-columns: 1fr;
+}
+
+.admin-list-grid.view-cards .admin-row p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .admin-list-grid.view-cards .button-row,
