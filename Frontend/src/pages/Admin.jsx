@@ -3195,7 +3195,7 @@ export default function Admin() {
                   )}
                 </section>
                 <AdminCollection
-                  className="admin-list"
+                  className="admin-list tour-card-collection"
                   items={tours}
                   label="tours"
                   emptyText="No tours yet."
@@ -3502,7 +3502,7 @@ export default function Admin() {
                           )}
                         </div>
                       </div>
-                      <div className="enquiry-detail-grid">
+                      <div className="enquiry-quick-grid">
                         <span>
                           <strong>Email</strong>
                           {enquiry.email || "Not provided"}
@@ -3515,56 +3515,76 @@ export default function Admin() {
                           <strong>Request</strong>
                           {enquiry.requestType === "quote" ? "Quote request" : "Question"}
                         </span>
-                        <span>
-                          <strong>Tour</strong>
-                          {enquiry.tour?.title || "General enquiry"}
-                        </span>
-                        <span>
-                          <strong>Partner</strong>
-                          {enquiry.partner?.name || "Not assigned"}
-                        </span>
-                        <span>
-                          <strong>Travel date</strong>
-                          {enquiry.travelDate ? formatDate(enquiry.travelDate) : "Not provided"}
-                        </span>
-                        <span>
-                          <strong>Group size</strong>
-                          {enquiry.groupSize || "Not provided"}
-                        </span>
-                        <span>
-                          <strong>Budget</strong>
-                          {enquiry.budgetEUR ? eur.format(enquiry.budgetEUR) : "Not provided"}
-                        </span>
                       </div>
-                      <section className="enquiry-message-body" aria-label="Traveller message body">
-                        <span>Message body</span>
-                        {enquiryMessageLines(enquiry).map((line, index) => (
-                          <p key={`${enquiry._id}-message-${index}`}>{line}</p>
-                        ))}
-                      </section>
-                    </div>
-                    <div className="enquiry-status-actions">
-                      <span>Update status</span>
-                      <select value={enquiry.status} onChange={(event) => handleStatusChange(enquiry._id, event.target.value)}>
-                        {enquiryStatusOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="enquiry-status-button-grid">
-                        {enquiryStatusOptions.map((option) => (
-                          <button
-                            className={enquiry.status === option.value ? "active" : ""}
-                            key={option.value}
-                            type="button"
-                            onClick={() => handleStatusChange(enquiry._id, option.value)}
-                            disabled={enquiry.status === option.value}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
+                      <details className="enquiry-toggle-panel">
+                        <summary>View message and details</summary>
+                        <div className="enquiry-detail-grid">
+                          <span>
+                            <strong>Email</strong>
+                            {enquiry.email || "Not provided"}
+                          </span>
+                          <span>
+                            <strong>Destination</strong>
+                            {enquiry.destination || enquiry.tour?.location || "Not provided"}
+                          </span>
+                          <span>
+                            <strong>Request</strong>
+                            {enquiry.requestType === "quote" ? "Quote request" : "Question"}
+                          </span>
+                          <span>
+                            <strong>Tour</strong>
+                            {enquiry.tour?.title || "General enquiry"}
+                          </span>
+                          <span>
+                            <strong>Partner</strong>
+                            {enquiry.partner?.name || "Not assigned"}
+                          </span>
+                          <span>
+                            <strong>Travel date</strong>
+                            {enquiry.travelDate ? formatDate(enquiry.travelDate) : "Not provided"}
+                          </span>
+                          <span>
+                            <strong>Group size</strong>
+                            {enquiry.groupSize || "Not provided"}
+                          </span>
+                          <span>
+                            <strong>Budget</strong>
+                            {enquiry.budgetEUR ? eur.format(enquiry.budgetEUR) : "Not provided"}
+                          </span>
+                        </div>
+                        <section className="enquiry-message-body" aria-label="Traveller message body">
+                          <span>Message body</span>
+                          {enquiryMessageLines(enquiry).map((line, index) => (
+                            <p key={`${enquiry._id}-message-${index}`}>{line}</p>
+                          ))}
+                        </section>
+                      </details>
+                      <details className="enquiry-toggle-panel enquiry-status-panel">
+                        <summary>Update status</summary>
+                        <div className="enquiry-status-actions">
+                          <span>Current status: {enquiryStatusLabel(enquiry.status)}</span>
+                          <select value={enquiry.status || "new"} onChange={(event) => handleStatusChange(enquiry._id, event.target.value)}>
+                            {enquiryStatusOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="enquiry-status-button-grid">
+                            {enquiryStatusOptions.map((option) => (
+                              <button
+                                className={(enquiry.status || "new") === option.value ? "active" : ""}
+                                key={option.value}
+                                type="button"
+                                onClick={() => handleStatusChange(enquiry._id, option.value)}
+                                disabled={(enquiry.status || "new") === option.value}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </details>
                     </div>
                   </article>
                 )}
