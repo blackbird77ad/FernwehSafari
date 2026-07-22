@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import DestinationStoryCard from "../components/DestinationStoryCard";
 import HeroSection from "../components/HeroSection";
+import SEO from "../components/SEO";
 import Spinner from "../components/Spinner";
 import StepCard from "../components/StepCard";
 import TestimonialCard from "../components/TestimonialCard";
 import TourCard from "../components/TourCard";
 import { getTours } from "../services/tourService";
+import { buildOrganizationSchema, buildTourItemListSchema, buildWebsiteSchema } from "../utils/seoConfig";
 import { destinationStories, testimonials } from "../utils/staticContent";
 import { activityOptions, destinationOptions, tourSortOptions } from "../utils/travelOptions";
 
@@ -21,6 +23,10 @@ export default function Home() {
   const activeQuickFilterCount = Object.entries(quickSearch).filter(
     ([key, value]) => value && !(key === "sort" && value === "featured")
   ).length;
+  const homeJsonLd = useMemo(
+    () => [buildOrganizationSchema(), buildWebsiteSchema(), buildTourItemListSchema(featuredTours)],
+    [featuredTours]
+  );
 
   useEffect(() => {
     getTours({ featured: true, limit: HOME_FEATURED_LIMIT })
@@ -48,6 +54,20 @@ export default function Home() {
 
   return (
     <>
+      <SEO
+        canonicalPath="/"
+        description="Travellex helps travellers from Germany and Europe compare Africa tours, Tanzania safaris, Zanzibar beach trips, Kilimanjaro routes and approved local operators."
+        jsonLd={homeJsonLd}
+        keywords={[
+          "Africa tours from Germany",
+          "Tanzania safari tours",
+          "Zanzibar tours",
+          "Kilimanjaro tours",
+          "Ngorongoro safari",
+          "Africa travel marketplace"
+        ]}
+        title="Africa Tours From Germany to Tanzania, Zanzibar and Beyond"
+      />
       <HeroSection />
       <section className={quickSearchOpen ? "instant-filter open" : "instant-filter collapsed"}>
         <div className="instant-filter-bar">
@@ -123,7 +143,7 @@ export default function Home() {
             <p className="eyebrow">Featured tours</p>
             <h2>Listings from approved partners.</h2>
           </div>
-          <Link className="button secondary" to="/tours?sort=featured">
+          <Link className="button secondary" to="/tours?featured=true&sort=featured">
             View all tours
           </Link>
         </div>
@@ -132,7 +152,7 @@ export default function Home() {
         ) : featuredTours.length ? (
           <div className="deal-feed">
             {featuredTours.map((tour) => (
-              <TourCard key={tour._id} tour={tour} />
+              <TourCard key={tour._id} tour={tour} variant="market" />
             ))}
           </div>
         ) : (
@@ -141,14 +161,33 @@ export default function Home() {
       </section>
       <section className="section fast-grid-section">
         <div className="quick-split-grid">
-          <Link to="/tours?category=Safari" className="quick-split-card safari">
+          <Link to="/destinations/tanzania-safari-tours" className="quick-split-card safari">
             <span>🦁</span>
             <strong>Africa Safaris</strong>
           </Link>
-          <Link to="/tours?category=Beach" className="quick-split-card coast">
+          <Link to="/destinations/zanzibar-tours" className="quick-split-card coast">
             <span>🏖️</span>
             <strong>Island & Coast</strong>
           </Link>
+        </div>
+      </section>
+      <section className="section seo-pathway-section">
+        <div className="section-heading split">
+          <div>
+            <p className="eyebrow">Popular searches</p>
+            <h2>Start with the route travellers search for most.</h2>
+          </div>
+          <Link className="button secondary" to="/destinations/germany-to-africa-tours">
+            Germany to Africa
+          </Link>
+        </div>
+        <div className="destination-seo-highlights">
+          <Link to="/destinations/tanzania-tours">Tanzania tours</Link>
+          <Link to="/destinations/zanzibar-tours">Zanzibar tours</Link>
+          <Link to="/destinations/tanzania-safari-tours">Tanzania safari</Link>
+          <Link to="/destinations/kilimanjaro-tours">Kilimanjaro tours</Link>
+          <Link to="/destinations/ngorongoro-crater-safari">Ngorongoro safari</Link>
+          <Link to="/destinations/africa-safari-tours">Africa safari tours</Link>
         </div>
       </section>
       <section className="section story-band">

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Travellex Africa tours</title>
+  <desc id="desc">Travellex preview card for Africa tours from Germany to Tanzania and Zanzibar.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#07101b"/>
+      <stop offset="0.58" stop-color="#0b1320"/>
+      <stop offset="1" stop-color="#0e7490"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="78%" cy="20%" r="45%">
+      <stop offset="0" stop-color="#c8a24a" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#c8a24a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#sun)"/>
+  <path d="M0 478c138-50 227-50 368-5 137 44 246 52 374-4 126-55 276-66 458 16v145H0Z" fill="#f5f7f8" opacity="0.14"/>
+  <path d="M0 528c159-58 277-44 412-8 148 39 285 25 408-23 132-52 250-42 380 18v115H0Z" fill="#c8a24a" opacity="0.25"/>
+  <text x="74" y="120" fill="#ffffff" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="42" font-weight="800">TRAVELLEX</text>
+  <text x="74" y="230" fill="#ffffff" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="76" font-weight="900">Africa tours from</text>
+  <text x="74" y="318" fill="#ffffff" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="76" font-weight="900">Germany to Tanzania</text>
+  <text x="74" y="398" fill="#d9b85c" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="54" font-weight="900">and Zanzibar.</text>
+  <text x="78" y="485" fill="#e9eef4" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="28" font-weight="650">Safari, coast, culture, Kilimanjaro and approved local operators.</text>
+</svg>

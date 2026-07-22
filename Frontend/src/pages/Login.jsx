@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import PasswordInput from "../components/PasswordInput";
+import SEO from "../components/SEO";
 import loginImage from "../assets/photos/kendwa-beach-tourist.png";
 import useAuth from "../hooks/useAuth";
+import { clearPendingBookingPath, getPathFromLocationState, getPendingBookingPath } from "../utils/bookingIntent";
 
 export default function Login() {
   const { login } = useAuth();
@@ -22,7 +24,11 @@ export default function Login() {
     try {
       const loggedInUser = await login(form);
       const isStaff = loggedInUser?.role === "admin" || loggedInUser?.role === "moderator";
-      const requestedPath = getRedirectPath(location.state?.from);
+      const requestedPath = getPathFromLocationState(location.state?.from) || getPendingBookingPath();
+
+      if (requestedPath) {
+        clearPendingBookingPath();
+      }
 
       navigate(isStaff ? "/admin" : requestedPath || "/dashboard", { replace: true });
     } catch (requestError) {
@@ -34,6 +40,7 @@ export default function Login() {
 
   return (
     <section className="auth-page">
+      <SEO canonicalPath="/login" noindex title="Travellex Login" />
       <div className="auth-split">
         <div className="login-image-card">
           <img src={loginImage} alt="Traveller enjoying Zanzibar beach" />
@@ -69,7 +76,7 @@ export default function Login() {
           {error && <p className="form-note error">{error}</p>}
           {error.toLowerCase().includes("verify") && (
             <p>
-              Need a new link? <Link to="/verify-email" state={{ email: form.email }}>Resend confirmation</Link>
+              Need a new link? <Link to="/verify-email" state={{ email: form.email, from: location.state?.from }}>Resend confirmation</Link>
             </p>
           )}
           <p>
@@ -78,22 +85,10 @@ export default function Login() {
             </Link>
           </p>
           <p>
-            No account yet? <Link to="/register">Register</Link>
+            No account yet? <Link to="/register" state={{ from: location.state?.from }}>Register</Link>
           </p>
         </form>
       </div>
     </section>
   );
-}
-
-function getRedirectPath(from) {
-  if (!from) {
-    return "";
-  }
-
-  if (typeof from === "string") {
-    return from;
-  }
-
-  return `${from.pathname || ""}${from.search || ""}${from.hash || ""}` || "";
 }

@@ -1,7 +1,7 @@
 {
   "name": "Travellex",
   "short_name": "Travellex",
-  "description": "Africa tours marketplace with Travellex-hosted booking sessions.",
+  "description": "Africa tours marketplace for Tanzania safari, Zanzibar coast, Kilimanjaro and Germany-to-Africa travel planning.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

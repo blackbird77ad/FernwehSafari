@@ -1,4 +1,6 @@
 import { useState } from "react";
+import SEO from "../components/SEO";
+import { buildFaqSchema } from "../utils/seoConfig";
 
 const faqGroups = [
   {
@@ -12,8 +14,8 @@ const faqGroups = [
   {
     category: "Booking & Refunds",
     items: [
-      ["Does Travellex take payment?", "Travellex tracks the handoff with a booking code. The approved operator confirms payment details on their own booking page or through Travellex support."],
-      ["Who confirms availability?", "The approved tour operator confirms live availability, inclusions, terms and payment details while Travellex keeps the booking code tracked."],
+      ["Does Travellex take payment?", "Most tours are completed on the approved operator's booking page. Travellex keeps your tour choice connected for support."],
+      ["Who confirms availability?", "The approved tour operator confirms live availability, inclusions, terms and payment details before you pay."],
       ["Can I ask questions before booking?", "Yes. Use the contact form or tour enquiry flow with dates, group size and destination priorities."]
     ]
   },
@@ -29,9 +31,17 @@ const faqGroups = [
 
 export default function FAQ() {
   const [openKey, setOpenKey] = useState("");
+  const faqItems = faqGroups.flatMap((group) => group.items);
 
   return (
     <>
+      <SEO
+        canonicalPath="/faq"
+        description="Answers about Travellex Africa tours, Tanzania safari planning, Zanzibar booking, operators, payments, safety and travel preparation."
+        jsonLd={buildFaqSchema(faqItems)}
+        keywords={["Travellex FAQ", "Africa tour booking questions", "Tanzania safari FAQ", "Zanzibar travel FAQ"]}
+        title="Africa Tour Booking FAQ"
+      />
       <section className="page-hero compact-hero faq-hero">
         <p className="eyebrow">FAQ</p>
         <h1>Fast answers before you choose a route.</h1>

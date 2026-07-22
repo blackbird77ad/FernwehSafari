@@ -1,5 +1,7 @@
 import { useState } from "react";
+import SEO from "../components/SEO";
 import { createEnquiry } from "../services/enquiryService";
+import { buildOrganizationSchema } from "../utils/seoConfig";
 import { destinationOptions } from "../utils/travelOptions";
 
 export default function Contact() {
@@ -34,16 +36,29 @@ export default function Contact() {
 
   return (
     <>
+      <SEO
+        canonicalPath="/contact"
+        description="Contact Travellex for Africa travel questions, Tanzania safari planning, Zanzibar tours and Germany-to-Africa trip support."
+        jsonLd={buildOrganizationSchema()}
+        keywords={["Contact Travellex", "Africa travel questions", "Tanzania safari enquiry", "Zanzibar tour enquiry"]}
+        title="Contact Travellex"
+      />
       <section className="page-hero compact-hero contact-hero">
         <p className="eyebrow">Contact</p>
         <h1>Fast touchpoints for Africa travel questions.</h1>
       </section>
       <section className="section contact-action-layout">
-        <a className="touch-action whatsapp" href="https://wa.me/4917676062927" target="_blank" rel="noreferrer">
+        <a
+          className="touch-action whatsapp"
+          href="https://wa.me/4917676062927"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Chat with Travellex on WhatsApp"
+        >
           <span>💬</span>
           Chat on WhatsApp
         </a>
-        <a className="touch-action email" href="mailto:experience@travellex.tours">
+        <a className="touch-action email" href="mailto:experience@travellex.tours" aria-label="Email Travellex">
           <span>✉️</span>
           experience@travellex.tours
         </a>

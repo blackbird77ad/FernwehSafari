@@ -27,12 +27,12 @@ export default function Footer() {
       </div>
       <div>
         <h3>Destinations</h3>
-        <Link to="/tours?location=Anywhere+in+Africa">Africa-wide</Link>
-        <Link to="/tours?location=Kenya+safari">Kenya safari</Link>
-        <Link to="/tours?location=Botswana+Okavango+Delta">Botswana</Link>
-        <Link to="/tours?location=Morocco+cultural+tour">Morocco</Link>
-        <Link to="/tours?location=Ngorongoro">Ngorongoro</Link>
-        <Link to="/tours?location=Nungwi">Zanzibar coast</Link>
+        <Link to="/destinations/germany-to-africa-tours">From Germany</Link>
+        <Link to="/destinations/tanzania-tours">Tanzania tours</Link>
+        <Link to="/destinations/zanzibar-tours">Zanzibar coast</Link>
+        <Link to="/destinations/tanzania-safari-tours">Tanzania safari</Link>
+        <Link to="/destinations/ngorongoro-crater-safari">Ngorongoro</Link>
+        <Link to="/destinations/kilimanjaro-tours">Kilimanjaro</Link>
       </div>
       <div>
         <h3>Partners</h3>

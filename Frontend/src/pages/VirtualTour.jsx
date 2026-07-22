@@ -8,6 +8,7 @@ import ngorongoroPanorama from "../assets/photos/Ngorongoro-National-Park-Tanzan
 import oldFortPanorama from "../assets/photos/Old fort Zanzibar.webp";
 import pajePanorama from "../assets/photos/Paje_Zanzibar-kiting.webp";
 import prisonIslandPanorama from "../assets/photos/prison-island-from-above.webp";
+import SEO from "../components/SEO";
 import Spinner from "../components/Spinner";
 
 const VirtualTourCanvas = lazy(() => import("../components/VirtualTourCanvas"));
@@ -83,6 +84,12 @@ export default function VirtualTour() {
 
   return (
     <>
+      <SEO
+        canonicalPath="/virtual-tour"
+        description="Preview Tanzania, Zanzibar, Kilimanjaro, Ngorongoro, Stone Town and island travel scenes before choosing an Africa tour on Travellex."
+        keywords={["Africa virtual tour", "Zanzibar virtual tour", "Tanzania safari preview", "Kilimanjaro travel preview"]}
+        title="Africa Virtual Tour Preview"
+      />
       <section className="page-hero compact-hero virtual-tour-hero">
         <p className="eyebrow">Virtual tour</p>
         <h1>Preview the feeling, then book the real journey.</h1>

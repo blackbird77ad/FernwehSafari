@@ -4,6 +4,7 @@ const sendResponse = require("../utils/sendResponse");
 const TourPartner = require("../models/TourPartner");
 const crypto = require("node:crypto");
 const { getCommissionSettings, normalizeCommissionRate } = require("../lib/commissionSettings");
+const { createApprovedPartnerFromAdmin, normalizePartnerEmail } = require("../lib/partnerApproval");
 
 function isStaff(user) {
   return user?.role === "admin" || user?.role === "moderator";
@@ -21,7 +22,7 @@ function serializePartner(partner, includeSecret = false) {
 
 const listPartners = asyncHandler(async (req, res) => {
   const filters = isStaff(req.user) && req.query.includeInactive === "true" ? {} : { isActive: true };
-  const query = TourPartner.find(filters).sort({ name: 1 });
+  const query = TourPartner.find(filters).populate("ownerUser", "name email role suspended").sort({ name: 1 });
 
   if (isStaff(req.user)) {
     query.select("+postbackSecret");
@@ -35,10 +36,17 @@ const createPartner = asyncHandler(async (req, res) => {
   const settings = await getCommissionSettings();
   const payload = {
     ...req.body,
+    contactEmail: normalizePartnerEmail(req.body.contactEmail),
     commissionRatePercent: normalizeCommissionRate(req.body.commissionRatePercent, settings.defaultCommissionRatePercent)
   };
-  const partner = await TourPartner.create(payload);
-  sendResponse(res, 201, { partner: serializePartner(partner, true) });
+  const result = await createApprovedPartnerFromAdmin(payload);
+  await result.partner.populate("ownerUser", "name email role suspended");
+
+  sendResponse(res, 201, {
+    accountCreated: result.accountCreated,
+    emailStatus: result.emailStatus,
+    partner: serializePartner(result.partner, true)
+  });
 });
 
 const updatePartner = asyncHandler(async (req, res) => {

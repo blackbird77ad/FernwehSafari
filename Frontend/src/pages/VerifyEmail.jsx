@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import SEO from "../components/SEO";
 import useAuth from "../hooks/useAuth";
 import { resendVerification } from "../services/authService";
+import { clearPendingBookingPath, getPathFromLocationState, getPendingBookingPath } from "../utils/bookingIntent";
 
 const verificationRequests = new Map();
 
@@ -17,6 +19,7 @@ export default function VerifyEmail() {
   const { verifyEmail } = useAuth();
   const location = useLocation();
   const token = useMemo(() => new URLSearchParams(location.search).get("token"), [location.search]);
+  const continuePath = getPathFromLocationState(location.state?.from) || getPendingBookingPath();
   const [email, setEmail] = useState(location.state?.email || "");
   const [message, setMessage] = useState(
     token ? "Confirming your email..." : location.state?.message || "Check your inbox for the Travellex confirmation link."
@@ -78,13 +81,14 @@ export default function VerifyEmail() {
 
   return (
     <section className="auth-page verify-email-page">
+      <SEO canonicalPath="/verify-email" noindex title="Confirm Travellex Email" />
       <div className="auth-card verify-email-card">
         <p className="eyebrow">Email confirmation</p>
         <h1>{verified ? "You are verified." : "Confirm your Travellex email."}</h1>
         <p className={tone === "error" ? "form-note error" : "form-note"}>{message}</p>
         {verified ? (
-          <Link className="button primary" to="/dashboard">
-            Continue to dashboard
+          <Link className="button primary" to={continuePath || "/dashboard"} onClick={clearPendingBookingPath}>
+            {continuePath ? "Continue booking" : "Continue to dashboard"}
           </Link>
         ) : (
           <form className="panel-form" onSubmit={handleResend}>
@@ -98,7 +102,7 @@ export default function VerifyEmail() {
           </form>
         )}
         <p>
-          Already confirmed? <Link to="/login">Login</Link>
+          Already confirmed? <Link to="/login" state={{ from: continuePath }}>Login</Link>
         </p>
       </div>
     </section>

@@ -1,0 +1,24 @@
+# Travellex
+
+Travellex is an Africa-focused tour marketplace at https://travellex.tours.
+
+Core search intent:
+- Africa tours from Germany and Europe
+- Tanzania safari tours
+- Zanzibar tours and beach holidays
+- Kilimanjaro tours
+- Ngorongoro Crater safari tours
+- Stone Town, Nungwi, Kendwa, Paje, Jozani Forest and Mnemba Island tours
+
+Important pages:
+- https://travellex.tours/
+- https://travellex.tours/tours
+- https://travellex.tours/destinations/germany-to-africa-tours
+- https://travellex.tours/destinations/tanzania-tours
+- https://travellex.tours/destinations/zanzibar-tours
+- https://travellex.tours/destinations/tanzania-safari-tours
+- https://travellex.tours/destinations/africa-safari-tours
+- https://travellex.tours/gallery
+- https://travellex.tours/contact
+
+Travellex helps travellers compare approved local operators, EUR pricing, route details, images, videos and booking paths before continuing to the selected operator.

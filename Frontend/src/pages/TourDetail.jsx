@@ -2,13 +2,15 @@ import { Suspense, lazy, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import EnquiryForm from "../components/EnquiryForm";
 import ImageGallery from "../components/ImageGallery";
+import SEO from "../components/SEO";
 import Spinner from "../components/Spinner";
 import fallbackTourImage from "../assets/photos/ngorongoro-wide-with-tourists.jpg";
 import useAuth from "../hooks/useAuth";
 import { createGuideApplication, createGuideBooking } from "../services/guideService";
-import { createReferral } from "../services/referralService";
 import { getTour } from "../services/tourService";
+import { setPendingBookingPath } from "../utils/bookingIntent";
 import { eur } from "../utils/formatters";
+import { buildBreadcrumbSchema, buildTourSchema } from "../utils/seoConfig";
 import { destinationStories } from "../utils/staticContent";
 
 const VirtualTourCanvas = lazy(() => import("../components/VirtualTourCanvas"));
@@ -69,30 +71,26 @@ export default function TourDetail() {
       .finally(() => setLoading(false));
   }, [slug]);
 
-  async function handleReferral() {
+  function handleReferral() {
     if (!tour || bookingLoading) {
       return;
     }
 
-    setBookingLoading(true);
+    const bookingPath = `/booking/start/${tour._id}`;
 
-    try {
-      const response = await createReferral({ tourId: tour._id });
-      const trackingCode = response.data.referral?.trackingCode;
-
-      if (!trackingCode) {
-        throw new Error("Travellex booking tracking could not be created.");
-      }
-
-      navigate(`/booking/${trackingCode}`, {
+    if (!isAuthenticated) {
+      setPendingBookingPath(bookingPath);
+      navigate("/login", {
         state: {
-          referral: response.data.referral
+          from: bookingPath,
+          message: "Sign in or create a free traveller account to continue booking."
         }
       });
-    } catch (error) {
-      setMessage(error.message);
-      setBookingLoading(false);
+      return;
     }
+
+    setBookingLoading(true);
+    navigate(bookingPath);
   }
 
   async function handleSave() {
@@ -270,9 +268,34 @@ export default function TourDetail() {
     { label: "Payment terms", value: tour.paymentTerms }
   ].filter((item) => item.value);
   const canApplyAsGuide = !user || user.role === "traveller" || user.role === "tour_guide";
+  const tourJsonLd = [
+    buildBreadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Tours", path: "/tours" },
+      { name: tour.title, path: `/tours/${tour.slug}` }
+    ]),
+    buildTourSchema(tour)
+  ];
 
   return (
     <>
+      <SEO
+        canonicalPath={`/tours/${tour.slug}`}
+        description={tour.shortDescription || tour.description || `Book ${tour.title} with approved Travellex operators.`}
+        image={tour.images?.[0]}
+        jsonLd={tourJsonLd}
+        keywords={[
+          tour.title,
+          tour.location,
+          tour.category,
+          tour.comfortLevel,
+          "Africa tours from Germany",
+          "Tanzania safari tours",
+          "Zanzibar tours"
+        ].filter(Boolean)}
+        title={`${tour.title} Tour`}
+        type="article"
+      />
       <section className="detail-hero destination-detail-hero" style={{ backgroundImage: `url(${heroImage})` }}>
         <div>
           <p className="eyebrow">{tour.category}</p>
@@ -280,7 +303,7 @@ export default function TourDetail() {
           <p>{destinationStory?.hook || tour.shortDescription}</p>
           <div className="button-row">
             <button className="button primary" type="button" onClick={handleReferral} disabled={bookingLoading}>
-              {bookingLoading ? "Starting..." : "Book with Travellex"}
+              {bookingLoading ? "Starting..." : "Book tour"}
             </button>
             <button className="button secondary light" type="button" onClick={handleSave}>
               Save tour
@@ -321,9 +344,9 @@ export default function TourDetail() {
             </span>
           </div>
           <div className="content-block">
-            <p>📍 {compactDescription}</p>
+            <p>{compactDescription}</p>
             <p>
-              🧭 Duration: {tour.duration}. Route base: {tour.location}. Listed from {eur.format(tour.priceEUR)} {tour.priceBasis || "Per person"}.
+              Duration: {tour.duration}. Route base: {tour.location}. Listed from {eur.format(tour.priceEUR)} {tour.priceBasis || "Per person"}.
             </p>
           </div>
           <div className="tour-comparison-panel">
@@ -376,7 +399,7 @@ export default function TourDetail() {
               </div>
             </div>
           )}
-          <ImageGallery images={tour.images} />
+          <ImageGallery altBase={tour.title} images={tour.images} />
           {vrScene && (
             <div className="tour-vr-preview" id="tour-vr">
               <div className="section-heading split">
@@ -656,14 +679,14 @@ export default function TourDetail() {
       <div className="sticky-booking-bar">
         <span>
           <strong>{tour.title}</strong>
-          <small>{eur.format(tour.priceEUR)} · Travellex tracked booking</small>
+          <small>{eur.format(tour.priceEUR)} · Continue with operator</small>
         </span>
         <div className="button-row">
           <a className="button secondary compact" href="#quote">
             Quote
           </a>
           <button className="button primary compact" type="button" onClick={handleReferral} disabled={bookingLoading}>
-            {bookingLoading ? "Starting..." : "Book with Travellex"}
+            {bookingLoading ? "Starting..." : "Book tour"}
           </button>
         </div>
       </div>

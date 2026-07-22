@@ -7,6 +7,7 @@ const Tour = require("../models/Tour");
 const { notifyOwner, notifyUser } = require("../lib/resend");
 
 const clientUrl = (process.env.CLIENT_URL || "https://travellex.tours").replace(/\/+$/, "");
+const MAX_TOUR_MEDIA_ITEMS = Tour.MAX_TOUR_MEDIA_ITEMS || 5;
 
 function escapeRegExp(value = "") {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -223,6 +224,27 @@ function ensureValidGroupSizeRange(payload, existingTour = {}) {
   }
 }
 
+function normalizeTourMediaItems(value) {
+  const items = Array.isArray(value)
+    ? value.map((item) => String(item || "").trim()).filter(Boolean)
+    : String(value || "")
+        .split(/\r?\n/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+  if (items.length > MAX_TOUR_MEDIA_ITEMS) {
+    throw new ApiError(422, `Tours can include up to ${MAX_TOUR_MEDIA_ITEMS} images or videos.`);
+  }
+
+  return [...new Set(items)];
+}
+
+function normalizeTourMediaPayload(payload) {
+  if (payload.images !== undefined) {
+    payload.images = normalizeTourMediaItems(payload.images);
+  }
+}
+
 async function getOwnedPartner(userId) {
   return TourPartner.findOne({ ownerUser: userId, isActive: true });
 }
@@ -330,6 +352,7 @@ const createTour = asyncHandler(async (req, res) => {
     stripAdminOnlyTourFields(payload);
   }
 
+  normalizeTourMediaPayload(payload);
   ensureValidGroupSizeRange(payload);
 
   const tour = await Tour.create(payload);
@@ -379,6 +402,8 @@ const updateTour = asyncHandler(async (req, res) => {
   if (!canManageTourVr(req.user)) {
     stripAdminOnlyTourFields(payload);
   }
+
+  normalizeTourMediaPayload(payload);
 
   if (payload.title && !payload.slug) {
     payload.slug = await uniqueSlug(payload.title, req.params.id);

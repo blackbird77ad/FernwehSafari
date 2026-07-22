@@ -125,7 +125,7 @@ const createReferral = asyncHandler(async (req, res) => {
 
   const referral = await Referral.create({
     trackingCode,
-    user: req.user?._id,
+    user: req.user._id,
     tour: tour._id,
     partner: tour.partner._id,
     outboundUrl: bookingURL || undefined,
@@ -181,6 +181,11 @@ const openBookingSession = asyncHandler(async (req, res) => {
   if (!referral?.outboundUrl) {
     throw new ApiError(404, "Booking session not found.");
   }
+
+  referral.clickedAt = new Date();
+  referral.ipAddress = req.ip || referral.ipAddress;
+  referral.userAgent = req.get("user-agent") || referral.userAgent;
+  await referral.save();
 
   res.redirect(302, referral.outboundUrl);
 });

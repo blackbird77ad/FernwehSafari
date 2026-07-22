@@ -8,10 +8,12 @@ const galleryRoutes = require("./routes/galleryRoutes");
 const guideRoutes = require("./routes/guideRoutes");
 const partnerRoutes = require("./routes/partnerRoutes");
 const referralRoutes = require("./routes/referralRoutes");
+const seoRoutes = require("./routes/seoRoutes");
 const settingsRoutes = require("./routes/settingsRoutes");
 const tourRoutes = require("./routes/tourRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 const userRoutes = require("./routes/userRoutes");
+const { robots, sitemap } = require("./controllers/seoController");
 const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
@@ -49,8 +51,17 @@ function isAllowedOrigin(origin) {
   }
 
   try {
-    const { hostname, protocol } = new URL(normalizedOrigin);
+    const { hostname, port, protocol } = new URL(normalizedOrigin);
     const isHttps = protocol === "https:";
+    const isLocalDevOrigin =
+      protocol === "http:" &&
+      ["localhost", "127.0.0.1"].includes(hostname) &&
+      ["5173", "5174", "5175", "5176"].includes(port);
+
+    if (isLocalDevOrigin) {
+      return true;
+    }
+
     return (
       isHttps &&
       (hostname === "travellex.tours" ||
@@ -89,6 +100,9 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+app.get("/robots.txt", robots);
+app.get("/sitemap.xml", sitemap);
+
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/applications", applicationRoutes);
@@ -98,6 +112,7 @@ app.use("/api/enquiries", enquiryRoutes);
 app.use("/api/gallery", galleryRoutes);
 app.use("/api/guides", guideRoutes);
 app.use("/api/referrals", referralRoutes);
+app.use("/api/seo", seoRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/users", userRoutes);

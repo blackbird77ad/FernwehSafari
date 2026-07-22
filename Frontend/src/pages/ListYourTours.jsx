@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import SEO from "../components/SEO";
 import useAuth from "../hooks/useAuth";
 import { createTourCompanyApplication } from "../services/applicationService";
 
@@ -117,6 +118,12 @@ export default function ListYourTours() {
 
   return (
     <>
+      <SEO
+        canonicalPath="/partner"
+        description="Tour companies can apply to list Africa tours on Travellex, reaching travellers searching for Tanzania, Zanzibar, safari, coast, culture and adventure routes."
+        keywords={["list Africa tours", "tour operator marketplace", "Travellex partner", "Tanzania tour company", "Zanzibar tour operator"]}
+        title="List Africa Tours With Travellex"
+      />
       <section className="partner-pitch-hero">
         <div>
           <p className="eyebrow">Partner & referral program</p>

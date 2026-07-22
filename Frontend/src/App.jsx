@@ -2,14 +2,17 @@ import { lazy, Suspense } from "react";
 import { Navigate, Routes, Route, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import SEO from "./components/SEO";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
 import Spinner from "./components/Spinner";
 import About from "./pages/About";
 import Admin from "./pages/Admin";
+import BookingStart from "./pages/BookingStart";
 import BookingSession from "./pages/BookingSession";
 import Contact from "./pages/Contact";
 import Dashboard from "./pages/Dashboard";
+import DestinationLanding from "./pages/DestinationLanding";
 import FAQ from "./pages/FAQ";
 import ForgotPassword from "./pages/ForgotPassword";
 import Gallery from "./pages/Gallery";
@@ -38,12 +41,25 @@ export default function App() {
 
   return (
     <div className={isWorkspace ? "app-shell admin-app-shell" : "app-shell"}>
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
+      {isWorkspace && <SEO canonicalPath={location.pathname} noindex title="Travellex Workspace" />}
       {!isWorkspace && <Navbar />}
-      <main className={isWorkspace ? "admin-main" : ""}>
+      <main className={isWorkspace ? "admin-main" : ""} id="main-content" tabIndex="-1">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/tours" element={<Tours />} />
           <Route path="/tours/:slug" element={<TourDetail />} />
+          <Route path="/destinations/:slug" element={<DestinationLanding />} />
+          <Route
+            path="/booking/start/:tourId"
+            element={
+              <ProtectedRoute>
+                <BookingStart />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/booking/:trackingCode" element={<BookingSession />} />
           <Route path="/about" element={<About />} />
           <Route path="/gallery" element={<Gallery />} />

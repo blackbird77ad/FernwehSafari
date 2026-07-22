@@ -5,9 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
       name="description"
-      content="Travellex organizes Africa-focused tours and adventure travel with a simple trip planning and inquiry flow."
+      content="Travellex helps travellers from Germany and Europe compare Africa tours, Tanzania safaris, Zanzibar beach trips, Kilimanjaro routes and approved local operators."
     >
+    <meta
+      name="keywords"
+      content="Africa tours from Germany, Tanzania safari tours, Zanzibar tours, Kilimanjaro tours, Ngorongoro safari, Germany to Africa travel, Africa travel marketplace"
+    >
+    <meta name="robots" content="index, follow, max-image-preview:large">
     <meta name="theme-color" content="#0b1320">
+    <meta property="og:site_name" content="Travellex">
+    <meta property="og:title" content="Travellex | Africa Tours From Germany to Tanzania and Zanzibar">
+    <meta
+      property="og:description"
+      content="Compare curated Africa tours from approved operators, with strong coverage for Tanzania safaris, Zanzibar coast trips, Kilimanjaro and Ngorongoro."
+    >
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://travellex.tours/">
+    <meta property="og:image" content="https://travellex.tours/travellex-og.svg">
+    <meta property="og:locale" content="en_US">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Travellex | Africa Tours From Germany to Tanzania and Zanzibar">
+    <meta
+      name="twitter:description"
+      content="Compare Tanzania safari, Zanzibar, Kilimanjaro and wider Africa tours from approved local operators."
+    >
+    <meta name="twitter:image" content="https://travellex.tours/travellex-og.svg">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Travellex">
@@ -15,6 +37,40 @@
     <link rel="icon" type="image/png" href="/src/assets/photos/Travellex-favicon.png">
     <link rel="apple-touch-icon" href="/src/assets/photos/Travellex-favicon.png">
     <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="canonical" href="https://travellex.tours/">
+    <link rel="alternate" href="https://travellex.tours/" hreflang="en">
+    <link rel="alternate" href="https://travellex.tours/" hreflang="x-default">
+    <script type="application/ld+json" id="travellex-jsonld-static">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "TravelAgency",
+            "@id": "https://travellex.tours/#organization",
+            "name": "Travellex",
+            "url": "https://travellex.tours/",
+            "logo": "https://travellex.tours/travellex-pwa-icon.svg",
+            "image": "https://travellex.tours/travellex-og.svg",
+            "email": "experience@travellex.tours",
+            "telephone": "+49 176 7606 2927",
+            "areaServed": ["Germany", "Tanzania", "Zanzibar", "Africa"],
+            "knowsAbout": ["Tanzania safari", "Zanzibar tours", "Kilimanjaro tours", "Ngorongoro safari", "Germany to Africa travel"]
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://travellex.tours/#website",
+            "name": "Travellex",
+            "url": "https://travellex.tours/",
+            "publisher": { "@id": "https://travellex.tours/#organization" },
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": "https://travellex.tours/tours?search={search_term_string}",
+              "query-input": "required name=search_term_string"
+            }
+          }
+        ]
+      }
+    </script>
     <script>
       (function () {
         try {
@@ -54,7 +110,7 @@
       };
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <title>Travellex</title>
+    <title>Travellex | Africa Tours From Germany to Tanzania and Zanzibar</title>
   </head>
   <body>
     <div id="root"></div>

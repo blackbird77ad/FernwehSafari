@@ -59,6 +59,7 @@ const COMFORT_LEVELS = ["Budget", "Midrange", "Luxury", "Premium", "Mixed"];
 const TOUR_TYPES = ["Private", "Shared", "Private or shared"];
 const PRICE_BASIS = ["Per person", "Per group", "Per vehicle", "Per booking", "On request"];
 const CONFIRMATION_TYPES = ["On request", "Manual confirmation", "Instant confirmation"];
+const MAX_TOUR_MEDIA_ITEMS = 5;
 
 const tourSchema = new mongoose.Schema(
   {
@@ -134,7 +135,13 @@ const tourSchema = new mongoose.Schema(
     },
     images: {
       type: [String],
-      default: []
+      default: [],
+      validate: {
+        validator(items = []) {
+          return items.length <= MAX_TOUR_MEDIA_ITEMS;
+        },
+        message: `Tours can include up to ${MAX_TOUR_MEDIA_ITEMS} image or video URLs.`
+      }
     },
     comfortLevel: {
       type: String,
@@ -343,3 +350,4 @@ module.exports.COMFORT_LEVELS = COMFORT_LEVELS;
 module.exports.TOUR_TYPES = TOUR_TYPES;
 module.exports.PRICE_BASIS = PRICE_BASIS;
 module.exports.CONFIRMATION_TYPES = CONFIRMATION_TYPES;
+module.exports.MAX_TOUR_MEDIA_ITEMS = MAX_TOUR_MEDIA_ITEMS;

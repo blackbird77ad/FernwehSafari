@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import SEO from "../components/SEO";
 import TestimonialCard from "../components/TestimonialCard";
 import { destinationStories, testimonials } from "../utils/staticContent";
 
@@ -7,6 +8,12 @@ export default function Testimonials() {
 
   return (
     <>
+      <SEO
+        canonicalPath="/testimonials"
+        description="Traveller stories from Travellex Africa routes, including Tanzania safari, Zanzibar coast, Kilimanjaro and Stone Town planning experiences."
+        keywords={["Travellex testimonials", "Africa tour reviews", "Tanzania safari reviews", "Zanzibar travel stories"]}
+        title="Africa Tour Traveller Stories"
+      />
       <section className="page-hero compact-hero testimonials-hero">
         <p className="eyebrow">Testimonials</p>
         <h1>Traveller stories from Africa routes.</h1>

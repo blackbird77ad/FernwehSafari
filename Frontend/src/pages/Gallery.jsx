@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import SEO from "../components/SEO";
 import Spinner from "../components/Spinner";
 import useAuth from "../hooks/useAuth";
 import { createGalleryMedia, getGalleryMedia } from "../services/galleryService";
+import { absoluteUrl } from "../utils/seoConfig";
 import { destinationStories, gallerySeedMedia } from "../utils/staticContent";
 
 const emptySubmission = {
@@ -50,6 +52,13 @@ export default function Gallery() {
   const galleryItems = [...seededMedia, ...backendMedia, ...(backendMedia.length ? [] : fallbackMedia)];
   const visibleItems =
     activeTag === "All" ? galleryItems : galleryItems.filter((item) => item.tags?.includes(activeTag));
+  const galleryJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ImageGallery",
+    name: "Travellex Africa travel gallery",
+    description: "Safari, Zanzibar, Kilimanjaro, coast, wildlife and culture travel scenes curated by Travellex.",
+    image: galleryItems.slice(0, 12).map((item) => absoluteUrl(item.url))
+  };
 
   useEffect(() => {
     getGalleryMedia()
@@ -86,6 +95,13 @@ export default function Gallery() {
 
   return (
     <>
+      <SEO
+        canonicalPath="/gallery"
+        description="Browse Africa travel photos and videos from Travellex routes, including Tanzania safari, Zanzibar beaches, Kilimanjaro, Stone Town and wildlife moments."
+        jsonLd={galleryJsonLd}
+        keywords={["Africa travel gallery", "Tanzania safari photos", "Zanzibar travel photos", "Kilimanjaro travel"]}
+        title="Africa Travel Gallery"
+      />
       <section className="page-hero compact-hero gallery-hero">
         <p className="eyebrow">Gallery</p>
         <h1>Real travel scenes from safari tracks, mountain air and island light.</h1>

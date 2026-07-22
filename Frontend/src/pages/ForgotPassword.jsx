@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import SEO from "../components/SEO";
 import { requestPasswordReset } from "../services/authService";
 
 export default function ForgotPassword() {
@@ -35,6 +36,7 @@ export default function ForgotPassword() {
 
   return (
     <section className="auth-page verify-email-page">
+      <SEO canonicalPath="/forgot-password" noindex title="Reset Travellex Password" />
       <div className="auth-card verify-email-card">
         <p className="eyebrow">Password reset</p>
         <h1>Reset your Travellex password.</h1>

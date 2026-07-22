@@ -12,7 +12,10 @@ export default function ScrollToTop() {
       return;
     }
 
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      document.getElementById("main-content")?.focus({ preventScroll: true });
+    });
   }, [hash, pathname, search]);
 
   return null;

@@ -4,6 +4,8 @@ import ConfirmActionButton from "../components/ConfirmActionButton";
 import PaginatedList from "../components/PaginatedList";
 import Spinner from "../components/Spinner";
 import TourCard from "../components/TourCard";
+import TourListingForm from "../components/TourListingForm";
+import fallbackTourImage from "../assets/photos/ngorongoro-wide-with-tourists.jpg";
 import travellexLogo from "../assets/photos/Travellex-logo-wordmark.png";
 import useAuth from "../hooks/useAuth";
 import { getMyEnquiries } from "../services/enquiryService";
@@ -17,8 +19,16 @@ import { getMyReferrals } from "../services/referralService";
 import { createTour, deleteTour, getTours, updateTour } from "../services/tourService";
 import { uploadImage } from "../services/uploadService";
 import { eur, formatDate } from "../utils/formatters";
-import { activityOptions, comfortLevelOptions, confirmationTypeOptions, priceBasisOptions, tourTypeOptions } from "../utils/travelOptions";
 import { formatItineraryText, formatListText, numberOrUndefined, parseItineraryText, splitLines } from "../utils/tourFormHelpers";
+import {
+  appendTourMedia,
+  formatTourMediaText,
+  isTourMediaLimitExceeded,
+  isVideoMedia,
+  MAX_TOUR_MEDIA_ITEMS,
+  normalizeTourMedia,
+  splitTourMedia
+} from "../utils/tourMedia";
 
 const emptyCompanyTour = {
   title: "",
@@ -134,6 +144,22 @@ function guideBookingStatusLabel(status) {
   };
 
   return labels[status] || String(status || "Not set").replace(/_/g, " ");
+}
+
+function TourManagementMedia({ tour }) {
+  const media = normalizeTourMedia(tour.images);
+  const firstMedia = media[0] || fallbackTourImage;
+
+  return (
+    <div className="management-listing-media partner-listing-media">
+      {isVideoMedia(firstMedia) ? (
+        <video src={firstMedia} muted loop playsInline preload="metadata" />
+      ) : (
+        <img src={firstMedia} alt={`${tour.title} preview`} loading="lazy" />
+      )}
+      <span>{media.length ? `${media.length}/${MAX_TOUR_MEDIA_ITEMS} media` : "Add media"}</span>
+    </div>
+  );
 }
 
 export default function Dashboard() {
@@ -308,7 +334,7 @@ export default function Dashboard() {
       whatToBring: splitLines(tourForm.whatToBring),
       notSuitableFor: splitLines(tourForm.notSuitableFor),
       availableWeekdays: splitLines(tourForm.availableWeekdays),
-      images: splitLines(tourForm.images),
+      images: normalizeTourMedia(tourForm.images),
       highlights: splitLines(tourForm.highlights),
       inclusions: splitLines(tourForm.inclusions),
       exclusions: splitLines(tourForm.exclusions),
@@ -386,6 +412,10 @@ export default function Dashboard() {
     setSubmittingTour(true);
 
     try {
+      if (isTourMediaLimitExceeded(tourForm.images)) {
+        throw new Error(`Tours can include up to ${MAX_TOUR_MEDIA_ITEMS} images or videos.`);
+      }
+
       if (editingTourId) {
         await updateTour(editingTourId, serializeTourForm());
         setMessage("Tour updated on the public Travellex tours page.");
@@ -450,7 +480,7 @@ export default function Dashboard() {
       startLocation: tour.startLocation || "",
       endLocation: tour.endLocation || "",
       referralLink: tour.referralLink || "",
-      images: formatListText(tour.images),
+      images: formatTourMediaText(tour.images),
       inclusions: formatListText(tour.inclusions),
       exclusions: formatListText(tour.exclusions),
       availableFrom: tour.availableFrom ? tour.availableFrom.slice(0, 10) : "",
@@ -468,15 +498,21 @@ export default function Dashboard() {
       return;
     }
 
+    if (splitTourMedia(tourForm.images).length >= MAX_TOUR_MEDIA_ITEMS) {
+      setMessage(`This listing already has ${MAX_TOUR_MEDIA_ITEMS} media items.`);
+      event.target.value = "";
+      return;
+    }
+
     setUploadingTourImage(true);
 
     try {
       const response = await uploadImage(file);
       setTourForm((current) => ({
         ...current,
-        images: [current.images, response.data.url].filter(Boolean).join("\n")
+        images: appendTourMedia(current.images, response.data.url)
       }));
-      setMessage("Image uploaded and added to this listing.");
+      setMessage("Media uploaded and added to this listing.");
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -667,363 +703,22 @@ export default function Dashboard() {
                   <strong>{tourFormOpen ? "Hide editor" : "Open editor"}</strong>
                 </button>
                 {tourFormOpen && (
-                  <form className="panel-form partner-listing-form" onSubmit={handleCompanyTourSubmit}>
-                    <h2>{editingTourId ? "Edit listing" : "Create listing"}</h2>
-                    <label className="field">
-                      <span>Title</span>
-                      <input value={tourForm.title} onChange={(event) => updateTourField("title", event.target.value)} required />
-                    </label>
-                    <label className="field">
-                      <span>Short description</span>
-                      <input value={tourForm.shortDescription} onChange={(event) => updateTourField("shortDescription", event.target.value)} />
-                    </label>
-                    <label className="field">
-                      <span>Description</span>
-                      <textarea value={tourForm.description} onChange={(event) => updateTourField("description", event.target.value)} rows="4" />
-                    </label>
-                    <div className="form-grid">
-                      <label className="field">
-                        <span>Price EUR</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={tourForm.priceEUR}
-                          onChange={(event) => updateTourField("priceEUR", event.target.value)}
-                          required
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Price basis</span>
-                        <select value={tourForm.priceBasis} onChange={(event) => updateTourField("priceBasis", event.target.value)}>
-                          {priceBasisOptions.map((basis) => (
-                            <option key={basis} value={basis}>
-                              {basis}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="field">
-                        <span>Duration</span>
-                        <input value={tourForm.duration} onChange={(event) => updateTourField("duration", event.target.value)} required />
-                      </label>
-                      <label className="field">
-                        <span>Duration days</span>
-                        <input
-                          type="number"
-                          min="1"
-                          value={tourForm.durationDays}
-                          onChange={(event) => updateTourField("durationDays", event.target.value)}
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Location</span>
-                        <input value={tourForm.location} onChange={(event) => updateTourField("location", event.target.value)} required />
-                      </label>
-                      <label className="field">
-                        <span>Category</span>
-                        <select value={tourForm.category} onChange={(event) => updateTourField("category", event.target.value)}>
-                          {activityOptions.map((activity) => (
-                            <option key={activity} value={activity}>
-                              {activity}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                    <div className="form-grid">
-                      <label className="field">
-                        <span>Child price EUR</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={tourForm.childPriceEUR}
-                          onChange={(event) => updateTourField("childPriceEUR", event.target.value)}
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Single supplement EUR</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={tourForm.singleSupplementEUR}
-                          onChange={(event) => updateTourField("singleSupplementEUR", event.target.value)}
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Deposit %</span>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={tourForm.depositPercent}
-                          onChange={(event) => updateTourField("depositPercent", event.target.value)}
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Booking cutoff days</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={tourForm.bookingCutoffDays}
-                          onChange={(event) => updateTourField("bookingCutoffDays", event.target.value)}
-                        />
-                      </label>
-                    </div>
-                    <div className="form-grid">
-                      <label className="field">
-                        <span>Comfort level</span>
-                        <select value={tourForm.comfortLevel} onChange={(event) => updateTourField("comfortLevel", event.target.value)}>
-                          {comfortLevelOptions.map((level) => (
-                            <option key={level} value={level}>
-                              {level}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="field">
-                        <span>Tour type</span>
-                        <select value={tourForm.tourType} onChange={(event) => updateTourField("tourType", event.target.value)}>
-                          {tourTypeOptions.map((type) => (
-                            <option key={type} value={type}>
-                              {type}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="field">
-                        <span>Start location</span>
-                        <input value={tourForm.startLocation} onChange={(event) => updateTourField("startLocation", event.target.value)} />
-                      </label>
-                      <label className="field">
-                        <span>End location</span>
-                        <input value={tourForm.endLocation} onChange={(event) => updateTourField("endLocation", event.target.value)} />
-                      </label>
-                    </div>
-                    <div className="checkbox-row">
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={tourForm.guideIncluded}
-                          onChange={(event) => updateTourField("guideIncluded", event.target.checked)}
-                        />
-                        Guide included
-                      </label>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={tourForm.customizable}
-                          onChange={(event) => updateTourField("customizable", event.target.checked)}
-                        />
-                        Customizable
-                      </label>
-                    </div>
-                    <div className="form-grid">
-                      <label className="field">
-                        <span>Group size min</span>
-                        <input
-                          type="number"
-                          min="1"
-                          value={tourForm.groupSizeMin}
-                          onChange={(event) => updateTourField("groupSizeMin", event.target.value)}
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Group size max</span>
-                        <input
-                          type="number"
-                          min="1"
-                          value={tourForm.groupSizeMax}
-                          onChange={(event) => updateTourField("groupSizeMax", event.target.value)}
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Minimum age</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={tourForm.minimumAge}
-                          onChange={(event) => updateTourField("minimumAge", event.target.value)}
-                        />
-                      </label>
-                    </div>
-                    <label className="field">
-                      <span>Languages, one per line</span>
-                      <textarea value={tourForm.languages} onChange={(event) => updateTourField("languages", event.target.value)} rows="3" />
-                    </label>
-                    <label className="field">
-                      <span>Route summary</span>
-                      <input
-                        value={tourForm.routeSummary}
-                        onChange={(event) => updateTourField("routeSummary", event.target.value)}
-                        placeholder="Arusha - Tarangire - Ngorongoro"
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Daily itinerary, one day per line</span>
-                      <textarea
-                        value={tourForm.itinerary}
-                        onChange={(event) => updateTourField("itinerary", event.target.value)}
-                        placeholder="Day 1 | Arrival in Arusha | Pickup, briefing and overnight stay"
-                        rows="5"
-                      />
-                    </label>
-                    <div className="form-grid">
-                      <label className="field">
-                        <span>Meeting point</span>
-                        <input value={tourForm.meetingPoint} onChange={(event) => updateTourField("meetingPoint", event.target.value)} />
-                      </label>
-                      <label className="field">
-                        <span>Departure time</span>
-                        <input
-                          value={tourForm.departureTime}
-                          onChange={(event) => updateTourField("departureTime", event.target.value)}
-                          placeholder="08:00 or Flexible"
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Return time</span>
-                        <input
-                          value={tourForm.returnTime}
-                          onChange={(event) => updateTourField("returnTime", event.target.value)}
-                          placeholder="17:30 or Flexible"
-                        />
-                      </label>
-                    </div>
-                    <label className="checkbox-inline">
-                      <input
-                        type="checkbox"
-                        checked={tourForm.pickupIncluded}
-                        onChange={(event) => updateTourField("pickupIncluded", event.target.checked)}
-                      />
-                      Pickup included
-                    </label>
-                    <label className="field">
-                      <span>Pickup details</span>
-                      <textarea value={tourForm.pickupDetails} onChange={(event) => updateTourField("pickupDetails", event.target.value)} rows="2" />
-                    </label>
-                    <div className="form-grid">
-                      <label className="field">
-                        <span>Difficulty</span>
-                        <input value={tourForm.difficulty} onChange={(event) => updateTourField("difficulty", event.target.value)} />
-                      </label>
-                      <label className="field">
-                        <span>Accessibility notes</span>
-                        <input
-                          value={tourForm.accessibility}
-                          onChange={(event) => updateTourField("accessibility", event.target.value)}
-                          placeholder="Wheelchair access, mobility limits, steps"
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Transport</span>
-                        <input value={tourForm.transport} onChange={(event) => updateTourField("transport", event.target.value)} />
-                      </label>
-                      <label className="field">
-                        <span>Accommodation</span>
-                        <input value={tourForm.accommodation} onChange={(event) => updateTourField("accommodation", event.target.value)} />
-                      </label>
-                      <label className="field">
-                        <span>Meals</span>
-                        <input value={tourForm.meals} onChange={(event) => updateTourField("meals", event.target.value)} />
-                      </label>
-                    </div>
-                    <div className="form-grid">
-                      <label className="field">
-                        <span>Available from</span>
-                        <input type="date" value={tourForm.availableFrom} onChange={(event) => updateTourField("availableFrom", event.target.value)} />
-                      </label>
-                      <label className="field">
-                        <span>Available to</span>
-                        <input type="date" value={tourForm.availableTo} onChange={(event) => updateTourField("availableTo", event.target.value)} />
-                      </label>
-                      <label className="field">
-                        <span>Confirmation type</span>
-                        <select value={tourForm.confirmationType} onChange={(event) => updateTourField("confirmationType", event.target.value)}>
-                          {confirmationTypeOptions.map((type) => (
-                            <option key={type} value={type}>
-                              {type}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                    <label className="field">
-                      <span>Available weekdays, one per line</span>
-                      <textarea
-                        value={tourForm.availableWeekdays}
-                        onChange={(event) => updateTourField("availableWeekdays", event.target.value)}
-                        placeholder={"Daily\nMonday\nFriday"}
-                        rows="3"
-                      />
-                    </label>
-                    <label className="field">
-                      <span>External booking/referral link (optional)</span>
-                      <input
-                        value={tourForm.referralLink}
-                        onChange={(event) => updateTourField("referralLink", event.target.value)}
-                        placeholder="Leave blank to keep booking inside Travellex"
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Upload tour image</span>
-                      <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleTourImageUpload} disabled={uploadingTourImage} />
-                    </label>
-                    {uploadingTourImage && <p className="form-note">Uploading image...</p>}
-                    <label className="field">
-                      <span>Image URLs, one per line</span>
-                      <textarea value={tourForm.images} onChange={(event) => updateTourField("images", event.target.value)} />
-                    </label>
-                    <label className="field">
-                      <span>Inclusions, one per line</span>
-                      <textarea value={tourForm.inclusions} onChange={(event) => updateTourField("inclusions", event.target.value)} />
-                    </label>
-                    <label className="field">
-                      <span>Exclusions, one per line</span>
-                      <textarea value={tourForm.exclusions} onChange={(event) => updateTourField("exclusions", event.target.value)} />
-                    </label>
-                    <label className="field">
-                      <span>Highlights, one per line</span>
-                      <textarea value={tourForm.highlights} onChange={(event) => updateTourField("highlights", event.target.value)} />
-                    </label>
-                    <label className="field">
-                      <span>What to bring, one per line</span>
-                      <textarea value={tourForm.whatToBring} onChange={(event) => updateTourField("whatToBring", event.target.value)} />
-                    </label>
-                    <label className="field">
-                      <span>Not suitable for, one per line</span>
-                      <textarea value={tourForm.notSuitableFor} onChange={(event) => updateTourField("notSuitableFor", event.target.value)} />
-                    </label>
-                    <label className="field">
-                      <span>Cancellation policy</span>
-                      <textarea
-                        value={tourForm.cancellationPolicy}
-                        onChange={(event) => updateTourField("cancellationPolicy", event.target.value)}
-                        rows="3"
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Payment terms</span>
-                      <textarea value={tourForm.paymentTerms} onChange={(event) => updateTourField("paymentTerms", event.target.value)} rows="3" />
-                    </label>
-                    <div className="button-row">
-                      <button className="button primary" type="submit" disabled={submittingTour || uploadingTourImage}>
-                        {submittingTour ? "Publishing..." : editingTourId ? "Update listing" : "Publish listing"}
-                      </button>
-                      {(editingTourId || tourFormOpen) && (
-                        <button
-                          className="button secondary"
-                          type="button"
-                          onClick={() => {
-                            setEditingTourId("");
-                            setTourForm(emptyCompanyTour);
-                            setTourFormOpen(false);
-                          }}
-                        >
-                          Cancel
-                        </button>
-                      )}
-                    </div>
-                  </form>
+                  <TourListingForm
+                    cancelLabel="Cancel"
+                    editing={Boolean(editingTourId)}
+                    form={tourForm}
+                    onCancel={() => {
+                      setEditingTourId("");
+                      setTourForm(emptyCompanyTour);
+                      setTourFormOpen(false);
+                    }}
+                    onFieldChange={updateTourField}
+                    onSubmit={handleCompanyTourSubmit}
+                    onUpload={handleTourImageUpload}
+                    submitting={submittingTour}
+                    submitLabel={editingTourId ? "Update listing" : "Publish listing"}
+                    uploading={uploadingTourImage}
+                  />
                 )}
               </section>
 
@@ -1092,66 +787,72 @@ export default function Dashboard() {
                         className={expandedTourId === tour._id ? "partner-listing-card expanded" : "partner-listing-card"}
                         key={tour._id}
                       >
-                        <div className="partner-listing-row">
-                          <div>
-                            <button
-                              className="listing-title-button"
-                              type="button"
-                              onClick={() => setExpandedTourId((current) => (current === tour._id ? "" : tour._id))}
-                              aria-expanded={expandedTourId === tour._id}
-                            >
-                              {tour.title}
-                            </button>
-                            <span>
-                              {tour.location} - {eur.format(tour.priceEUR)} - {tour.duration}
+                        <TourManagementMedia tour={tour} />
+                        <div className="partner-listing-content">
+                          <div className="partner-listing-row">
+                            <div>
+                              <button
+                                className="listing-title-button"
+                                type="button"
+                                onClick={() => setExpandedTourId((current) => (current === tour._id ? "" : tour._id))}
+                                aria-expanded={expandedTourId === tour._id}
+                              >
+                                {tour.title}
+                              </button>
+                              <span>
+                                {tour.location} - {tour.duration || "Duration not set"}
+                              </span>
+                            </div>
+                            <div className="partner-listing-price">
+                              <strong>{eur.format(tour.priceEUR)}</strong>
+                              <span>{tour.priceBasis || "Per person"}</span>
+                            </div>
+                            <span className={`listing-status listing-status-${getListingStatus(tour)}`}>
+                              {getListingStatusLabel(tour)}
                             </span>
                           </div>
-                          <span className={`listing-status listing-status-${getListingStatus(tour)}`}>
-                            {getListingStatusLabel(tour)}
-                          </span>
-                        </div>
-                        <div className="listing-meta-grid">
-                          <span>{tour.category}</span>
-                          <span>{tour.comfortLevel}</span>
-                          <span>{tour.tourType}</span>
-                          <span>{tour.updatedAt ? `Updated ${formatDate(tour.updatedAt)}` : "New listing"}</span>
-                        </div>
-                        {expandedTourId === tour._id && (
-                          <div className="listing-expanded-detail">
-                            <p>{tour.shortDescription || tour.description || "No description saved yet."}</p>
-                            <div className="listing-detail-grid">
-                              <span>Route: {tour.routeSummary || [tour.startLocation, tour.endLocation].filter(Boolean).join(" - ") || "Not listed"}</span>
-                              <span>
-                                Group: {[tour.groupSizeMin, tour.groupSizeMax].filter(Boolean).join("-") || "Not listed"}
-                              </span>
-                              <span>Languages: {tour.languages?.join(", ") || "Not listed"}</span>
-                              <span>Pickup: {tour.pickupIncluded ? tour.pickupDetails || "Included" : "Not included"}</span>
-                              <span>Price basis: {tour.priceBasis || "Not listed"}</span>
-                              <span>Confirmation: {tour.confirmationType || "Not listed"}</span>
-                              <span>Guide included: {tour.guideIncluded === false ? "No" : "Yes"}</span>
-                              <span>Customizable: {tour.customizable === false ? "No" : "Yes"}</span>
-                              <span>Itinerary days: {tour.itinerary?.length || 0}</span>
-                              <span>Images: {tour.images?.length || 0}</span>
-                              <span>Highlights: {tour.highlights?.length || 0}</span>
-                              <span>Inclusions: {tour.inclusions?.length || 0}</span>
-                            </div>
+                          <div className="listing-meta-grid">
+                            <span>{tour.category}</span>
+                            <span>{tour.comfortLevel}</span>
+                            <span>{tour.tourType}</span>
+                            <span>{tour.images?.length || 0}/{MAX_TOUR_MEDIA_ITEMS} media</span>
+                            <span>{tour.updatedAt ? `Updated ${formatDate(tour.updatedAt)}` : "New listing"}</span>
                           </div>
-                        )}
-                        <div className="button-row">
-                          {tour.isActive && tour.slug && (
-                            <Link className="button secondary compact" to={`/tours/${tour.slug}`}>
-                              View
-                            </Link>
+                          <p className="partner-listing-summary">{tour.shortDescription || tour.routeSummary || tour.description || "No description saved yet."}</p>
+                          {expandedTourId === tour._id && (
+                            <div className="listing-expanded-detail">
+                              <div className="listing-detail-grid">
+                                <span>Route: {tour.routeSummary || [tour.startLocation, tour.endLocation].filter(Boolean).join(" - ") || "Not listed"}</span>
+                                <span>
+                                  Group: {[tour.groupSizeMin, tour.groupSizeMax].filter(Boolean).join("-") || "Not listed"}
+                                </span>
+                                <span>Languages: {tour.languages?.join(", ") || "Not listed"}</span>
+                                <span>Pickup: {tour.pickupIncluded ? tour.pickupDetails || "Included" : "Not included"}</span>
+                                <span>Confirmation: {tour.confirmationType || "Not listed"}</span>
+                                <span>Guide included: {tour.guideIncluded === false ? "No" : "Yes"}</span>
+                                <span>Customizable: {tour.customizable === false ? "No" : "Yes"}</span>
+                                <span>Itinerary days: {tour.itinerary?.length || 0}</span>
+                                <span>Highlights: {tour.highlights?.length || 0}</span>
+                                <span>Inclusions: {tour.inclusions?.length || 0}</span>
+                              </div>
+                            </div>
                           )}
-                          <button className="button secondary compact" type="button" onClick={() => editCompanyTour(tour)}>
-                            Edit
-                          </button>
-                          <ConfirmActionButton
-                            actionLabel={`Delete ${tour.title}`}
-                            confirmMessage={`Delete tour "${tour.title}"? This cannot be undone.`}
-                            iconOnly
-                            onConfirm={() => removeCompanyTour(tour._id)}
-                          />
+                          <div className="button-row">
+                            {tour.isActive && tour.slug && (
+                              <Link className="button secondary compact" to={`/tours/${tour.slug}`}>
+                                View
+                              </Link>
+                            )}
+                            <button className="button secondary compact" type="button" onClick={() => editCompanyTour(tour)}>
+                              Edit
+                            </button>
+                            <ConfirmActionButton
+                              actionLabel={`Delete ${tour.title}`}
+                              confirmMessage={`Delete tour "${tour.title}"? This cannot be undone.`}
+                              iconOnly
+                              onConfirm={() => removeCompanyTour(tour._id)}
+                            />
+                          </div>
                         </div>
                       </article>
                     ))}

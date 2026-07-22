@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import PasswordInput from "../components/PasswordInput";
+import SEO from "../components/SEO";
 import registerImage from "../assets/photos/Nungwi beach Zanzibar-homepage.jpg";
 import useAuth from "../hooks/useAuth";
+import { getPathFromLocationState, getPendingBookingPath } from "../utils/bookingIntent";
 
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState({ name: "", email: "", password: "", country: "" });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -26,6 +29,7 @@ export default function Register() {
         replace: true,
         state: {
           email: response.email || form.email,
+          from: getPathFromLocationState(location.state?.from) || getPendingBookingPath(),
           message: response.verificationEmailMessage,
           sent: response.verificationEmailSent
         }
@@ -39,6 +43,7 @@ export default function Register() {
 
   return (
     <section className="auth-page">
+      <SEO canonicalPath="/register" noindex title="Create Travellex Account" />
       <div className="auth-split register-split">
         <div className="login-image-card register-image-card">
           <img src={registerImage} alt="Nungwi beach in Zanzibar at golden hour" />
@@ -47,7 +52,7 @@ export default function Register() {
             <h2>Save Africa tours and adventures before you book.</h2>
             <div className="auth-trust-list">
               <span>Verified local operators</span>
-              <span>Referral-safe booking flow</span>
+              <span>Easy operator booking</span>
               <span>Partner tools after approval</span>
             </div>
           </div>
@@ -87,7 +92,7 @@ export default function Register() {
           </button>
           {error && <p className="form-note error">{error}</p>}
           <p>
-            Already have an account? <Link to="/login">Login</Link>
+            Already have an account? <Link to="/login" state={{ from: location.state?.from }}>Login</Link>
           </p>
         </form>
       </div>

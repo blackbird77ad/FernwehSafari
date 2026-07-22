@@ -14,7 +14,7 @@ const adminOnly = require("../middleware/adminOnly");
 
 const router = express.Router();
 
-router.post("/", optionalAuth, createReferral);
+router.post("/", auth, createReferral);
 router.post("/postback", receivePartnerPostback);
 router.get("/booking/:trackingCode/open", optionalAuth, openBookingSession);
 router.get("/booking/:trackingCode", optionalAuth, getBookingSession);

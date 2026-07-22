@@ -10,7 +10,7 @@ export default function HeroSection() {
           <p className="eyebrow">Africa tours marketplace</p>
           <h1>Book Africa tours with Travellex.</h1>
           <p className="fast-hero-copy">
-            Compare safari, mountain, culture and coast journeys from trusted operators, then carry a Travellex booking code through the handoff.
+            Compare safari, mountain, culture and coast journeys from trusted operators, then continue booking with the right local company.
           </p>
           <div className="fast-hero-actions">
             <Link className="button primary" to="/tours">

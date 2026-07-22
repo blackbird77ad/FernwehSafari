@@ -5,6 +5,10 @@ const Enquiry = require("../models/Enquiry");
 const Tour = require("../models/Tour");
 const { sendEnquiryEmails } = require("../lib/resend");
 
+function normalizeMessage(value) {
+  return String(value || "").trim();
+}
+
 const createEnquiry = asyncHandler(async (req, res) => {
   const {
     name,
@@ -33,6 +37,8 @@ const createEnquiry = asyncHandler(async (req, res) => {
     }
   }
 
+  const readableMessage = normalizeMessage(message);
+
   const enquiry = await Enquiry.create({
     user: req.user?._id,
     name,
@@ -40,7 +46,7 @@ const createEnquiry = asyncHandler(async (req, res) => {
     tour: tour?._id,
     partner: tour?.partner?._id,
     destination,
-    message,
+    message: readableMessage,
     type,
     requestType,
     travelDate: travelDate || undefined,

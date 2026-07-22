@@ -9,7 +9,7 @@ const uploadImage = asyncHandler(async (req, res) => {
   }
 
   if (!req.file?.path) {
-    throw new ApiError(422, "Image upload failed.");
+    throw new ApiError(422, "Media upload failed.");
   }
 
   sendResponse(res, 201, {

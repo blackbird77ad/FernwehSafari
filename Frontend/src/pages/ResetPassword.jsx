@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import PasswordInput from "../components/PasswordInput";
+import SEO from "../components/SEO";
 import { resetPassword } from "../services/authService";
 
 export default function ResetPassword() {
@@ -39,6 +40,7 @@ export default function ResetPassword() {
 
   return (
     <section className="auth-page verify-email-page">
+      <SEO canonicalPath="/reset-password" noindex title="Choose New Password" />
       <div className="auth-card verify-email-card">
         <p className="eyebrow">New password</p>
         <h1>Choose a new password.</h1>

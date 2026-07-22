@@ -3,10 +3,13 @@ import { Link, useNavigate } from "react-router-dom";
 import ConfirmActionButton from "../components/ConfirmActionButton";
 import PaginatedList from "../components/PaginatedList";
 import Spinner from "../components/Spinner";
+import ThemeToggle from "../components/ThemeToggle";
+import TourListingForm from "../components/TourListingForm";
 import Toast from "../components/Toast";
+import fallbackTourImage from "../assets/photos/ngorongoro-wide-with-tourists.jpg";
 import travellexLogo from "../assets/photos/Travellex-logo-wordmark.png";
 import useAuth from "../hooks/useAuth";
-import { activityOptions, comfortLevelOptions, confirmationTypeOptions, priceBasisOptions, tourTypeOptions } from "../utils/travelOptions";
+import { activityOptions, comfortLevelOptions } from "../utils/travelOptions";
 import { getAdminDashboardSummary } from "../services/adminService";
 import {
   createPartner,
@@ -54,6 +57,15 @@ import {
 } from "../services/userService";
 import { eur, formatDate } from "../utils/formatters";
 import { formatItineraryText, formatListText, numberOrUndefined, parseItineraryText, splitLines } from "../utils/tourFormHelpers";
+import {
+  appendTourMedia,
+  formatTourMediaText,
+  isTourMediaLimitExceeded,
+  isVideoMedia,
+  MAX_TOUR_MEDIA_ITEMS,
+  normalizeTourMedia,
+  splitTourMedia
+} from "../utils/tourMedia";
 
 const userRoles = ["traveller", "tour_company", "tour_guide", "moderator", "admin"];
 
@@ -157,20 +169,44 @@ const tabMeta = {
 };
 
 const tabAccentColors = {
-  overview: "#0e7490",
-  commissions: "#047857",
-  referrals: "#c8a24a",
-  users: "#047857",
-  "role dashboards": "#6366f1",
-  "company applications": "#b87333",
-  tours: "#0f766e",
-  partners: "#7c3aed",
-  "guide applications": "#be123c",
-  "guide bookings": "#2563eb",
-  "gallery media": "#db2777",
-  enquiries: "#ea580c",
-  uploads: "#0891b2"
+  overview: "#2563EB",
+  commissions: "#22C55E",
+  referrals: "#2563EB",
+  users: "#6366F1",
+  "role dashboards": "#6366F1",
+  "company applications": "#F59E0B",
+  tours: "#2563EB",
+  partners: "#14B8A6",
+  "guide applications": "#F59E0B",
+  "guide bookings": "#2563EB",
+  "gallery media": "#EC4899",
+  enquiries: "#F59E0B",
+  uploads: "#0EA5E9"
 };
+
+const adminNavIcons = {
+  overview: "DB",
+  commissions: "CM",
+  referrals: "BK",
+  users: "US",
+  "role dashboards": "RL",
+  "company applications": "PA",
+  tours: "TR",
+  partners: "PT",
+  "guide applications": "GA",
+  "guide bookings": "GB",
+  "gallery media": "GL",
+  enquiries: "EN",
+  uploads: "UP"
+};
+
+const adminTabGroups = [
+  { label: "Main", description: "Health and decisions", tabs: ["overview"] },
+  { label: "Operations", description: "Tours, bookings, payouts", tabs: ["tours", "guide bookings", "referrals", "commissions"] },
+  { label: "People", description: "Partners, customers, access", tabs: ["partners", "users", "role dashboards", "enquiries"] },
+  { label: "Content", description: "Gallery and uploads", tabs: ["gallery media", "uploads"] },
+  { label: "Applications", description: "Partner and guide reviews", tabs: ["company applications", "guide applications"] }
+];
 
 const emptyTour = {
   title: "",
@@ -329,6 +365,34 @@ function statusLabel(status) {
   return String(status || "not set").replace(/_/g, " ");
 }
 
+const enquiryStatusOptions = [
+  { value: "new", label: "New" },
+  { value: "contacted", label: "Contacted" },
+  { value: "referred", label: "Referred" },
+  { value: "closed", label: "Closed" }
+];
+
+function enquiryStatusLabel(status) {
+  return enquiryStatusOptions.find((option) => option.value === status)?.label || statusLabel(status);
+}
+
+function enquirySubject(enquiry) {
+  if (enquiry.type === "partner_application") {
+    return "Tour listing application";
+  }
+
+  return enquiry.tour?.title || enquiry.destination || "General enquiry";
+}
+
+function enquiryMessageLines(enquiry) {
+  const lines = String(enquiry.message || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return lines.length ? lines : ["No message was provided."];
+}
+
 const partnerApplicationReviewTabs = [
   { value: "approved", label: "Approved partners" },
   { value: "rejected", label: "Rejected partner applications" }
@@ -355,7 +419,7 @@ function emailDeliveryMessage(baseMessage, emailStatus) {
   if (emailStatus && emailStatus.sent === false) {
     return {
       tone: "error",
-      message: `${baseMessage} Decision saved, but email notification failed: ${emailStatus.reason || "Check Resend configuration."}`
+      message: `${baseMessage} Email notification failed: ${emailStatus.reason || "Check Resend configuration."}`
     };
   }
 
@@ -364,6 +428,33 @@ function emailDeliveryMessage(baseMessage, emailStatus) {
   }
 
   return { message: baseMessage };
+}
+
+function InfoHint({ text }) {
+  return (
+    <span className="info-hint" tabIndex="0" aria-label={text}>
+      <span aria-hidden="true">i</span>
+      <span className="info-hint-bubble" role="tooltip">
+        {text}
+      </span>
+    </span>
+  );
+}
+
+function TourManagementMedia({ tour }) {
+  const media = normalizeTourMedia(tour.images);
+  const firstMedia = media[0] || fallbackTourImage;
+
+  return (
+    <div className="management-listing-media">
+      {isVideoMedia(firstMedia) ? (
+        <video src={firstMedia} muted loop playsInline preload="metadata" />
+      ) : (
+        <img src={firstMedia} alt={`${tour.title} preview`} loading="lazy" />
+      )}
+      <span>{media.length ? `${media.length}/${MAX_TOUR_MEDIA_ITEMS} media` : "Add media"}</span>
+    </div>
+  );
 }
 
 function getPathValue(item, path) {
@@ -500,6 +591,9 @@ export default function Admin() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
+  const [adminSearch, setAdminSearch] = useState("");
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [dashboardSummary, setDashboardSummary] = useState(emptyDashboardSummary);
@@ -776,6 +870,107 @@ export default function Admin() {
       unpaidCommissionCount,
       uploading
     ]
+  );
+
+  const availableTabGroups = useMemo(
+    () =>
+      adminTabGroups
+        .map((group) => ({
+          ...group,
+          tabs: group.tabs.filter((tab) => tabs.includes(tab))
+        }))
+        .filter((group) => group.tabs.length),
+    [tabs]
+  );
+
+  const adminSearchMatches = useMemo(() => {
+    const search = adminSearch.trim().toLowerCase();
+
+    if (!search) {
+      return [];
+    }
+
+    return tabs.filter((tab) =>
+      [tab, tabMeta[tab]?.title, tabMeta[tab]?.description]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(search)
+    );
+  }, [adminSearch, tabs]);
+
+  const adminQuickActions = useMemo(
+    () =>
+      [
+        {
+          tab: "company applications",
+          label: "Review partner requests",
+          value: pendingCompanyApplicationCount,
+          detail: "waiting"
+        },
+        {
+          tab: "partners",
+          label: "Create approved partner",
+          value: totalPartnerCount,
+          detail: "ready to list"
+        },
+        {
+          tab: "tours",
+          label: "Manage public tours",
+          value: totalTourCount,
+          detail: "listings"
+        },
+        {
+          tab: "referrals",
+          label: "Record booking",
+          value: eur.format(commissionStats.open),
+          detail: "unpaid"
+        },
+        {
+          tab: "users",
+          label: "Manage access",
+          value: totalUserCount,
+          detail: "accounts"
+        }
+      ].filter((action) => tabs.includes(action.tab)),
+    [
+      commissionStats.open,
+      pendingCompanyApplicationCount,
+      tabs,
+      totalPartnerCount,
+      totalTourCount,
+      totalUserCount
+    ]
+  );
+
+  const adminHealthSignals = useMemo(
+    () => [
+      {
+        label: "Business health",
+        value: dashboardActionCount ? `${dashboardActionCount} actions` : "Clear",
+        detail: dashboardActionCount ? "needs review" : "no urgent queue",
+        tone: dashboardActionCount ? "warning" : "success"
+      },
+      {
+        label: "Tour supply",
+        value: totalTourCount,
+        detail: `${totalPartnerCount} approved operators`,
+        tone: totalTourCount ? "success" : "warning"
+      },
+      {
+        label: "Media quality",
+        value: pendingGalleryCount,
+        detail: "gallery items pending",
+        tone: pendingGalleryCount ? "warning" : "success"
+      },
+      {
+        label: "Revenue guard",
+        value: eur.format(commissionStats.open),
+        detail: "confirmed but unpaid",
+        tone: commissionStats.open ? "warning" : "success"
+      }
+    ],
+    [commissionStats.open, dashboardActionCount, pendingGalleryCount, totalPartnerCount, totalTourCount]
   );
 
   const pendingCompanyApplicationItems = useMemo(
@@ -1232,7 +1427,7 @@ export default function Admin() {
       availableWeekdays: splitLines(tourForm.availableWeekdays),
       commissionRatePercent:
         tourForm.commissionRatePercent === "" ? undefined : Number(tourForm.commissionRatePercent),
-      images: splitLines(tourForm.images),
+      images: normalizeTourMedia(tourForm.images),
       highlights: splitLines(tourForm.highlights),
       inclusions: splitLines(tourForm.inclusions),
       exclusions: splitLines(tourForm.exclusions),
@@ -1255,6 +1450,11 @@ export default function Admin() {
 
   async function handleTourSubmit(event) {
     event.preventDefault();
+
+    if (isTourMediaLimitExceeded(tourForm.images)) {
+      setToast({ tone: "error", message: `Tours can include up to ${MAX_TOUR_MEDIA_ITEMS} images or videos.` });
+      return;
+    }
 
     try {
       if (editingTourId) {
@@ -1319,7 +1519,7 @@ export default function Admin() {
       partner: tour.partner?._id || tour.partner || "",
       referralLink: tour.referralLink || "",
       commissionRatePercent: tour.commissionRatePercent ?? "",
-      images: formatListText(tour.images),
+      images: formatTourMediaText(tour.images),
       inclusions: formatListText(tour.inclusions),
       exclusions: formatListText(tour.exclusions),
       availableFrom: tour.availableFrom ? tour.availableFrom.slice(0, 10) : "",
@@ -1370,8 +1570,12 @@ export default function Admin() {
         await updatePartner(editingPartnerId, serializePartnerForm());
         setToast({ message: "Partner updated." });
       } else {
-        await createPartner(serializePartnerForm());
-        setToast({ message: "Partner created." });
+        const response = await createPartner(serializePartnerForm());
+        const baseMessage = response.data.accountCreated
+          ? "Partner created, approved, and dashboard account created."
+          : "Partner created and existing account approved.";
+
+        setToast(emailDeliveryMessage(baseMessage, response.data.emailStatus));
       }
 
       setPartnerForm(emptyPartner);
@@ -1688,15 +1892,21 @@ export default function Admin() {
       return;
     }
 
+    if (splitTourMedia(tourForm.images).length >= MAX_TOUR_MEDIA_ITEMS) {
+      setToast({ tone: "error", message: `This tour already has ${MAX_TOUR_MEDIA_ITEMS} media items.` });
+      event.target.value = "";
+      return;
+    }
+
     setUploading(true);
 
     try {
       const response = await uploadImage(file);
       setTourForm((current) => ({
         ...current,
-        images: [current.images, response.data.url].filter(Boolean).join("\n")
+        images: appendTourMedia(current.images, response.data.url)
       }));
-      setToast({ message: "Image uploaded and added to the tour form." });
+      setToast({ message: "Media uploaded and added to the tour form." });
     } catch (error) {
       setToast({ tone: "error", message: error.message });
     } finally {
@@ -1712,6 +1922,26 @@ export default function Admin() {
   function handleTabChange(tab) {
     setActiveTab(tab);
     setSidebarOpen(false);
+    setProfileMenuOpen(false);
+  }
+
+  function toggleAdminSidebar() {
+    const isDesktopLayout = typeof window !== "undefined" && window.matchMedia("(min-width: 1161px)").matches;
+
+    if (isDesktopLayout) {
+      setDesktopSidebarOpen((current) => !current);
+      return;
+    }
+
+    setSidebarOpen((current) => !current);
+  }
+
+  function handleAdminSearchSubmit(event) {
+    event.preventDefault();
+
+    if (adminSearchMatches[0]) {
+      handleTabChange(adminSearchMatches[0]);
+    }
   }
 
   function renderCompanyApplicationRow(application, { canReview = false } = {}) {
@@ -1822,9 +2052,16 @@ export default function Admin() {
   }
 
   const activeMeta = tabMeta[activeTab] || { title: activeTab, description: "Manage Travellex." };
+  const adminConsoleClass = [
+    "admin-console",
+    sidebarOpen ? "sidebar-open" : "sidebar-collapsed",
+    desktopSidebarOpen ? "sidebar-desktop-open" : "sidebar-desktop-closed"
+  ].join(" ");
+  const isDesktopSidebarLayout = typeof window !== "undefined" && window.matchMedia("(min-width: 1161px)").matches;
+  const sidebarToggleExpanded = isDesktopSidebarLayout ? desktopSidebarOpen : sidebarOpen;
 
   return (
-    <section className={sidebarOpen ? "admin-console sidebar-open" : "admin-console sidebar-collapsed"}>
+    <section className={adminConsoleClass}>
       <aside className="admin-sidebar">
         <div className="admin-sidebar-head">
           <Link className="admin-brand" to="/">
@@ -1836,9 +2073,9 @@ export default function Admin() {
           <button
             className="admin-sidebar-toggle sidebar-inner-toggle"
             type="button"
-            aria-label={sidebarOpen ? "Close admin sidebar" : "Open admin sidebar"}
-            aria-expanded={sidebarOpen}
-            onClick={() => setSidebarOpen((current) => !current)}
+            aria-label={sidebarToggleExpanded ? "Close admin sidebar" : "Open admin sidebar"}
+            aria-expanded={sidebarToggleExpanded}
+            onClick={toggleAdminSidebar}
           >
             <span />
             <span />
@@ -1853,17 +2090,34 @@ export default function Admin() {
           </div>
         </div>
         <nav className="admin-console-nav" aria-label="Admin workspace navigation">
-          {tabs.map((tab) => (
-            <button
-              className={activeTab === tab ? "active" : ""}
-              key={tab}
-              type="button"
-              style={{ "--tab-accent": tabAccentColors[tab] || "var(--admin-accent)" }}
-              onClick={() => handleTabChange(tab)}
-            >
-              <strong>{tabMeta[tab]?.title || tab}</strong>
-              <small>{tabCounts[tab] ?? 0}</small>
-            </button>
+          {availableTabGroups.map((group) => (
+            <details className="admin-nav-group" key={group.label} open={group.label === "Main" || group.tabs.includes(activeTab)}>
+              <summary>
+                <span>{group.label}</span>
+                <small>{group.description}</small>
+              </summary>
+              <div className="admin-nav-group-items">
+                {group.tabs.map((tab) => (
+                  <button
+                    className={activeTab === tab ? "active" : ""}
+                    key={tab}
+                    type="button"
+                    style={{ "--tab-accent": tabAccentColors[tab] || "var(--admin-accent)" }}
+                    onClick={() => handleTabChange(tab)}
+                    aria-current={activeTab === tab ? "page" : undefined}
+                  >
+                    <span className="admin-nav-icon" aria-hidden="true">
+                      {adminNavIcons[tab] || "AD"}
+                    </span>
+                    <span className="admin-nav-copy">
+                      <strong>{tabMeta[tab]?.title || tab}</strong>
+                      <small>{tabMeta[tab]?.description || "Manage admin records."}</small>
+                    </span>
+                    <span className="admin-nav-count">{tabCounts[tab] ?? 0}</span>
+                  </button>
+                ))}
+              </div>
+            </details>
           ))}
         </nav>
         <div className="admin-sidebar-card">
@@ -1885,53 +2139,121 @@ export default function Admin() {
       )}
       <section className="admin-workspace">
         <header className="admin-topbar">
-          <button
-            className="admin-sidebar-toggle"
-            type="button"
-            aria-label={sidebarOpen ? "Close admin sidebar" : "Open admin sidebar"}
-            aria-expanded={sidebarOpen}
-            onClick={() => setSidebarOpen((current) => !current)}
-          >
-            <span />
-            <span />
-            <span />
-          </button>
+          <div className="admin-topbar-left">
+            <button
+              className="admin-sidebar-toggle"
+              type="button"
+              aria-label={sidebarToggleExpanded ? "Close admin sidebar" : "Open admin sidebar"}
+              aria-expanded={sidebarToggleExpanded}
+              onClick={toggleAdminSidebar}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+            <div className="admin-breadcrumb" aria-label="Admin breadcrumb">
+              <span>Admin</span>
+              <span>/</span>
+              <strong>{activeMeta.title}</strong>
+            </div>
+          </div>
+          <form className="admin-global-search" onSubmit={handleAdminSearchSubmit}>
+            <label className="sr-only" htmlFor="admin-global-search">
+              Search admin modules
+            </label>
+            <input
+              id="admin-global-search"
+              type="search"
+              value={adminSearch}
+              onChange={(event) => setAdminSearch(event.target.value)}
+              placeholder="Search modules, tours, users..."
+            />
+            {adminSearch && (
+              <span className="admin-search-count">
+                {adminSearchMatches.length ? `${adminSearchMatches.length} module${adminSearchMatches.length === 1 ? "" : "s"}` : "No matches"}
+              </span>
+            )}
+          </form>
+          <div className="admin-topbar-actions">
+            <ThemeToggle compact />
+            <button className="admin-icon-button" type="button" title="Notifications" aria-label="Notifications" onClick={() => handleTabChange("overview")}>
+              <span aria-hidden="true">N</span>
+            </button>
+            {tabs.includes("enquiries") && (
+              <button className="admin-icon-button" type="button" title="Messages" aria-label="Messages" onClick={() => handleTabChange("enquiries")}>
+                <span aria-hidden="true">M</span>
+              </button>
+            )}
+            <button
+              className="admin-icon-button"
+              type="button"
+              title="Help"
+              aria-label="Help"
+              onClick={() => setToast({ message: "Use the info markers across admin screens for field and workflow guidance." })}
+            >
+              <span aria-hidden="true">?</span>
+            </button>
+            <div className="admin-profile-menu-wrap">
+              <button
+                className="admin-profile-button"
+                type="button"
+                aria-label="Open admin profile"
+                aria-expanded={profileMenuOpen}
+                onClick={() => setProfileMenuOpen((current) => !current)}
+              >
+                <span className="admin-avatar">{user?.name?.slice(0, 1) || "A"}</span>
+                <span>
+                  <strong>{user?.name || "Admin"}</strong>
+                  <small>{roleLabels[user?.role] || "Staff"}</small>
+                </span>
+              </button>
+              {profileMenuOpen && (
+                <div className="admin-profile-menu" role="menu">
+                  <div>
+                    <strong>{user?.name || "Admin"}</strong>
+                    <span>{user?.email || roleLabels[user?.role] || "Staff"}</span>
+                  </div>
+                  <Link to="/" role="menuitem" onClick={() => setProfileMenuOpen(false)}>
+                    Public site
+                  </Link>
+                  <button type="button" role="menuitem" onClick={handleAdminLogout}>
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+        <section className="admin-page-header">
           <div>
-            <p className="eyebrow">Admin workspace</p>
-            <h1>{activeMeta.title}</h1>
+            <p className="eyebrow">Travellex admin</p>
+            <div className="admin-page-title-row">
+              <h1>{activeMeta.title}</h1>
+              <InfoHint text={`${activeMeta.title}: ${activeMeta.description}`} />
+            </div>
             <span>{activeMeta.description}</span>
           </div>
-          <div className="button-row">
-            <label className="admin-jump-field">
-              <span>Jump to</span>
-              <select value={activeTab} onChange={(event) => handleTabChange(event.target.value)}>
-                {tabs.map((tab) => (
-                  <option key={tab} value={tab}>
-                    {tabMeta[tab]?.title || tab} ({tabCounts[tab] ?? 0})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <Link className="button primary compact" to="/">
+          <div className="admin-page-actions">
+            <Link className="button secondary compact" to="/">
               View public site
             </Link>
           </div>
-        </header>
-        <nav className="admin-folder-tabs" aria-label="Admin folders">
-          {tabs.map((tab) => (
+        </section>
+        <div className="admin-command-strip" aria-label="Admin quick actions">
+          {adminQuickActions.map((action) => (
             <button
-              className={activeTab === tab ? "active" : ""}
-              key={tab}
+              className={activeTab === action.tab ? "active" : ""}
+              key={action.tab}
               type="button"
-              style={{ "--tab-accent": tabAccentColors[tab] || "var(--admin-accent)" }}
-              onClick={() => handleTabChange(tab)}
-              aria-current={activeTab === tab ? "page" : undefined}
+              style={{ "--tab-accent": tabAccentColors[action.tab] || "var(--admin-accent)" }}
+              onClick={() => handleTabChange(action.tab)}
             >
-              <span>{tabMeta[tab]?.title || tab}</span>
-              <small>{tabCounts[tab] ?? 0}</small>
+              <span>{action.label}</span>
+              <strong>{action.value}</strong>
+              <small>{action.detail}</small>
             </button>
           ))}
-        </nav>
+        </div>
         <div className="admin-workspace-content">
         {loading ? (
           <Spinner />
@@ -2013,6 +2335,56 @@ export default function Admin() {
                     sends the booking result back, the commission updates automatically. If not, use Bookings & Payments
                     to enter the booking from the partner report.
                   </p>
+                </div>
+                <div className="admin-dashboard-widgets">
+                  <article className="side-panel admin-system-panel">
+                    <p className="eyebrow">System status</p>
+                    <h2>What needs attention now.</h2>
+                    <div className="admin-system-list">
+                      {adminHealthSignals.map((signal) => (
+                        <button
+                          className={`admin-system-item tone-${signal.tone}`}
+                          key={signal.label}
+                          type="button"
+                          onClick={() => {
+                            if (signal.label === "Business health") {
+                              handleTabChange(dashboardActionCount ? "company applications" : "overview");
+                            } else if (signal.label === "Tour supply") {
+                              handleTabChange("tours");
+                            } else if (signal.label === "Media quality") {
+                              handleTabChange("gallery media");
+                            } else if (signal.label === "Revenue guard") {
+                              handleTabChange("commissions");
+                            }
+                          }}
+                        >
+                          <span>
+                            <strong>{signal.label}</strong>
+                            <small>{signal.detail}</small>
+                          </span>
+                          <b>{signal.value}</b>
+                        </button>
+                      ))}
+                    </div>
+                  </article>
+                  <article className="side-panel admin-flow-panel">
+                    <p className="eyebrow">Fast workflows</p>
+                    <h2>Keep the marketplace moving.</h2>
+                    <div className="plain-help-list">
+                      <button type="button" onClick={() => handleTabChange("partners")}>
+                        <strong>1</strong>
+                        Create an approved partner account.
+                      </button>
+                      <button type="button" onClick={() => handleTabChange("tours")}>
+                        <strong>2</strong>
+                        Add up to {MAX_TOUR_MEDIA_ITEMS} polished tour media items.
+                      </button>
+                      <button type="button" onClick={() => handleTabChange("gallery media")}>
+                        <strong>3</strong>
+                        Review gallery assets before they go public.
+                      </button>
+                    </div>
+                  </article>
                 </div>
               </div>
             )}
@@ -2798,455 +3170,28 @@ export default function Admin() {
                     <strong>{tourFormOpen ? "Hide" : "Open"}</strong>
                   </button>
                   {tourFormOpen && (
-                    <form className="panel-form admin-form user-form-panel" onSubmit={handleTourSubmit}>
-                      <h2>{editingTourId ? "Edit tour" : "Create tour"}</h2>
-                  <label className="field">
-                    <span>Title</span>
-                    <input value={tourForm.title} onChange={(event) => updateTourField("title", event.target.value)} required />
-                  </label>
-                  <label className="field">
-                    <span>Short description</span>
-                    <input
-                      value={tourForm.shortDescription}
-                      onChange={(event) => updateTourField("shortDescription", event.target.value)}
+                    <TourListingForm
+                      allowStatusControls
+                      commissionSettings={commissionSettings}
+                      editing={Boolean(editingTourId)}
+                      form={tourForm}
+                      isAdmin={isAdmin}
+                      onCancel={() => {
+                        setEditingTourId("");
+                        setTourForm(emptyTour);
+                        setTourFormOpen(false);
+                      }}
+                      onFieldChange={updateTourField}
+                      onSubmit={handleTourSubmit}
+                      onUpload={handleUpload}
+                      partnerOptions={partnerOptions}
+                      showCommissionField
+                      showPartnerSelect
+                      showReviewFields
+                      showVrFields={isAdmin}
+                      submitLabel={editingTourId ? "Update tour" : "Create tour"}
+                      uploading={uploading}
                     />
-                  </label>
-                  <label className="field">
-                    <span>Description</span>
-                    <textarea value={tourForm.description} onChange={(event) => updateTourField("description", event.target.value)} />
-                  </label>
-                  <div className="form-grid">
-                    <label className="field">
-                      <span>Price EUR</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={tourForm.priceEUR}
-                        onChange={(event) => updateTourField("priceEUR", event.target.value)}
-                        required
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Price basis</span>
-                      <select value={tourForm.priceBasis} onChange={(event) => updateTourField("priceBasis", event.target.value)}>
-                        {priceBasisOptions.map((basis) => (
-                          <option key={basis} value={basis}>
-                            {basis}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="field">
-                      <span>Duration</span>
-                      <input value={tourForm.duration} onChange={(event) => updateTourField("duration", event.target.value)} required />
-                    </label>
-                    <label className="field">
-                      <span>Duration days</span>
-                      <input
-                        type="number"
-                        min="1"
-                        value={tourForm.durationDays}
-                        onChange={(event) => updateTourField("durationDays", event.target.value)}
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Location</span>
-                      <input value={tourForm.location} onChange={(event) => updateTourField("location", event.target.value)} required />
-                    </label>
-                    <label className="field">
-                      <span>Category</span>
-                      <select value={tourForm.category} onChange={(event) => updateTourField("category", event.target.value)}>
-                        {activityOptions.map((activity) => (
-                          <option key={activity} value={activity}>
-                            {activity}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                  <div className="form-grid">
-                    <label className="field">
-                      <span>Child price EUR</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={tourForm.childPriceEUR}
-                        onChange={(event) => updateTourField("childPriceEUR", event.target.value)}
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Single supplement EUR</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={tourForm.singleSupplementEUR}
-                        onChange={(event) => updateTourField("singleSupplementEUR", event.target.value)}
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Deposit %</span>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={tourForm.depositPercent}
-                        onChange={(event) => updateTourField("depositPercent", event.target.value)}
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Booking cutoff days</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={tourForm.bookingCutoffDays}
-                        onChange={(event) => updateTourField("bookingCutoffDays", event.target.value)}
-                      />
-                    </label>
-                  </div>
-                  <div className="form-grid">
-                    <label className="field">
-                      <span>Comfort level</span>
-                      <select value={tourForm.comfortLevel} onChange={(event) => updateTourField("comfortLevel", event.target.value)}>
-                        {comfortLevelOptions.map((level) => (
-                          <option key={level} value={level}>
-                            {level}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="field">
-                      <span>Tour type</span>
-                      <select value={tourForm.tourType} onChange={(event) => updateTourField("tourType", event.target.value)}>
-                        {tourTypeOptions.map((type) => (
-                          <option key={type} value={type}>
-                            {type}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="field">
-                      <span>Start location</span>
-                      <input value={tourForm.startLocation} onChange={(event) => updateTourField("startLocation", event.target.value)} />
-                    </label>
-                    <label className="field">
-                      <span>End location</span>
-                      <input value={tourForm.endLocation} onChange={(event) => updateTourField("endLocation", event.target.value)} />
-                    </label>
-                  </div>
-                  <div className="checkbox-row">
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={tourForm.guideIncluded}
-                        onChange={(event) => updateTourField("guideIncluded", event.target.checked)}
-                      />
-                      Guide included
-                    </label>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={tourForm.customizable}
-                        onChange={(event) => updateTourField("customizable", event.target.checked)}
-                      />
-                      Customizable
-                    </label>
-                  </div>
-                  <div className="form-grid">
-                    <label className="field">
-                      <span>Group size min</span>
-                      <input
-                        type="number"
-                        min="1"
-                        value={tourForm.groupSizeMin}
-                        onChange={(event) => updateTourField("groupSizeMin", event.target.value)}
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Group size max</span>
-                      <input
-                        type="number"
-                        min="1"
-                        value={tourForm.groupSizeMax}
-                        onChange={(event) => updateTourField("groupSizeMax", event.target.value)}
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Minimum age</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={tourForm.minimumAge}
-                        onChange={(event) => updateTourField("minimumAge", event.target.value)}
-                      />
-                    </label>
-                  </div>
-                  <label className="field">
-                    <span>Languages, one per line</span>
-                    <textarea value={tourForm.languages} onChange={(event) => updateTourField("languages", event.target.value)} rows="3" />
-                  </label>
-                  <label className="field">
-                    <span>Route summary</span>
-                    <input
-                      value={tourForm.routeSummary}
-                      onChange={(event) => updateTourField("routeSummary", event.target.value)}
-                      placeholder="Arusha - Tarangire - Ngorongoro - Zanzibar"
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Daily itinerary, one day per line</span>
-                    <textarea
-                      value={tourForm.itinerary}
-                      onChange={(event) => updateTourField("itinerary", event.target.value)}
-                      placeholder="Day 1 | Arrival in Arusha | Pickup, briefing and overnight stay"
-                      rows="5"
-                    />
-                  </label>
-                  <div className="form-grid">
-                    <label className="field">
-                      <span>Meeting point</span>
-                      <input value={tourForm.meetingPoint} onChange={(event) => updateTourField("meetingPoint", event.target.value)} />
-                    </label>
-                    <label className="field">
-                      <span>Departure time</span>
-                      <input
-                        value={tourForm.departureTime}
-                        onChange={(event) => updateTourField("departureTime", event.target.value)}
-                        placeholder="08:00 or Flexible"
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Return time</span>
-                      <input
-                        value={tourForm.returnTime}
-                        onChange={(event) => updateTourField("returnTime", event.target.value)}
-                        placeholder="17:30 or Flexible"
-                      />
-                    </label>
-                  </div>
-                  <label className="checkbox-inline">
-                    <input
-                      type="checkbox"
-                      checked={tourForm.pickupIncluded}
-                      onChange={(event) => updateTourField("pickupIncluded", event.target.checked)}
-                    />
-                    Pickup included
-                  </label>
-                  <label className="field">
-                    <span>Pickup details</span>
-                    <textarea value={tourForm.pickupDetails} onChange={(event) => updateTourField("pickupDetails", event.target.value)} rows="2" />
-                  </label>
-                  <div className="form-grid">
-                    <label className="field">
-                      <span>Difficulty</span>
-                      <input value={tourForm.difficulty} onChange={(event) => updateTourField("difficulty", event.target.value)} />
-                    </label>
-                    <label className="field">
-                      <span>Accessibility notes</span>
-                      <input
-                        value={tourForm.accessibility}
-                        onChange={(event) => updateTourField("accessibility", event.target.value)}
-                        placeholder="Wheelchair access, mobility limits, steps"
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Transport</span>
-                      <input value={tourForm.transport} onChange={(event) => updateTourField("transport", event.target.value)} />
-                    </label>
-                    <label className="field">
-                      <span>Accommodation</span>
-                      <input value={tourForm.accommodation} onChange={(event) => updateTourField("accommodation", event.target.value)} />
-                    </label>
-                    <label className="field">
-                      <span>Meals</span>
-                      <input value={tourForm.meals} onChange={(event) => updateTourField("meals", event.target.value)} />
-                    </label>
-                  </div>
-                  <div className="form-grid">
-                    <label className="field">
-                      <span>Available from</span>
-                      <input type="date" value={tourForm.availableFrom} onChange={(event) => updateTourField("availableFrom", event.target.value)} />
-                    </label>
-                    <label className="field">
-                      <span>Available to</span>
-                      <input type="date" value={tourForm.availableTo} onChange={(event) => updateTourField("availableTo", event.target.value)} />
-                    </label>
-                    <label className="field">
-                      <span>Confirmation type</span>
-                      <select value={tourForm.confirmationType} onChange={(event) => updateTourField("confirmationType", event.target.value)}>
-                        {confirmationTypeOptions.map((type) => (
-                          <option key={type} value={type}>
-                            {type}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="field">
-                      <span>Review rating</span>
-                      <input
-                        type="number"
-                        min="0"
-                        max="5"
-                        step="0.1"
-                        value={tourForm.reviewRating}
-                        onChange={(event) => updateTourField("reviewRating", event.target.value)}
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Review count</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={tourForm.reviewCount}
-                        onChange={(event) => updateTourField("reviewCount", event.target.value)}
-                      />
-                    </label>
-                  </div>
-                  <label className="field">
-                    <span>Available weekdays, one per line</span>
-                    <textarea
-                      value={tourForm.availableWeekdays}
-                      onChange={(event) => updateTourField("availableWeekdays", event.target.value)}
-                      placeholder={"Daily\nMonday\nFriday"}
-                      rows="3"
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Partner</span>
-                    <select value={tourForm.partner} onChange={(event) => updateTourField("partner", event.target.value)} required>
-                      <option value="">Choose partner</option>
-                      {partnerOptions.map((partner) => (
-                        <option key={partner.value} value={partner.value}>
-                          {partner.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="field">
-                    <span>Referral link</span>
-                    <input value={tourForm.referralLink} onChange={(event) => updateTourField("referralLink", event.target.value)} />
-                  </label>
-                  <label className="field">
-                    <span>Special commission for this tour %</span>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={tourForm.commissionRatePercent}
-                      onChange={(event) => updateTourField("commissionRatePercent", event.target.value)}
-                      placeholder={`${commissionSettings.defaultCommissionRatePercent || 0}% normal rate`}
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Image URLs, one per line</span>
-                    <textarea value={tourForm.images} onChange={(event) => updateTourField("images", event.target.value)} />
-                  </label>
-                  <label className="field">
-                    <span>Inclusions, one per line</span>
-                    <textarea value={tourForm.inclusions} onChange={(event) => updateTourField("inclusions", event.target.value)} />
-                  </label>
-                  <label className="field">
-                    <span>Exclusions, one per line</span>
-                    <textarea value={tourForm.exclusions} onChange={(event) => updateTourField("exclusions", event.target.value)} />
-                  </label>
-                  {isAdmin && (
-                    <div className="vr-admin-panel">
-                      <label className="checkbox-inline">
-                        <input
-                          type="checkbox"
-                          checked={tourForm.vrEnabled}
-                          onChange={(event) => updateTourField("vrEnabled", event.target.checked)}
-                        />
-                        Enable VR for this tour
-                      </label>
-                      <div className="form-grid">
-                        <label className="field">
-                          <span>VR media type</span>
-                          <select value={tourForm.vrMediaType} onChange={(event) => updateTourField("vrMediaType", event.target.value)}>
-                            <option value="image">360 image</option>
-                            <option value="video">360 video</option>
-                          </select>
-                        </label>
-                        <label className="field">
-                          <span>VR media URL</span>
-                          <input
-                            value={tourForm.vrMediaUrl}
-                            onChange={(event) => updateTourField("vrMediaUrl", event.target.value)}
-                            placeholder="Image or video URL"
-                          />
-                        </label>
-                      </div>
-                      <label className="field">
-                        <span>VR caption</span>
-                        <input
-                          value={tourForm.vrCaption}
-                          onChange={(event) => updateTourField("vrCaption", event.target.value)}
-                          placeholder="What the traveller is seeing"
-                        />
-                      </label>
-                      <p className="form-note">Only admins can enable VR. Partner media stays normal until Travellex approves it here.</p>
-                    </div>
-                  )}
-                  <label className="field">
-                    <span>Highlights, one per line</span>
-                    <textarea value={tourForm.highlights} onChange={(event) => updateTourField("highlights", event.target.value)} />
-                  </label>
-                  <label className="field">
-                    <span>What to bring, one per line</span>
-                    <textarea value={tourForm.whatToBring} onChange={(event) => updateTourField("whatToBring", event.target.value)} />
-                  </label>
-                  <label className="field">
-                    <span>Not suitable for, one per line</span>
-                    <textarea value={tourForm.notSuitableFor} onChange={(event) => updateTourField("notSuitableFor", event.target.value)} />
-                  </label>
-                  <label className="field">
-                    <span>Cancellation policy</span>
-                    <textarea
-                      value={tourForm.cancellationPolicy}
-                      onChange={(event) => updateTourField("cancellationPolicy", event.target.value)}
-                      rows="3"
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Payment terms</span>
-                    <textarea value={tourForm.paymentTerms} onChange={(event) => updateTourField("paymentTerms", event.target.value)} rows="3" />
-                  </label>
-                  <div className="checkbox-row">
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={tourForm.featured}
-                        onChange={(event) => updateTourField("featured", event.target.checked)}
-                      />
-                      Featured
-                    </label>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={tourForm.isActive}
-                        onChange={(event) => updateTourField("isActive", event.target.checked)}
-                      />
-                      Active
-                    </label>
-                  </div>
-                  <div className="button-row">
-                    <button className="button primary" type="submit">
-                      {editingTourId ? "Update tour" : "Create tour"}
-                    </button>
-                    {editingTourId && (
-                      <button
-                        className="button secondary"
-                        type="button"
-                        onClick={() => {
-                          setEditingTourId("");
-                          setTourForm(emptyTour);
-                          setTourFormOpen(false);
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    )}
-                  </div>
-                    </form>
                   )}
                 </section>
                 <AdminCollection
@@ -3310,29 +3255,47 @@ export default function Admin() {
                   searchPlaceholder="Search title, location, partner or category"
                 >
                   {(tour) => (
-                    <article className="admin-row" key={tour._id}>
-                      <div>
-                        <strong>{tour.title}</strong>
-                        {tour.vrEnabled && <span className="tour-vr-admin-status">VR on</span>}
-                        <span>
-                          {tour.location} - {tour.category} - {eur.format(tour.priceEUR)}
-                        </span>
-                        <div className="admin-inline-flags">
-                          <label>
+                    <article className="admin-row admin-tour-row" key={tour._id}>
+                      <TourManagementMedia tour={tour} />
+                      <div className="admin-tour-card-body">
+                        <div className="admin-tour-card-head">
+                          <div>
+                            <strong>{tour.title}</strong>
+                            <span>{tour.partner?.name || "No partner"} - {tour.location || "Location not set"}</span>
+                          </div>
+                          <div className="admin-tour-price">
+                            <strong>{eur.format(tour.priceEUR)}</strong>
+                            <span>{tour.priceBasis || "Per person"}</span>
+                          </div>
+                        </div>
+                        <div className="admin-tour-meta-grid">
+                          <span>{tour.category || "Category"}</span>
+                          <span>{tour.duration || "Duration not set"}</span>
+                          <span>{tour.comfortLevel || "Comfort not set"}</span>
+                          <span>{tour.images?.length || 0}/{MAX_TOUR_MEDIA_ITEMS} media</span>
+                          {tour.vrEnabled && <span className="tour-vr-admin-status">VR on</span>}
+                        </div>
+                        <p>{tour.shortDescription || tour.routeSummary || tour.description || "No short description saved yet."}</p>
+                        <div className="admin-inline-flags luxury-toggle-row">
+                          <label className="lux-toggle">
                             <input
                               type="checkbox"
                               checked={Boolean(tour.featured)}
                               onChange={(event) => handleTourQuickToggle(tour._id, "featured", event.target.checked)}
                             />
-                            Featured homepage
+                            <span aria-hidden="true" />
+                            Featured
+                            <InfoHint text="Featured tours can appear in homepage and promoted listing areas." />
                           </label>
-                          <label>
+                          <label className="lux-toggle">
                             <input
                               type="checkbox"
                               checked={Boolean(tour.isActive)}
                               onChange={(event) => handleTourQuickToggle(tour._id, "isActive", event.target.checked)}
                             />
-                            Public tours
+                            <span aria-hidden="true" />
+                            Public
+                            <InfoHint text="Active tours are visible to travellers. Turn off to keep as an internal draft." />
                           </label>
                         </div>
                       </div>
@@ -3354,8 +3317,19 @@ export default function Admin() {
             )}
             {activeTab === "partners" && (
               <div className="admin-grid">
-                <form className="panel-form admin-form" onSubmit={handlePartnerSubmit}>
+                <form className="panel-form admin-form partner-admin-form" onSubmit={handlePartnerSubmit}>
                   <h2>{editingPartnerId ? "Edit partner" : "Add partner"}</h2>
+                  <div className="partner-approval-banner">
+                    <p className="eyebrow">Instant approval</p>
+                    <strong>
+                      {editingPartnerId
+                        ? "Partner details stay connected to the approved dashboard account."
+                        : "Creating a partner also creates or upgrades the tour company account."}
+                    </strong>
+                    <span>
+                      The contact email becomes the owner login, and an active partner can add listings straight away.
+                    </span>
+                  </div>
                   {Object.keys(emptyPartner)
                     .filter((key) => key !== "isActive")
                     .map((key) => (
@@ -3365,13 +3339,19 @@ export default function Admin() {
                           <textarea value={partnerForm[key]} onChange={(event) => updatePartnerField(key, event.target.value)} />
                         ) : (
                           <input
-                            type={["commissionRatePercent", "rating", "reviewCount"].includes(key) ? "number" : "text"}
+                            type={
+                              key === "contactEmail"
+                                ? "email"
+                                : ["commissionRatePercent", "rating", "reviewCount"].includes(key)
+                                  ? "number"
+                                  : "text"
+                            }
                             min={["commissionRatePercent", "rating", "reviewCount"].includes(key) ? "0" : undefined}
                             max={key === "commissionRatePercent" ? "100" : key === "rating" ? "5" : undefined}
                             step={key === "rating" ? "0.1" : undefined}
                             value={partnerForm[key]}
                             onChange={(event) => updatePartnerField(key, event.target.value)}
-                            required={key === "name"}
+                            required={["name", "contactEmail"].includes(key)}
                           />
                         )}
                       </label>
@@ -3384,9 +3364,23 @@ export default function Admin() {
                     />
                     Active partner
                   </label>
-                  <button className="button primary" type="submit">
-                    {editingPartnerId ? "Update partner" : "Create partner"}
-                  </button>
+                  <div className="button-row partner-form-actions">
+                    <button className="button primary" type="submit">
+                      {editingPartnerId ? "Update partner" : "Create approved partner"}
+                    </button>
+                    {editingPartnerId && (
+                      <button
+                        className="button secondary"
+                        type="button"
+                        onClick={() => {
+                          setEditingPartnerId("");
+                          setPartnerForm(emptyPartner);
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
                 </form>
                 <AdminCollection
                   className="admin-list"
@@ -3410,12 +3404,24 @@ export default function Admin() {
                   searchPlaceholder="Search partner, location, trust note or terms"
                 >
                   {(partner) => (
-                    <article className="admin-row" key={partner._id}>
+                    <article className="admin-row partner-admin-row" key={partner._id}>
                       <div>
                         <strong>{partner.name}</strong>
                         <span>
                           {partner.location || "Location not set"} - {partner.rating ? `${Number(partner.rating).toFixed(1)} / 5` : "No rating"} - Commission {partner.commissionRatePercent || 0}%
                         </span>
+                        <div className="partner-account-strip">
+                          <span>
+                            <strong>Dashboard access</strong>
+                            {partner.ownerUser
+                              ? `${partner.ownerUser.name || partner.ownerUser.email} - ${roleLabels[partner.ownerUser.role] || partner.ownerUser.role}`
+                              : "No linked login yet"}
+                          </span>
+                          <span>
+                            <strong>Approval</strong>
+                            {partner.isActive ? "Approved and active" : "Inactive"}
+                          </span>
+                        </div>
                         {partner.licenseInfo && <p>{partner.licenseInfo}</p>}
                         <p>{partner.commissionTerms || "No commission terms saved yet."}</p>
                         <details className="postback-box">
@@ -3450,10 +3456,12 @@ export default function Admin() {
             )}
             {activeTab === "enquiries" && (
               <AdminCollection
+                className="admin-list full enquiry-admin-list"
+                defaultView="list"
                 items={enquiries}
                 label="enquiries"
                 emptyText="No enquiries yet."
-                searchKeys={["name", "email", "destination", "message", "tour.title", "type", "status"]}
+                searchKeys={["name", "email", "destination", "message", "tour.title", "partner.name", "type", "status"]}
                 filterOptions={[
                   { value: "new", label: "New", predicate: (enquiry) => enquiry.status === "new" },
                   { value: "contacted", label: "Contacted", predicate: (enquiry) => enquiry.status === "contacted" },
@@ -3468,25 +3476,96 @@ export default function Admin() {
                   { value: "destination", label: "Destination A-Z", compare: (left, right) => compareText(left.destination, right.destination) }
                 ]}
                 searchPlaceholder="Search name, email, destination or message"
+                viewModes={[
+                  { value: "list", label: "Inbox" },
+                  { value: "cards", label: "Cards" }
+                ]}
               >
                 {(enquiry) => (
-                  <article className="admin-row" key={enquiry._id}>
-                    <div>
-                      <strong>{enquiry.name}</strong>
-                      <span>
-                        {enquiry.email} -{" "}
-                        {enquiry.type === "partner_application" ? "Tour listing application" : enquiry.tour?.title || "General"} -{" "}
-                        {formatDate(enquiry.createdAt)}
-                      </span>
-                      {enquiry.destination && <p>Destination: {enquiry.destination}</p>}
-                      <p>{enquiry.message}</p>
+                  <article className={`admin-row enquiry-message-card status-${enquiry.status || "new"}`} key={enquiry._id}>
+                    <div className="enquiry-message-main">
+                      <div className="enquiry-message-head">
+                        <div>
+                          <span className={`enquiry-status-pill status-${enquiry.status || "new"}`}>
+                            {enquiryStatusLabel(enquiry.status)}
+                          </span>
+                          <strong>{enquiry.name || "Traveller"}</strong>
+                          <span>
+                            {enquirySubject(enquiry)} - {formatDate(enquiry.createdAt)}
+                          </span>
+                        </div>
+                        <div className="button-row enquiry-contact-actions">
+                          {enquiry.email && (
+                            <a className="button secondary compact" href={`mailto:${enquiry.email}`}>
+                              Reply by email
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                      <div className="enquiry-detail-grid">
+                        <span>
+                          <strong>Email</strong>
+                          {enquiry.email || "Not provided"}
+                        </span>
+                        <span>
+                          <strong>Destination</strong>
+                          {enquiry.destination || enquiry.tour?.location || "Not provided"}
+                        </span>
+                        <span>
+                          <strong>Request</strong>
+                          {enquiry.requestType === "quote" ? "Quote request" : "Question"}
+                        </span>
+                        <span>
+                          <strong>Tour</strong>
+                          {enquiry.tour?.title || "General enquiry"}
+                        </span>
+                        <span>
+                          <strong>Partner</strong>
+                          {enquiry.partner?.name || "Not assigned"}
+                        </span>
+                        <span>
+                          <strong>Travel date</strong>
+                          {enquiry.travelDate ? formatDate(enquiry.travelDate) : "Not provided"}
+                        </span>
+                        <span>
+                          <strong>Group size</strong>
+                          {enquiry.groupSize || "Not provided"}
+                        </span>
+                        <span>
+                          <strong>Budget</strong>
+                          {enquiry.budgetEUR ? eur.format(enquiry.budgetEUR) : "Not provided"}
+                        </span>
+                      </div>
+                      <section className="enquiry-message-body" aria-label="Traveller message body">
+                        <span>Message body</span>
+                        {enquiryMessageLines(enquiry).map((line, index) => (
+                          <p key={`${enquiry._id}-message-${index}`}>{line}</p>
+                        ))}
+                      </section>
                     </div>
-                    <select value={enquiry.status} onChange={(event) => handleStatusChange(enquiry._id, event.target.value)}>
-                      <option value="new">new</option>
-                      <option value="contacted">contacted</option>
-                      <option value="referred">referred</option>
-                      <option value="closed">closed</option>
-                    </select>
+                    <div className="enquiry-status-actions">
+                      <span>Update status</span>
+                      <select value={enquiry.status} onChange={(event) => handleStatusChange(enquiry._id, event.target.value)}>
+                        {enquiryStatusOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="enquiry-status-button-grid">
+                        {enquiryStatusOptions.map((option) => (
+                          <button
+                            className={enquiry.status === option.value ? "active" : ""}
+                            key={option.value}
+                            type="button"
+                            onClick={() => handleStatusChange(enquiry._id, option.value)}
+                            disabled={enquiry.status === option.value}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </article>
                 )}
               </AdminCollection>
@@ -3712,11 +3791,14 @@ export default function Admin() {
                 <p className="eyebrow">Cloudinary upload</p>
                 <h2>Upload a tour image</h2>
                 <label className="field">
-                  <span>Image file</span>
-                  <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading} />
+                  <span className="label-with-info">
+                    Tour media file
+                    <InfoHint text={`Uploads are added to the open tour form. Each tour can keep up to ${MAX_TOUR_MEDIA_ITEMS} images or videos.`} />
+                  </span>
+                  <input type="file" accept="image/*,video/mp4,video/webm,video/quicktime" onChange={handleUpload} disabled={uploading} />
                 </label>
                 <p>
-                  Uploaded image URLs are inserted into the tour form so they can be saved into the tour images array.
+                  Uploaded media URLs are inserted into the tour form so they can be saved into the tour gallery.
                 </p>
               </div>
             )}

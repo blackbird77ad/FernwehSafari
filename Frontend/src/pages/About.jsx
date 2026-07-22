@@ -1,8 +1,10 @@
 import { destinationStories } from "../utils/staticContent";
+import SEO from "../components/SEO";
+import { buildOrganizationSchema } from "../utils/seoConfig";
 
 const trustAnchors = [
   ["Verified Local Operators", "Companies are reviewed before routes appear publicly."],
-  ["Secure Referral Architecture", "Travellers move from discovery to the original booking flow with clear handoff."],
+  ["Simple Booking Path", "Travellers can compare routes, choose a tour and continue with the right operator."],
   ["On-the-Ground Experts", "Destination context is shaped around real Africa travel patterns, starting with Tanzania and Zanzibar."]
 ];
 
@@ -11,9 +13,16 @@ export default function About() {
 
   return (
     <>
+      <SEO
+        canonicalPath="/about"
+        description="Travellex is an Africa-focused travel marketplace helping travellers from Germany and Europe compare Tanzania, Zanzibar and wider Africa tours from approved operators."
+        jsonLd={buildOrganizationSchema()}
+        keywords={["About Travellex", "Africa tour marketplace", "Germany to Africa travel", "Tanzania and Zanzibar travel"]}
+        title="About Travellex Africa Tours"
+      />
       <section className="page-hero compact-hero about-hero">
         <p className="eyebrow">About Travellex</p>
-        <h1>Trust infrastructure for Africa tour discovery.</h1>
+        <h1>A clearer way to find Africa tours.</h1>
       </section>
       <section className="section about-trust-layout">
         <div className="profile-orbit">
@@ -26,7 +35,7 @@ export default function About() {
             Travellex helps travellers compare Africa tours and adventure experiences before they book. Tanzania
             safaris, Kilimanjaro routes, heritage walks and Zanzibar coast escapes are the current strongest focus,
             but the platform is built for a wider travel map. We keep the site visual and emotional, while every
-            journey still gets practical details, reviewed partners and a clean referral path.
+            journey still gets practical details, reviewed partners and a clean route to booking.
           </p>
         </div>
       </section>

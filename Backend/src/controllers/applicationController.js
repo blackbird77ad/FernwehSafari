@@ -1,16 +1,8 @@
-const bcrypt = require("bcryptjs");
-const crypto = require("node:crypto");
 const ApiError = require("../utils/apiError");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/sendResponse");
 const TourCompanyApplication = require("../models/TourCompanyApplication");
-const TourPartner = require("../models/TourPartner");
-const User = require("../models/User");
-const {
-  assignPasswordResetToken,
-  buildClientUrl,
-  PASSWORD_RESET_TOKEN_TTL_MINUTES
-} = require("../lib/accountTokens");
+const { approveCompanyApplication } = require("../lib/partnerApproval");
 const { notifyOwner, notifyUser } = require("../lib/resend");
 
 function parseList(value) {
@@ -79,10 +71,6 @@ function requirePartnerApplicationDetails(payload, body) {
   }
 }
 
-function randomAccountPassword() {
-  return crypto.randomBytes(32).toString("hex");
-}
-
 function applicationStatusCopy(status, reviewNotes) {
   const messages = {
     under_review: "Travellex has moved your tour company application into review.",
@@ -94,92 +82,6 @@ function applicationStatusCopy(status, reviewNotes) {
     messages[status] || `Your Travellex application status is now ${status.replace(/_/g, " ")}.`,
     reviewNotes || (status === "rejected" ? "No additional reason was provided." : "")
   ].filter(Boolean);
-}
-
-async function approveCompanyApplication(application, adminUser, reviewNotes) {
-  let user = await User.findOne({ email: application.email.toLowerCase() }).select(
-    "+emailVerificationTokenHash +emailVerificationExpiresAt +passwordResetTokenHash +passwordResetExpiresAt"
-  );
-  let setupPasswordUrl = "";
-  let accountCreated = false;
-
-  if (!user) {
-    user = new User({
-      name: application.contactName,
-      email: application.email,
-      passwordHash: await bcrypt.hash(randomAccountPassword(), 12),
-      country: application.headquarters,
-      role: "tour_company",
-      emailVerified: true,
-      emailVerifiedAt: new Date()
-    });
-    const setupToken = assignPasswordResetToken(user);
-    setupPasswordUrl = buildClientUrl(`/reset-password?token=${encodeURIComponent(setupToken)}`);
-    accountCreated = true;
-    await user.save();
-  } else {
-    user.role = "tour_company";
-    user.suspended = false;
-    user.emailVerified = true;
-    user.emailVerifiedAt = user.emailVerifiedAt || new Date();
-    user.emailVerificationTokenHash = undefined;
-    user.emailVerificationExpiresAt = undefined;
-    await user.save();
-  }
-
-  const partnerPayload = {
-    name: application.companyName,
-    bookingURL: application.bookingURL || application.website || "",
-    location: application.headquarters,
-    contactEmail: application.email,
-    contactPhone: application.whatsapp || application.phone,
-    description: application.notes || `${application.companyName} tour company profile.`,
-    commissionTerms: application.commissionExpectation,
-    ownerUser: user._id,
-    application: application._id,
-    isActive: true
-  };
-
-  const partner =
-    (await TourPartner.findOneAndUpdate({ ownerUser: user._id }, partnerPayload, {
-      new: true,
-      runValidators: true
-    })) || (await TourPartner.create(partnerPayload));
-
-  application.status = "approved";
-  application.reviewNotes = reviewNotes;
-  application.reviewedBy = adminUser._id;
-  application.reviewedAt = new Date();
-  application.linkedUser = user._id;
-  application.partner = partner._id;
-  await application.save();
-
-  const loginUrl = buildClientUrl("/login");
-  const emailStatus = await notifyUser(
-    application.email,
-    "Travellex tour company application approved",
-    [
-      `Hello ${application.contactName},`,
-      "",
-      "Your company application has been approved.",
-      "Your account now has tour company access and can post tours for Travellex review.",
-      accountCreated
-        ? `Set password: ${setupPasswordUrl}`
-        : `Login: ${loginUrl}`,
-      accountCreated
-        ? `This password setup link expires in ${PASSWORD_RESET_TOKEN_TTL_MINUTES} minutes. If it expires, use Forgot password on the login page.`
-        : "Use your existing Travellex login. If you do not remember your password, use Forgot password on the login page.",
-      "",
-      "Travellex"
-    ],
-    {
-      cta: accountCreated
-        ? { label: "Set password", href: setupPasswordUrl }
-        : { label: "Login", href: loginUrl }
-    }
-  );
-
-  return { application, emailStatus, accountCreated };
 }
 
 const createCompanyApplication = asyncHandler(async (req, res) => {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
+import SEO from "../components/SEO";
 import Spinner from "../components/Spinner";
 import { getBookingOpenURL, getBookingSession } from "../services/referralService";
 
@@ -13,7 +14,7 @@ export default function BookingSession() {
   const [copied, setCopied] = useState(false);
   const tour = session?.referral?.tour;
   const partner = session?.referral?.partner;
-  const bookingTitle = useMemo(() => tour?.title || "Travellex booking session", [tour?.title]);
+  const bookingTitle = useMemo(() => tour?.title || "your selected tour", [tour?.title]);
   const hasExternalBooking = Boolean(session?.referral?.hasExternalBooking ?? session?.referral?.outboundUrl);
   const bookingOpenURL = trackingCode && hasExternalBooking ? getBookingOpenURL(trackingCode) : "";
 
@@ -28,20 +29,21 @@ export default function BookingSession() {
       .finally(() => setLoading(false));
   }, [session, trackingCode]);
 
-  async function copyTrackingCode() {
+  async function copySupportReference() {
     try {
       await window.navigator.clipboard.writeText(trackingCode);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
-      setMessage("Copy failed. You can still select and copy the booking code manually.");
+      setMessage("Copy failed. You can still select and copy the support reference manually.");
     }
   }
 
   if (loading) {
     return (
       <section className="section booking-session-shell">
-        <Spinner label="Preparing Travellex booking session" />
+        <SEO canonicalPath="/booking" noindex title="Booking" />
+        <Spinner label="Preparing booking" />
       </section>
     );
   }
@@ -49,10 +51,11 @@ export default function BookingSession() {
   if (!session?.referral) {
     return (
       <section className="section booking-session-shell">
+        <SEO canonicalPath="/booking" noindex title="Booking" />
         <div className="booking-session-empty">
-          <p className="eyebrow">Booking session</p>
-          <h1>We could not open this Travellex booking session.</h1>
-          <p>{message || "The session may have expired or the tracking code is invalid."}</p>
+          <p className="eyebrow">Booking</p>
+          <h1>We could not open this booking.</h1>
+          <p>{message || "The booking link may have expired. You can start again from the tour page."}</p>
           <Link className="button primary" to="/tours">
             Browse tours
           </Link>
@@ -63,68 +66,70 @@ export default function BookingSession() {
 
   return (
     <section className="booking-session-page">
+      <SEO canonicalPath="/booking" noindex title="Booking" />
       <div className="booking-session-header">
         <div>
-          <p className="eyebrow">Travellex booking session</p>
-          <h1>{bookingTitle}</h1>
+          <p className="eyebrow">Booking</p>
+          <h1>Continue with {partner?.name || "the tour operator"}.</h1>
           <p>
-            Travellex has created your booking code. Continue on the partner website in a normal browser tab so security checks can work properly.
+            You are ready to book {bookingTitle}. We have prepared the right operator link for you.
           </p>
         </div>
         <div className="booking-session-meta" aria-label="Booking session details">
           <span>
-            <strong>Hosted by</strong>
-            Travellex
+            <strong>Tour</strong>
+            {tour?.location || "Selected tour"}
           </span>
           <span>
             <strong>Operator</strong>
             {partner?.name || "Approved partner"}
           </span>
           <span>
-            <strong>Tracking</strong>
-            Active
+            <strong>Reference</strong>
+            Ready
           </span>
         </div>
       </div>
       {hasExternalBooking ? (
         <div className="booking-handoff-panel">
           <div>
-            <p className="eyebrow">Partner booking handoff</p>
-            <h2>Open the partner booking page in a new tab.</h2>
+            <p className="eyebrow">Next step</p>
+            <h2>Finish your booking with {partner?.name || "the operator"}.</h2>
             <p>
-              Some partner websites use security pages that ask visitors to confirm they are not a robot. Opening the booking page
-              outside an embedded window prevents those checks from looping or getting stuck.
+              Complete availability, traveller details and payment on the operator booking page.
             </p>
           </div>
-          <div className="booking-code-box">
-            <span>Travellex booking code</span>
-            <strong>{trackingCode}</strong>
-            <small>Keep this code with the booking so Travellex can track support and commission.</small>
-          </div>
+          <details className="booking-reference-details">
+            <summary>Support reference</summary>
+            <div className="booking-code-box">
+              <span>For Travellex support</span>
+              <strong>{trackingCode}</strong>
+              <small>You only need this if you ask us for help with this booking.</small>
+            </div>
+          </details>
           <div className="button-row">
-            <a className="button primary" href={bookingOpenURL} target="_blank" rel="noopener noreferrer">
-              Open partner booking
+            <a className="button primary" href={bookingOpenURL}>
+              Continue booking
             </a>
-            <button className="button secondary" type="button" onClick={copyTrackingCode}>
-              {copied ? "Copied" : "Copy booking code"}
+            <button className="button secondary" type="button" onClick={copySupportReference}>
+              {copied ? "Copied" : "Copy support reference"}
             </button>
             <Link className="button secondary" to={tour?.slug ? `/tours/${tour.slug}#quote` : "/contact"}>
-              Ask Travellex to help
+              Ask a question
             </Link>
           </div>
           {message && <p className="form-note error">{message}</p>}
         </div>
       ) : (
         <div className="booking-internal-panel">
-          <p className="eyebrow">Travellex-hosted booking</p>
-          <h2>This partner manages the booking through Travellex.</h2>
+          <p className="eyebrow">Booking request</p>
+          <h2>Send your trip details to Travellex.</h2>
           <p>
-            Your tracking session is active. Travellex will coordinate availability, operator details and payment next
-            steps with {partner?.name || "the approved partner"}.
+            This operator does not have instant online booking yet. Share your dates and questions and Travellex will help with the next step.
           </p>
-          <div className="booking-session-meta" aria-label="Travellex booking handoff">
+          <div className="booking-session-meta" aria-label="Booking request details">
             <span>
-              <strong>Tracking code</strong>
+              <strong>Support ref</strong>
               {trackingCode}
             </span>
             <span>
@@ -133,7 +138,7 @@ export default function BookingSession() {
             </span>
             <span>
               <strong>Next step</strong>
-              Travellex handoff
+              Trip details
             </span>
           </div>
           <div className="button-row">
@@ -148,7 +153,7 @@ export default function BookingSession() {
       )}
       <div className="booking-session-help">
         <p>
-          If the partner page asks for a robot check, complete it in the new tab. If it keeps looping, send the booking code to Travellex and we will help complete the handoff.
+          Need help before you continue? Ask Travellex and we will connect the details to this tour.
         </p>
         <Link className="button secondary compact" to={tour?.slug ? `/tours/${tour.slug}` : "/tours"}>
           Back to tour

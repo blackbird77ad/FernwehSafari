@@ -55,6 +55,15 @@ function enquiryLabel(enquiry) {
   return enquiry.requestType === "quote" ? `Quote request: ${tourLabel(enquiry)}` : tourLabel(enquiry);
 }
 
+function readableMessageLines(message) {
+  const lines = String(message || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return lines.length ? lines : ["No message provided."];
+}
+
 function normalizeLines(lines = []) {
   return lines.filter((line) => line !== undefined && line !== null).map((line) => String(line));
 }
@@ -377,6 +386,7 @@ async function sendEnquiryEmails(enquiry) {
   const partnerName = enquiry.partner?.name || "Not assigned";
   const partnerEmail = enquiry.partner?.contactEmail || "Not provided";
   const requestType = enquiry.requestType === "quote" ? "Quote request" : "Question";
+  const messageLines = readableMessageLines(enquiry.message);
   const confirmationText =
     enquiry.type === "partner_application"
       ? "Travellex has received your tour listing application and will follow up to schedule a discussion."
@@ -397,13 +407,17 @@ async function sendEnquiryEmails(enquiry) {
     `Group size: ${enquiry.groupSize || "Not provided"}`,
     `Budget EUR: ${enquiry.budgetEUR || "Not provided"}`,
     "",
-    enquiry.message || "No message provided."
+    "Traveller message",
+    ...messageLines
   ];
   const userLines = [
     `Hello ${enquiry.name},`,
     "",
     `Thank you for contacting Travellex about ${label}.`,
     confirmationText,
+    "",
+    "Your message",
+    ...messageLines,
     "",
     "Warm regards,",
     "Travellex"
