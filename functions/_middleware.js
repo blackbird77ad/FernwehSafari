@@ -39,6 +39,11 @@ export async function onRequest(context) {
   const methodSupportsHtml = request.method === "GET" || request.method === "HEAD";
   const noSlashPath = url.pathname.replace(/\/+$/, "");
 
+  if (url.hostname === "www.travellex.tours") {
+    url.hostname = "travellex.tours";
+    return Response.redirect(url.toString(), 301);
+  }
+
   if (url.pathname !== noSlashPath && PRERENDERED_ROUTES.has(noSlashPath)) {
     url.pathname = noSlashPath;
     return Response.redirect(url.toString(), 301);
