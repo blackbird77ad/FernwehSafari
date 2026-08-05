@@ -9,8 +9,22 @@ const fallbackSitemap = `<?xml version="1.0" encoding="UTF-8"?>
   <url><loc>https://travellex.tours/destinations/zanzibar-tours</loc><changefreq>weekly</changefreq><priority>0.90</priority></url>
   <url><loc>https://travellex.tours/destinations/tanzania-safari-tours</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
   <url><loc>https://travellex.tours/destinations/africa-safari-tours</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://travellex.tours/destinations/kilimanjaro-tours</loc><changefreq>weekly</changefreq><priority>0.84</priority></url>
+  <url><loc>https://travellex.tours/destinations/ngorongoro-crater-safari</loc><changefreq>weekly</changefreq><priority>0.84</priority></url>
+  <url><loc>https://travellex.tours/destinations/lake-manyara-safari</loc><changefreq>weekly</changefreq><priority>0.82</priority></url>
+  <url><loc>https://travellex.tours/destinations/mikumi-safari</loc><changefreq>weekly</changefreq><priority>0.82</priority></url>
+  <url><loc>https://travellex.tours/destinations/stone-town-tours</loc><changefreq>weekly</changefreq><priority>0.82</priority></url>
+  <url><loc>https://travellex.tours/destinations/nungwi-kendwa-beach</loc><changefreq>weekly</changefreq><priority>0.80</priority></url>
+  <url><loc>https://travellex.tours/destinations/mnemba-island-snorkeling</loc><changefreq>weekly</changefreq><priority>0.80</priority></url>
+  <url><loc>https://travellex.tours/destinations/paje-beach-tours</loc><changefreq>weekly</changefreq><priority>0.78</priority></url>
+  <url><loc>https://travellex.tours/destinations/jozani-forest-tours</loc><changefreq>weekly</changefreq><priority>0.78</priority></url>
   <url><loc>https://travellex.tours/gallery</loc><changefreq>weekly</changefreq><priority>0.72</priority></url>
+  <url><loc>https://travellex.tours/virtual-tour</loc><changefreq>weekly</changefreq><priority>0.70</priority></url>
+  <url><loc>https://travellex.tours/about</loc><changefreq>monthly</changefreq><priority>0.68</priority></url>
+  <url><loc>https://travellex.tours/testimonials</loc><changefreq>monthly</changefreq><priority>0.66</priority></url>
+  <url><loc>https://travellex.tours/faq</loc><changefreq>monthly</changefreq><priority>0.64</priority></url>
   <url><loc>https://travellex.tours/contact</loc><changefreq>monthly</changefreq><priority>0.62</priority></url>
+  <url><loc>https://travellex.tours/partner</loc><changefreq>monthly</changefreq><priority>0.58</priority></url>
 </urlset>`;
 
 function getApiBaseUrl(env = {}) {

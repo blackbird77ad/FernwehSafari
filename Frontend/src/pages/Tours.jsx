@@ -228,6 +228,7 @@ export default function Tours() {
         description="Search approved Africa tours with EUR pricing, including Tanzania safari, Zanzibar beach, Kilimanjaro, Ngorongoro, Stone Town and wider African travel routes."
         jsonLd={toursJsonLd}
         keywords={[
+          "Travellex Tours",
           "Africa tours",
           "Tanzania safari tours",
           "Zanzibar tours",
@@ -235,7 +236,7 @@ export default function Tours() {
           "African safari packages",
           "Kilimanjaro tours"
         ]}
-        title="Africa Tours, Tanzania Safaris and Zanzibar Trips"
+        title="Travellex Tours Marketplace | Africa Safaris, Tanzania and Zanzibar Trips"
       />
       <div className="tour-marketplace-hero">
         <div className="tour-breadcrumb" aria-label="Breadcrumb">

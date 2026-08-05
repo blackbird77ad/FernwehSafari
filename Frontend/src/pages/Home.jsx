@@ -56,9 +56,11 @@ export default function Home() {
     <>
       <SEO
         canonicalPath="/"
-        description="Travellex helps travellers from Germany and Europe compare Africa tours, Tanzania safaris, Zanzibar beach trips, Kilimanjaro routes and approved local operators."
+        description="Travellex Tours helps travellers compare Africa tours from Germany, Tanzania safaris, Zanzibar beach trips and approved operators."
         jsonLd={homeJsonLd}
         keywords={[
+          "Travellex",
+          "Travellex Tours",
           "Africa tours from Germany",
           "Tanzania safari tours",
           "Zanzibar tours",
@@ -66,7 +68,7 @@ export default function Home() {
           "Ngorongoro safari",
           "Africa travel marketplace"
         ]}
-        title="Africa Tours From Germany to Tanzania, Zanzibar and Beyond"
+        title="Travellex Tours | Africa Tours From Germany to Tanzania and Zanzibar"
       />
       <HeroSection />
       <section className={quickSearchOpen ? "instant-filter open" : "instant-filter collapsed"}>

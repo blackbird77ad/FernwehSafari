@@ -15,10 +15,10 @@ export default function About() {
     <>
       <SEO
         canonicalPath="/about"
-        description="Travellex is an Africa-focused travel marketplace helping travellers from Germany and Europe compare Tanzania, Zanzibar and wider Africa tours from approved operators."
+        description="Travellex is an Africa-focused marketplace for travellers comparing Tanzania, Zanzibar and wider Africa tours from approved operators."
         jsonLd={buildOrganizationSchema()}
-        keywords={["About Travellex", "Africa tour marketplace", "Germany to Africa travel", "Tanzania and Zanzibar travel"]}
-        title="About Travellex Africa Tours"
+        keywords={["About Travellex", "Travellex Tours", "Africa tour marketplace", "Germany to Africa travel", "Tanzania and Zanzibar travel"]}
+        title="About Travellex Tours"
       />
       <section className="page-hero compact-hero about-hero">
         <p className="eyebrow">About Travellex</p>

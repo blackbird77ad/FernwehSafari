@@ -40,8 +40,8 @@ export default function Contact() {
         canonicalPath="/contact"
         description="Contact Travellex for Africa travel questions, Tanzania safari planning, Zanzibar tours and Germany-to-Africa trip support."
         jsonLd={buildOrganizationSchema()}
-        keywords={["Contact Travellex", "Africa travel questions", "Tanzania safari enquiry", "Zanzibar tour enquiry"]}
-        title="Contact Travellex"
+        keywords={["Contact Travellex", "Contact Travellex Tours", "Africa travel questions", "Tanzania safari enquiry", "Zanzibar tour enquiry"]}
+        title="Contact Travellex Tours"
       />
       <section className="page-hero compact-hero contact-hero">
         <p className="eyebrow">Contact</p>

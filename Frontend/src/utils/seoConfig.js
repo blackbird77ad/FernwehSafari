@@ -1,9 +1,13 @@
-export const SITE_URL = (import.meta.env.VITE_SITE_URL || "https://travellex.tours").replace(/\/+$/, "");
+export const SITE_URL = (import.meta.env?.VITE_SITE_URL || "https://travellex.tours").replace(/\/+$/, "");
 export const SITE_NAME = "Travellex";
-export const DEFAULT_TITLE = "Travellex | Africa Tours From Germany to Tanzania and Zanzibar";
+export const BRAND_ALTERNATE_NAMES = ["Travellex Tours", "Travellex.tours", "Travellex Africa Tours"];
+export const DEFAULT_TITLE = "Travellex Tours | Africa Tours From Germany to Tanzania and Zanzibar";
 export const DEFAULT_DESCRIPTION =
-  "Compare curated Africa tours from approved operators, with strong coverage for Tanzania safaris, Zanzibar coast trips, Kilimanjaro, Ngorongoro and Germany-to-Africa travel planning.";
+  "Travellex Tours helps travellers compare Africa tours from Germany, Tanzania safaris, Zanzibar beach trips and approved operators.";
 export const DEFAULT_KEYWORDS = [
+  "Travellex",
+  "Travellex Tours",
+  "Travellex.tours",
   "Africa tours from Germany",
   "Tanzania safari tours",
   "Zanzibar tours",
@@ -40,6 +44,7 @@ export function buildOrganizationSchema() {
     "@type": "TravelAgency",
     "@id": `${SITE_URL}/#organization`,
     name: SITE_NAME,
+    alternateName: BRAND_ALTERNATE_NAMES,
     url: SITE_URL,
     logo: `${SITE_URL}/travellex-pwa-icon.svg`,
     image: DEFAULT_OG_IMAGE,
@@ -63,6 +68,7 @@ export function buildWebsiteSchema() {
     "@type": "WebSite",
     "@id": `${SITE_URL}/#website`,
     name: SITE_NAME,
+    alternateName: BRAND_ALTERNATE_NAMES,
     url: SITE_URL,
     inLanguage: "en",
     publisher: { "@id": `${SITE_URL}/#organization` },

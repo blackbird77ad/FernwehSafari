@@ -45,7 +45,20 @@ function normalizeJsonLd(jsonLd) {
     return null;
   }
 
-  return Array.isArray(jsonLd) ? { "@context": "https://schema.org", "@graph": jsonLd } : jsonLd;
+  if (!Array.isArray(jsonLd)) {
+    return jsonLd;
+  }
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": jsonLd.map((node) => {
+      const nextNode = { ...node };
+
+      delete nextNode["@context"];
+
+      return nextNode;
+    })
+  };
 }
 
 export default function SEO({

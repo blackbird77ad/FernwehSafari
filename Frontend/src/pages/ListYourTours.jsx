@@ -121,8 +121,8 @@ export default function ListYourTours() {
       <SEO
         canonicalPath="/partner"
         description="Tour companies can apply to list Africa tours on Travellex, reaching travellers searching for Tanzania, Zanzibar, safari, coast, culture and adventure routes."
-        keywords={["list Africa tours", "tour operator marketplace", "Travellex partner", "Tanzania tour company", "Zanzibar tour operator"]}
-        title="List Africa Tours With Travellex"
+        keywords={["list Africa tours", "tour operator marketplace", "Travellex partner", "Travellex Tours partner", "Tanzania tour company", "Zanzibar tour operator"]}
+        title="List Africa Tours With Travellex Tours"
       />
       <section className="partner-pitch-hero">
         <div>
