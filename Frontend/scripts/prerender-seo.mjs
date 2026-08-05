@@ -281,7 +281,7 @@ function outputPathForRoute(routePath) {
     return templatePath;
   }
 
-  return path.join(distRoot, `${routePath.replace(/^\/+/, "")}.html`);
+  return path.join(distRoot, routePath.replace(/^\/+/, ""), "index.html");
 }
 
 const template = await fs.readFile(templatePath, "utf8");
