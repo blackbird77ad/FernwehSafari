@@ -4,4 +4,27 @@
 http://www.travellex.tours/* https://travellex.tours/:splat 301!
 https://www.travellex.tours/* https://travellex.tours/:splat 301!
 
+/tours /tours/index.html 200
+/about /about/index.html 200
+/gallery /gallery/index.html 200
+/testimonials /testimonials/index.html 200
+/faq /faq/index.html 200
+/contact /contact/index.html 200
+/partner /partner/index.html 200
+/virtual-tour /virtual-tour/index.html 200
+/destinations/germany-to-africa-tours /destinations/germany-to-africa-tours/index.html 200
+/destinations/tanzania-tours /destinations/tanzania-tours/index.html 200
+/destinations/zanzibar-tours /destinations/zanzibar-tours/index.html 200
+/destinations/tanzania-safari-tours /destinations/tanzania-safari-tours/index.html 200
+/destinations/africa-safari-tours /destinations/africa-safari-tours/index.html 200
+/destinations/kilimanjaro-tours /destinations/kilimanjaro-tours/index.html 200
+/destinations/ngorongoro-crater-safari /destinations/ngorongoro-crater-safari/index.html 200
+/destinations/lake-manyara-safari /destinations/lake-manyara-safari/index.html 200
+/destinations/mikumi-safari /destinations/mikumi-safari/index.html 200
+/destinations/stone-town-tours /destinations/stone-town-tours/index.html 200
+/destinations/nungwi-kendwa-beach /destinations/nungwi-kendwa-beach/index.html 200
+/destinations/mnemba-island-snorkeling /destinations/mnemba-island-snorkeling/index.html 200
+/destinations/paje-beach-tours /destinations/paje-beach-tours/index.html 200
+/destinations/jozani-forest-tours /destinations/jozani-forest-tours/index.html 200
+
 /* /index.html 200
