@@ -5,6 +5,7 @@ const TourPartner = require("../models/TourPartner");
 const crypto = require("node:crypto");
 const { getCommissionSettings, normalizeCommissionRate } = require("../lib/commissionSettings");
 const { createApprovedPartnerFromAdmin, normalizePartnerEmail } = require("../lib/partnerApproval");
+const { serializePublicPartner } = require("../utils/privacySerializers");
 
 function isStaff(user) {
   return user?.role === "admin" || user?.role === "moderator";
@@ -29,7 +30,9 @@ const listPartners = asyncHandler(async (req, res) => {
   }
 
   const partners = await query;
-  sendResponse(res, 200, { partners: partners.map((partner) => serializePartner(partner, isStaff(req.user))) });
+  sendResponse(res, 200, {
+    partners: partners.map((partner) => (isStaff(req.user) ? serializePartner(partner, true) : serializePublicPartner(partner)))
+  });
 });
 
 const createPartner = asyncHandler(async (req, res) => {

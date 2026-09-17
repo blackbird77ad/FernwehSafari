@@ -5,6 +5,7 @@ const Enquiry = require("../models/Enquiry");
 const Tour = require("../models/Tour");
 const TourPartner = require("../models/TourPartner");
 const { notifyOwner, notifyUser, sendEnquiryEmails } = require("../lib/resend");
+const { serializeTravellerEnquiry } = require("../utils/privacySerializers");
 
 const clientUrl = (process.env.CLIENT_URL || "https://travellex.tours").replace(/\/+$/, "");
 const PARTNER_THREAD_DIRECTIONS = ["admin_to_partner", "partner_to_admin"];
@@ -195,9 +196,9 @@ const createEnquiry = asyncHandler(async (req, res) => {
   await enquiry.populate(["tour", "partner", "user", "referral"]);
 
   const emailStatus = await sendEnquiryEmails(enquiry, {
-    notifyTraveller: requestType !== "quote" && requestType !== "booking"
+    notifyTraveller: type === "partner_application"
   });
-  sendResponse(res, 201, { enquiry, emailStatus });
+  sendResponse(res, 201, { enquiry: serializeTravellerEnquiry(enquiry), emailStatus });
 });
 
 const listEnquiries = asyncHandler(async (req, res) => {
@@ -212,7 +213,7 @@ const listMyEnquiries = asyncHandler(async (req, res) => {
   const enquiries = await Enquiry.find({ user: req.user._id, isArchived: { $ne: true } })
     .populate(["tour", "partner", "referral"])
     .sort({ createdAt: -1 });
-  sendResponse(res, 200, { enquiries });
+  sendResponse(res, 200, { enquiries: enquiries.map(serializeTravellerEnquiry) });
 });
 
 const listPartnerEnquiries = asyncHandler(async (req, res) => {

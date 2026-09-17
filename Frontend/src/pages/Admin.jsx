@@ -378,6 +378,54 @@ function statusLabel(status) {
   return String(status || "not set").replace(/_/g, " ");
 }
 
+function bookingStatusValue(referral = {}) {
+  return referral.status || (referral.converted ? "converted" : "clicked");
+}
+
+function bookingStatusLabel(referral = {}) {
+  const labels = {
+    clicked: "New",
+    converted: "Booked",
+    paid: "Paid",
+    cancelled: "Cancelled",
+    disputed: "Needs review"
+  };
+
+  return labels[bookingStatusValue(referral)] || statusLabel(bookingStatusValue(referral));
+}
+
+function bookingAmount(referral = {}) {
+  return Number(referral.bookingValueEUR || referral.confirmedCommissionEUR || 0);
+}
+
+function bookingPaymentStatus(referral = {}) {
+  const status = bookingStatusValue(referral);
+  const confirmedCommission = Number(referral.confirmedCommissionEUR || 0);
+  const paidCommission = Number(referral.paidCommissionEUR || 0);
+
+  if (status === "paid" || referral.paidAt || (confirmedCommission > 0 && paidCommission >= confirmedCommission)) {
+    return "Paid";
+  }
+
+  return "Unpaid";
+}
+
+function bookingPaymentStatusClass(referral = {}) {
+  return bookingPaymentStatus(referral).toLowerCase();
+}
+
+function bookingTravellerName(referral = {}) {
+  return referral.user?.name || referral.user?.email || "Traveller";
+}
+
+function bookingTravellerEmail(referral = {}) {
+  return referral.user?.email || "";
+}
+
+function bookingPartnerEmail(referral = {}) {
+  return referral.partner?.contactEmail || "";
+}
+
 const enquiryStatusOptions = [
   { value: "received", label: "Received" },
   { value: "admin_review", label: "Admin review" },
@@ -669,6 +717,7 @@ export default function Admin() {
   const [userPagination, setUserPagination] = useState({ page: 1, limit: ADMIN_USER_PAGE_SIZE, total: 0, totalPages: 1, roleCounts: {} });
   const [referralForms, setReferralForms] = useState({});
   const [trackingReconcileForm, setTrackingReconcileForm] = useState(emptyTrackingReconcileForm);
+  const [selectedBookingId, setSelectedBookingId] = useState("");
   const [commissionSettings, setCommissionSettings] = useState(emptyCommissionSettings);
   const [commissionSettingsForm, setCommissionSettingsForm] = useState(emptyCommissionSettings);
   const [galleryForm, setGalleryForm] = useState(emptyGalleryMedia);
@@ -803,6 +852,52 @@ export default function Admin() {
   );
   const activeEnquiries = useMemo(() => enquiries.filter((enquiry) => !enquiry.isArchived), [enquiries]);
   const activeReferrals = useMemo(() => referrals.filter((referral) => !referral.isArchived), [referrals]);
+  const bookingEnquiriesByReferralId = useMemo(() => {
+    const map = new Map();
+
+    enquiries.forEach((enquiry) => {
+      const referralId = getEntityId(enquiry.referral);
+
+      if (referralId) {
+        map.set(referralId, enquiry);
+      }
+    });
+
+    return map;
+  }, [enquiries]);
+  const selectedBooking = useMemo(
+    () => referrals.find((referral) => referral._id === selectedBookingId),
+    [referrals, selectedBookingId]
+  );
+  const selectedBookingEnquiry = useMemo(() => {
+    if (!selectedBooking) {
+      return null;
+    }
+
+    const linkedEnquiryId = getEntityId(selectedBooking.enquiry);
+
+    return (
+      bookingEnquiriesByReferralId.get(selectedBooking._id) ||
+      enquiries.find((enquiry) => {
+        const enquiryId = getEntityId(enquiry);
+
+        return linkedEnquiryId && enquiryId === linkedEnquiryId;
+      }) || null
+    );
+  }, [bookingEnquiriesByReferralId, enquiries, selectedBooking]);
+  const bookingQueueMetrics = useMemo(
+    () => ({
+      new: activeReferrals.filter((referral) => bookingStatusValue(referral) === "clicked").length,
+      pending: activeReferrals.filter(
+        (referral) =>
+          bookingStatusValue(referral) === "disputed" ||
+          (bookingStatusValue(referral) === "converted" && bookingPaymentStatus(referral) === "Unpaid")
+      ).length,
+      paid: activeReferrals.filter((referral) => bookingPaymentStatus(referral) === "Paid").length,
+      booked: activeReferrals.filter((referral) => ["converted", "paid"].includes(bookingStatusValue(referral))).length
+    }),
+    [activeReferrals]
+  );
   const openEnquiryCount = useMemo(
     () =>
       isAdmin
@@ -3533,6 +3628,267 @@ export default function Admin() {
                     </article>
                   )}
                 </AdminCollection>
+                {selectedBooking && activeTab === "__disabled_booking_drawer__" && (
+                  <div className="booking-drawer-shell" role="dialog" aria-modal="true" aria-labelledby="booking-drawer-title">
+                    <button
+                      className="booking-drawer-backdrop"
+                      type="button"
+                      aria-label="Close booking details"
+                      onClick={() => setSelectedBookingId("")}
+                    />
+                    <aside className="booking-detail-drawer">
+                      <div className="booking-drawer-head">
+                        <div>
+                          <p className="eyebrow">Booking</p>
+                          <h2 id="booking-drawer-title">{selectedBooking.tour?.title || "Tour booking"}</h2>
+                          <span>
+                            {formatDate(selectedBooking.clickedAt)} - {selectedBooking.partner?.name || "Partner"}
+                          </span>
+                        </div>
+                        <button className="booking-drawer-close" type="button" onClick={() => setSelectedBookingId("")} aria-label="Close booking details">
+                          x
+                        </button>
+                      </div>
+                      <div className="booking-drawer-status">
+                        <span className={`booking-status-pill status-${selectedBooking.isArchived ? "archived" : bookingStatusValue(selectedBooking)}`}>
+                          {selectedBooking.isArchived ? "Archived" : bookingStatusLabel(selectedBooking)}
+                        </span>
+                        <strong>{eur.format(bookingAmount(selectedBooking))}</strong>
+                        <span className={`booking-payment-pill payment-${bookingPaymentStatusClass(selectedBooking)}`}>
+                          {bookingPaymentStatus(selectedBooking)}
+                        </span>
+                      </div>
+                      <div className="booking-drawer-sections">
+                        <section className="booking-drawer-section">
+                          <h3>Booking</h3>
+                          <dl>
+                            <div>
+                              <dt>Reference</dt>
+                              <dd>{selectedBooking.trackingCode || "Legacy booking"}</dd>
+                            </div>
+                            <div>
+                              <dt>Tour</dt>
+                              <dd>{selectedBooking.tour?.title || "Not provided"}</dd>
+                            </div>
+                            <div>
+                              <dt>Date</dt>
+                              <dd>{formatDate(selectedBooking.clickedAt)}</dd>
+                            </div>
+                            <div>
+                              <dt>Partner booking ID</dt>
+                              <dd>{selectedBooking.partnerBookingId || "Not saved"}</dd>
+                            </div>
+                          </dl>
+                        </section>
+                        <section className="booking-drawer-section">
+                          <h3>Traveller</h3>
+                          <dl>
+                            <div>
+                              <dt>Name</dt>
+                              <dd>{bookingTravellerName(selectedBooking)}</dd>
+                            </div>
+                            <div>
+                              <dt>Email</dt>
+                              <dd>{bookingTravellerEmail(selectedBooking) || "Not provided"}</dd>
+                            </div>
+                            <div>
+                              <dt>Account</dt>
+                              <dd>{selectedBooking.user ? "Registered traveller" : "Guest or legacy booking"}</dd>
+                            </div>
+                          </dl>
+                        </section>
+                        <section className="booking-drawer-section">
+                          <h3>Partner</h3>
+                          <dl>
+                            <div>
+                              <dt>Partner</dt>
+                              <dd>{selectedBooking.partner?.name || "Not provided"}</dd>
+                            </div>
+                            <div>
+                              <dt>Contact</dt>
+                              <dd>{bookingPartnerEmail(selectedBooking) || "Not provided"}</dd>
+                            </div>
+                            <div>
+                              <dt>Status</dt>
+                              <dd>{bookingStatusLabel(selectedBooking)}</dd>
+                            </div>
+                          </dl>
+                        </section>
+                        <section className="booking-drawer-section">
+                          <h3>Payment</h3>
+                          <dl>
+                            <div>
+                              <dt>Booking amount</dt>
+                              <dd>{eur.format(bookingAmount(selectedBooking))}</dd>
+                            </div>
+                            <div>
+                              <dt>Commission</dt>
+                              <dd>{eur.format(selectedBooking.confirmedCommissionEUR || 0)}</dd>
+                            </div>
+                            <div>
+                              <dt>Paid commission</dt>
+                              <dd>{eur.format(selectedBooking.paidCommissionEUR || 0)}</dd>
+                            </div>
+                            <div>
+                              <dt>Payment</dt>
+                              <dd>{bookingPaymentStatus(selectedBooking)}</dd>
+                            </div>
+                          </dl>
+                        </section>
+                        <section className="booking-drawer-section">
+                          <h3>Activity</h3>
+                          <ul className="booking-activity-list">
+                            <li>
+                              <strong>Booking started</strong>
+                              <span>{formatDate(selectedBooking.clickedAt)}</span>
+                            </li>
+                            {selectedBooking.convertedAt && (
+                              <li>
+                                <strong>Booking confirmed</strong>
+                                <span>{formatDate(selectedBooking.convertedAt)}</span>
+                              </li>
+                            )}
+                            {selectedBooking.paidAt && (
+                              <li>
+                                <strong>Payment recorded</strong>
+                                <span>{formatDate(selectedBooking.paidAt)}</span>
+                              </li>
+                            )}
+                            {selectedBooking.postbackReceivedAt && (
+                              <li>
+                                <strong>Partner report received</strong>
+                                <span>{formatDate(selectedBooking.postbackReceivedAt)}</span>
+                              </li>
+                            )}
+                            {selectedBooking.isArchived && (
+                              <li>
+                                <strong>Archived</strong>
+                                <span>{formatDate(selectedBooking.archivedAt)}</span>
+                              </li>
+                            )}
+                          </ul>
+                        </section>
+                        <section className="booking-drawer-section">
+                          <h3>Communication</h3>
+                          <div className="booking-drawer-actions">
+                            {bookingTravellerEmail(selectedBooking) ? (
+                              <a className="button secondary compact" href={`mailto:${bookingTravellerEmail(selectedBooking)}`}>
+                                Email traveller
+                              </a>
+                            ) : (
+                              <button className="button secondary compact" type="button" disabled>
+                                Email traveller
+                              </button>
+                            )}
+                            {bookingPartnerEmail(selectedBooking) ? (
+                              <a className="button secondary compact" href={`mailto:${bookingPartnerEmail(selectedBooking)}`}>
+                                Email partner
+                              </a>
+                            ) : (
+                              <button className="button secondary compact" type="button" disabled>
+                                Email partner
+                              </button>
+                            )}
+                          </div>
+                        </section>
+                        <section className="booking-drawer-section full">
+                          <h3>Update booking</h3>
+                          <form
+                            className="commission-edit-grid booking-edit-grid"
+                            onSubmit={(event) => {
+                              event.preventDefault();
+                              handleReferralConversion(selectedBooking._id);
+                            }}
+                          >
+                            <label className="field">
+                              <span>Booking amount EUR</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={referralField(selectedBooking, "bookingValueEUR")}
+                                onChange={(event) => updateReferralField(selectedBooking._id, "bookingValueEUR", event.target.value)}
+                              />
+                            </label>
+                            <label className="field">
+                              <span>Commission %</span>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={referralField(selectedBooking, "commissionRatePercent")}
+                                onChange={(event) => updateReferralField(selectedBooking._id, "commissionRatePercent", event.target.value)}
+                              />
+                            </label>
+                            <label className="field">
+                              <span>Commission EUR</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={referralField(selectedBooking, "commissionEUR") || selectedBooking.confirmedCommissionEUR || ""}
+                                onChange={(event) => updateReferralField(selectedBooking._id, "commissionEUR", event.target.value)}
+                              />
+                            </label>
+                            <label className="field">
+                              <span>Paid EUR</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={referralField(selectedBooking, "paidCommissionEUR")}
+                                onChange={(event) => updateReferralField(selectedBooking._id, "paidCommissionEUR", event.target.value)}
+                              />
+                            </label>
+                            <label className="field">
+                              <span>Status</span>
+                              <select
+                                value={referralField(selectedBooking, "status") || selectedBooking.status || "clicked"}
+                                onChange={(event) => updateReferralField(selectedBooking._id, "status", event.target.value)}
+                              >
+                                {referralStatuses.map((status) => (
+                                  <option key={status} value={status}>
+                                    {statusLabel(status)}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label className="field">
+                              <span>Notes</span>
+                              <input
+                                value={referralField(selectedBooking, "notes")}
+                                onChange={(event) => updateReferralField(selectedBooking._id, "notes", event.target.value)}
+                                placeholder="Partner invoice, booking id, payout note"
+                              />
+                            </label>
+                            <div className="booking-drawer-form-actions">
+                              <button className="button primary compact" type="submit">
+                                Save booking
+                              </button>
+                              <ConfirmActionButton
+                                actionLabel={selectedBooking.isArchived ? "Restore booking" : "Archive booking"}
+                                className="button secondary compact"
+                                confirmMessage={
+                                  selectedBooking.isArchived
+                                    ? `Restore booking ${selectedBooking.trackingCode || selectedBooking._id} to active queues?`
+                                    : `Archive booking ${selectedBooking.trackingCode || selectedBooking._id}? It will leave pending task counts but can be restored later.`
+                                }
+                                onConfirm={() => handleReferralArchive(selectedBooking._id, !selectedBooking.isArchived)}
+                              >
+                                {selectedBooking.isArchived ? "Restore" : "Archive"}
+                              </ConfirmActionButton>
+                              <ConfirmActionButton
+                                actionLabel={`Delete booking ${selectedBooking.trackingCode || selectedBooking._id}`}
+                                confirmMessage={`Permanently delete booking ${selectedBooking.trackingCode || selectedBooking._id}? This cannot be undone.`}
+                                onConfirm={async () => {
+                                  await handleReferralDelete(selectedBooking._id);
+                                  setSelectedBookingId("");
+                                }}
+                              />
+                            </div>
+                          </form>
+                        </section>
+                      </div>
+                    </aside>
+                  </div>
+                )}
               </div>
             )}
             {activeTab === "tour reviews" && (
@@ -4182,108 +4538,109 @@ export default function Admin() {
               </AdminCollection>
             )}
             {activeTab === "referrals" && (
-              <div className="admin-list full">
-                <div className="admin-kpi-grid compact">
-                  <article className="admin-kpi-card">
-                    <p className="eyebrow">Booking starts</p>
-                    <h2>{totalReferralCount}</h2>
-                  </article>
-                  <article className="admin-kpi-card">
-                    <p className="eyebrow">Bookings confirmed</p>
-                    <h2>{commissionStats.converted}</h2>
-                  </article>
-                  <article className="admin-kpi-card">
-                    <p className="eyebrow">Confirmed</p>
-                    <h2>{eur.format(commissionStats.confirmed)}</h2>
-                  </article>
-                  <article className="admin-kpi-card">
-                    <p className="eyebrow">Paid</p>
-                    <h2>{eur.format(commissionStats.paid)}</h2>
-                  </article>
-                </div>
-                <form className="panel-form tracking-reconcile-form" onSubmit={handleTrackingReconcileSubmit}>
+              <div className="admin-list full booking-ops-page">
+                <div className="booking-ops-header">
                   <div>
-                    <p className="eyebrow">Partner booking report</p>
-                    <h2>Record a partner booking.</h2>
-                    <p>
-                      Use this when the partner confirms a booking by email, WhatsApp or invoice. If the partner&apos;s
-                      reporting system is connected, this can happen automatically.
-                    </p>
+                    <p className="eyebrow">Operations</p>
+                    <h2>Bookings</h2>
                   </div>
-                  <div className="commission-edit-grid">
-                    <label className="field">
-                      <span>Travellex booking code</span>
-                      <input
-                        value={trackingReconcileForm.trackingCode}
-                        onChange={(event) => updateTrackingReconcileField("trackingCode", event.target.value)}
-                        required
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Partner booking ID</span>
-                      <input
-                        value={trackingReconcileForm.partnerBookingId}
-                        onChange={(event) => updateTrackingReconcileField("partnerBookingId", event.target.value)}
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Booking amount EUR</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={trackingReconcileForm.bookingValueEUR}
-                        onChange={(event) => updateTrackingReconcileField("bookingValueEUR", event.target.value)}
-                        required
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Commission %</span>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={trackingReconcileForm.commissionRatePercent}
-                        onChange={(event) => updateTrackingReconcileField("commissionRatePercent", event.target.value)}
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Commission EUR</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={trackingReconcileForm.commissionEUR}
-                        onChange={(event) => updateTrackingReconcileField("commissionEUR", event.target.value)}
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Status</span>
-                      <select
-                        value={trackingReconcileForm.status}
-                        onChange={(event) => updateTrackingReconcileField("status", event.target.value)}
-                      >
-                        {referralStatuses.map((status) => (
-                          <option key={status} value={status}>
-                            {statusLabel(status)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="field">
-                      <span>Notes</span>
-                      <input
-                        value={trackingReconcileForm.notes}
-                        onChange={(event) => updateTrackingReconcileField("notes", event.target.value)}
-                        placeholder="Report source, invoice, payout note"
-                      />
-                    </label>
-                    <button className="button primary compact" type="submit">
-                      Save booking
-                    </button>
+                  <div className="booking-metric-strip" aria-label="Booking summary">
+                    <span>
+                      <strong>{bookingQueueMetrics.new}</strong>
+                      New
+                    </span>
+                    <span>
+                      <strong>{bookingQueueMetrics.pending}</strong>
+                      Pending
+                    </span>
+                    <span>
+                      <strong>{bookingQueueMetrics.paid}</strong>
+                      Paid
+                    </span>
+                    <span>
+                      <strong>{bookingQueueMetrics.booked}</strong>
+                      Booked
+                    </span>
                   </div>
-                </form>
+                </div>
+                <details className="booking-report-fold">
+                  <summary>Record partner booking report</summary>
+                  <form className="panel-form tracking-reconcile-form" onSubmit={handleTrackingReconcileSubmit}>
+                    <div className="commission-edit-grid">
+                      <label className="field">
+                        <span>Travellex booking code</span>
+                        <input
+                          value={trackingReconcileForm.trackingCode}
+                          onChange={(event) => updateTrackingReconcileField("trackingCode", event.target.value)}
+                          required
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Partner booking ID</span>
+                        <input
+                          value={trackingReconcileForm.partnerBookingId}
+                          onChange={(event) => updateTrackingReconcileField("partnerBookingId", event.target.value)}
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Booking amount EUR</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={trackingReconcileForm.bookingValueEUR}
+                          onChange={(event) => updateTrackingReconcileField("bookingValueEUR", event.target.value)}
+                          required
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Commission %</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={trackingReconcileForm.commissionRatePercent}
+                          onChange={(event) => updateTrackingReconcileField("commissionRatePercent", event.target.value)}
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Commission EUR</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={trackingReconcileForm.commissionEUR}
+                          onChange={(event) => updateTrackingReconcileField("commissionEUR", event.target.value)}
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Status</span>
+                        <select
+                          value={trackingReconcileForm.status}
+                          onChange={(event) => updateTrackingReconcileField("status", event.target.value)}
+                        >
+                          {referralStatuses.map((status) => (
+                            <option key={status} value={status}>
+                              {statusLabel(status)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="field">
+                        <span>Notes</span>
+                        <input
+                          value={trackingReconcileForm.notes}
+                          onChange={(event) => updateTrackingReconcileField("notes", event.target.value)}
+                          placeholder="Report source, invoice, payout note"
+                        />
+                      </label>
+                      <button className="button primary compact" type="submit">
+                        Save booking
+                      </button>
+                    </div>
+                  </form>
+                </details>
                 <AdminCollection
                   className="admin-list embedded referral-top-collection booking-card-collection"
-                  defaultView="cards"
+                  defaultView="list"
                   items={referrals}
                   label="booking records"
                   emptyText="No booking starts tracked yet."
@@ -4308,146 +4665,87 @@ export default function Admin() {
                   searchPlaceholder="Search booking code, tour, partner or traveller"
                   pageSize={12}
                   viewModes={[
-                    { value: "cards", label: "Cards" },
-                    { value: "compact", label: "Compact" },
-                    { value: "list", label: "List" }
+                    { value: "list", label: "Table" },
+                    { value: "cards", label: "Cards" }
                   ]}
                 >
-                  {(referral) => (
-                    <article className="admin-row referral-row" key={referral._id}>
-                      <div className="booking-card-summary">
-                        <div className="booking-card-head">
-                          <div>
-                            <strong>{referral.tour?.title || "Tour booking"}</strong>
-                            <span>
-                              {referral.partner?.name || "Partner"} - {formatDate(referral.clickedAt)}
+                  {(referral) => {
+                    const bookingEnquiry = bookingEnquiriesByReferralId.get(referral._id);
+
+                    return (
+                    <article className="admin-row referral-row booking-scan-row" key={referral._id}>
+                      <button className="booking-scan-main" type="button" onClick={() => setSelectedBookingId(referral._id)}>
+                        <span className="booking-scan-title">{referral.tour?.title || "Tour booking"}</span>
+                        <span className="booking-scan-meta">
+                          {formatDate(referral.clickedAt)} - {referral.partner?.name || "Partner"}
+                        </span>
+                        <span className="booking-scan-state">
+                          {bookingEnquiry ? (
+                            <span className={`enquiry-status-pill status-${bookingEnquiry.status || "received"}`}>
+                              {enquiryStatusLabel(bookingEnquiry.status)}
                             </span>
-                          </div>
-                          <span className={`booking-status-pill status-${referral.isArchived ? "archived" : referral.status || (referral.converted ? "converted" : "clicked")}`}>
-                            {referral.isArchived ? "Archived" : statusLabel(referral.status || (referral.converted ? "converted" : "clicked"))}
-                          </span>
-                        </div>
-                        <div className="booking-mini-grid">
-                          <span>
-                            <strong>Traveller</strong>
-                            {referral.user?.email || "Signed-out guest"}
-                          </span>
-                          <span>
-                            <strong>Confirmed</strong>
-                            {eur.format(referral.confirmedCommissionEUR || 0)}
-                          </span>
-                          <span>
-                            <strong>Paid</strong>
-                            {eur.format(referral.paidCommissionEUR || 0)}
-                          </span>
-                        </div>
-                        <div className="booking-card-actions">
-                          {referral.outboundUrl && (
-                            <a className="button secondary compact" href={referral.outboundUrl} target="_blank" rel="noreferrer">
-                              Partner page
-                            </a>
+                          ) : (
+                            <span className={`booking-status-pill status-${referral.isArchived ? "archived" : bookingStatusValue(referral)}`}>
+                              {referral.isArchived ? "Archived" : bookingStatusLabel(referral)}
+                            </span>
                           )}
-                          <ConfirmActionButton
-                            actionLabel={referral.isArchived ? "Restore booking" : "Archive booking"}
-                            className="button secondary compact"
-                            confirmMessage={
-                              referral.isArchived
-                                ? `Restore booking ${referral.trackingCode || referral._id} to active queues?`
-                                : `Archive booking ${referral.trackingCode || referral._id}? It will leave pending task counts but can be restored later.`
-                            }
-                            onConfirm={() => handleReferralArchive(referral._id, !referral.isArchived)}
-                          >
-                            {referral.isArchived ? "Restore" : "Archive"}
-                          </ConfirmActionButton>
-                          <ConfirmActionButton
-                            actionLabel={`Delete booking ${referral.trackingCode || referral._id}`}
-                            confirmMessage={`Permanently delete booking ${referral.trackingCode || referral._id}? This cannot be undone.`}
-                            onConfirm={() => handleReferralDelete(referral._id)}
-                          />
-                        </div>
-                        <details className="booking-card-details">
-                          <summary>Details and update</summary>
-                          <div className="booking-detail-strip">
-                            <span>
-                              <strong>Travellex code</strong>
-                              {referral.trackingCode || "legacy booking"}
-                            </span>
-                            <span>
-                              <strong>Estimated</strong>
-                              {eur.format(referral.estimatedCommissionEUR || 0)}
-                            </span>
-                            <span>
-                              <strong>Booking ID</strong>
-                              {referral.partnerBookingId || "Not saved"}
-                            </span>
-                          </div>
-                          <div className="commission-edit-grid booking-edit-grid">
-                            <label className="field">
-                              <span>Booking amount EUR</span>
-                              <input
-                                type="number"
-                                min="0"
-                                value={referralField(referral, "bookingValueEUR")}
-                                onChange={(event) => updateReferralField(referral._id, "bookingValueEUR", event.target.value)}
-                              />
-                            </label>
-                            <label className="field">
-                              <span>Commission %</span>
-                              <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                value={referralField(referral, "commissionRatePercent")}
-                                onChange={(event) => updateReferralField(referral._id, "commissionRatePercent", event.target.value)}
-                              />
-                            </label>
-                            <label className="field">
-                              <span>Commission EUR</span>
-                              <input
-                                type="number"
-                                min="0"
-                                value={referralField(referral, "commissionEUR") || referral.confirmedCommissionEUR || ""}
-                                onChange={(event) => updateReferralField(referral._id, "commissionEUR", event.target.value)}
-                              />
-                            </label>
-                            <label className="field">
-                              <span>Paid EUR</span>
-                              <input
-                                type="number"
-                                min="0"
-                                value={referralField(referral, "paidCommissionEUR")}
-                                onChange={(event) => updateReferralField(referral._id, "paidCommissionEUR", event.target.value)}
-                              />
-                            </label>
-                            <label className="field">
-                              <span>Status</span>
-                              <select
-                                value={referralField(referral, "status") || referral.status || "clicked"}
-                                onChange={(event) => updateReferralField(referral._id, "status", event.target.value)}
-                              >
-                                {referralStatuses.map((status) => (
-                                  <option key={status} value={status}>
-                                    {statusLabel(status)}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label className="field">
-                              <span>Notes</span>
-                              <input
-                                value={referralField(referral, "notes")}
-                                onChange={(event) => updateReferralField(referral._id, "notes", event.target.value)}
-                                placeholder="Partner invoice, booking id, payout note"
-                              />
-                            </label>
-                            <button className="button primary compact" type="button" onClick={() => handleReferralConversion(referral._id)}>
-                              Save booking
+                          <strong>{eur.format(bookingAmount(referral))}</strong>
+                          <span className={`booking-payment-pill payment-${bookingPaymentStatusClass(referral)}`}>
+                            {bookingPaymentStatus(referral)}
+                          </span>
+                        </span>
+                      </button>
+                      <div className="booking-scan-actions">
+                        <button className="booking-action-chip" type="button" onClick={() => setSelectedBookingId(referral._id)}>
+                          Traveller
+                        </button>
+                        <button className="booking-action-chip" type="button" onClick={() => setSelectedBookingId(referral._id)}>
+                          Partner
+                        </button>
+                        <button className="booking-action-chip" type="button" onClick={() => setSelectedBookingId(referral._id)}>
+                          Payment
+                        </button>
+                        <details className="booking-more-menu">
+                          <summary aria-label={`More actions for ${referral.tour?.title || "booking"}`}>...</summary>
+                          <div className="booking-menu-panel">
+                            <button type="button" onClick={() => setSelectedBookingId(referral._id)}>
+                              View details
                             </button>
+                            <button type="button" onClick={() => setSelectedBookingId(referral._id)}>
+                              Update status
+                            </button>
+                            <button type="button" onClick={() => setSelectedBookingId(referral._id)}>
+                              Message traveller
+                            </button>
+                            <button type="button" onClick={() => setSelectedBookingId(referral._id)}>
+                              Ask partner
+                            </button>
+                            <ConfirmActionButton
+                              actionLabel={referral.isArchived ? "Restore booking" : "Archive booking"}
+                              className="booking-menu-action"
+                              confirmMessage={
+                                referral.isArchived
+                                  ? `Restore booking ${referral.trackingCode || referral._id} to active queues?`
+                                  : `Archive booking ${referral.trackingCode || referral._id}? It will leave pending task counts but can be restored later.`
+                              }
+                              onConfirm={() => handleReferralArchive(referral._id, !referral.isArchived)}
+                            >
+                              {referral.isArchived ? "Restore" : "Archive"}
+                            </ConfirmActionButton>
+                            <ConfirmActionButton
+                              actionLabel={`Delete booking ${referral.trackingCode || referral._id}`}
+                              className="booking-menu-action danger"
+                              confirmMessage={`Permanently delete booking ${referral.trackingCode || referral._id}? This cannot be undone.`}
+                              onConfirm={() => handleReferralDelete(referral._id)}
+                            >
+                              Delete
+                            </ConfirmActionButton>
                           </div>
                         </details>
                       </div>
                     </article>
-                  )}
+                    );
+                  }}
                 </AdminCollection>
               </div>
             )}
@@ -4471,6 +4769,392 @@ export default function Admin() {
         )}
         </div>
       </section>
+      {selectedBooking && (
+        <div className="booking-drawer-shell" role="dialog" aria-modal="true" aria-labelledby="booking-drawer-title">
+          <button
+            className="booking-drawer-backdrop"
+            type="button"
+            aria-label="Close booking details"
+            onClick={() => setSelectedBookingId("")}
+          />
+          <aside className="booking-detail-drawer">
+            <div className="booking-drawer-head">
+              <div>
+                <p className="eyebrow">Booking request</p>
+                <h2 id="booking-drawer-title">{selectedBooking.tour?.title || "Tour booking"}</h2>
+                <span>
+                  {formatDate(selectedBooking.clickedAt)} - {selectedBooking.partner?.name || "Partner"}
+                </span>
+              </div>
+              <button className="booking-drawer-close" type="button" onClick={() => setSelectedBookingId("")} aria-label="Close booking details">
+                x
+              </button>
+            </div>
+            <div className="booking-drawer-status">
+              <span className={`booking-status-pill status-${selectedBooking.isArchived ? "archived" : bookingStatusValue(selectedBooking)}`}>
+                {selectedBooking.isArchived ? "Archived" : bookingStatusLabel(selectedBooking)}
+              </span>
+              {selectedBookingEnquiry && (
+                <span className={`enquiry-status-pill status-${selectedBookingEnquiry.status || "received"}`}>
+                  {enquiryStatusLabel(selectedBookingEnquiry.status)}
+                </span>
+              )}
+              <strong>{eur.format(bookingAmount(selectedBooking))}</strong>
+              <span className={`booking-payment-pill payment-${bookingPaymentStatusClass(selectedBooking)}`}>
+                {bookingPaymentStatus(selectedBooking)}
+              </span>
+            </div>
+            <div className="booking-drawer-sections">
+              <section className="booking-drawer-section">
+                <h3>Booking</h3>
+                <dl>
+                  <div>
+                    <dt>Reference</dt>
+                    <dd>{selectedBooking.trackingCode || "Legacy booking"}</dd>
+                  </div>
+                  <div>
+                    <dt>Tour</dt>
+                    <dd>{selectedBooking.tour?.title || "Not provided"}</dd>
+                  </div>
+                  <div>
+                    <dt>Date</dt>
+                    <dd>{formatDate(selectedBooking.clickedAt)}</dd>
+                  </div>
+                  <div>
+                    <dt>Request type</dt>
+                    <dd>{selectedBookingEnquiry ? enquiryRequestTypeLabel(selectedBookingEnquiry.requestType) : "Booking request"}</dd>
+                  </div>
+                </dl>
+              </section>
+              <section className="booking-drawer-section">
+                <h3>Traveller</h3>
+                <dl>
+                  <div>
+                    <dt>Name</dt>
+                    <dd>{selectedBookingEnquiry?.name || bookingTravellerName(selectedBooking)}</dd>
+                  </div>
+                  <div>
+                    <dt>Email</dt>
+                    <dd>{selectedBookingEnquiry?.email || bookingTravellerEmail(selectedBooking) || "Not provided"}</dd>
+                  </div>
+                  <div>
+                    <dt>Travel date</dt>
+                    <dd>{selectedBookingEnquiry?.travelDate ? formatDate(selectedBookingEnquiry.travelDate) : "Not provided"}</dd>
+                  </div>
+                  <div>
+                    <dt>Group size</dt>
+                    <dd>{selectedBookingEnquiry?.groupSize || "Not provided"}</dd>
+                  </div>
+                </dl>
+              </section>
+              <section className="booking-drawer-section">
+                <h3>Partner</h3>
+                <dl>
+                  <div>
+                    <dt>Partner</dt>
+                    <dd>{selectedBooking.partner?.name || selectedBookingEnquiry?.partner?.name || "Not assigned"}</dd>
+                  </div>
+                  <div>
+                    <dt>Admin follow-up</dt>
+                    <dd>{selectedBookingEnquiry ? "Available" : "No linked enquiry"}</dd>
+                  </div>
+                  <div>
+                    <dt>Status</dt>
+                    <dd>{selectedBookingEnquiry ? enquiryStatusLabel(selectedBookingEnquiry.status) : bookingStatusLabel(selectedBooking)}</dd>
+                  </div>
+                </dl>
+              </section>
+              <section className="booking-drawer-section">
+                <h3>Payment</h3>
+                <dl>
+                  <div>
+                    <dt>Booking amount</dt>
+                    <dd>{eur.format(bookingAmount(selectedBooking))}</dd>
+                  </div>
+                  <div>
+                    <dt>Commission</dt>
+                    <dd>{eur.format(selectedBooking.confirmedCommissionEUR || 0)}</dd>
+                  </div>
+                  <div>
+                    <dt>Paid commission</dt>
+                    <dd>{eur.format(selectedBooking.paidCommissionEUR || 0)}</dd>
+                  </div>
+                  <div>
+                    <dt>Payment</dt>
+                    <dd>{bookingPaymentStatus(selectedBooking)}</dd>
+                  </div>
+                </dl>
+              </section>
+              {selectedBookingEnquiry && (
+                <>
+                  <section className="booking-drawer-section full">
+                    <h3>Traveller request</h3>
+                    <div className="enquiry-message-body compact" aria-label="Traveller booking request">
+                      {enquiryMessageLines(selectedBookingEnquiry).map((line, index) => (
+                        <p key={`${selectedBookingEnquiry._id}-booking-message-${index}`}>{line}</p>
+                      ))}
+                    </div>
+                  </section>
+                  <section className="booking-drawer-section full">
+                    <h3>Request status</h3>
+                    <div className="enquiry-status-actions">
+                      <span>Current status: {enquiryStatusLabel(selectedBookingEnquiry.status)}</span>
+                      <select value={selectedBookingEnquiry.status || "received"} onChange={(event) => handleStatusChange(selectedBookingEnquiry._id, event.target.value)}>
+                        {enquiryStatusOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="enquiry-status-button-grid">
+                        {enquiryStatusOptions.map((option) => (
+                          <button
+                            className={(selectedBookingEnquiry.status || "received") === option.value ? "active" : ""}
+                            key={option.value}
+                            type="button"
+                            onClick={() => handleStatusChange(selectedBookingEnquiry._id, option.value)}
+                            disabled={(selectedBookingEnquiry.status || "received") === option.value}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </section>
+                  {selectedBookingEnquiry.communications?.length > 0 && (
+                    <section className="booking-drawer-section full">
+                      <h3>Follow-up history</h3>
+                      <div className="booking-thread-list">
+                        {selectedBookingEnquiry.communications.map((item) => (
+                          <article key={item._id || `${selectedBookingEnquiry._id}-${item.sentAt}`}>
+                            <strong>{item.direction?.replace(/_/g, " ")}</strong>
+                            <span>{formatDate(item.sentAt)}</span>
+                            <p>{item.subject || item.message || "Message"}</p>
+                            {item.questions?.length > 0 && <p>Questions: {item.questions.join(" | ")}</p>}
+                            {item.answers?.length > 0 && <p>Answers: {item.answers.map((answer) => `${answer.question}: ${answer.answer}`).join(" | ")}</p>}
+                            {item.attachments?.length > 0 && <p>Attachments: {item.attachments.map((attachment) => attachment.name || attachment.url).join(", ")}</p>}
+                          </article>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                  {["partner", "traveller"].map((recipient) => {
+                    const form = getEnquiryMessageForm(selectedBookingEnquiry, recipient);
+                    const disabled = recipient === "partner" && !selectedBookingEnquiry.partner?.name;
+
+                    return (
+                      <section className="booking-drawer-section full" key={`${selectedBookingEnquiry._id}-booking-${recipient}`}>
+                        <h3>{recipient === "partner" ? "Ask partner" : "Message traveller"}</h3>
+                        <form className="panel-form booking-follow-up-form" onSubmit={(event) => handleEnquiryMessageSubmit(event, selectedBookingEnquiry, recipient)}>
+                          <label className="field">
+                            <span>Subject</span>
+                            <input
+                              value={form.subject}
+                              onChange={(event) => updateEnquiryMessageForm(selectedBookingEnquiry._id, recipient, "subject", event.target.value)}
+                              disabled={disabled}
+                            />
+                          </label>
+                          {recipient === "partner" && (
+                            <>
+                              <div className="button-row">
+                                {partnerQuestionTemplates.map((question) => (
+                                  <button
+                                    className="button secondary compact"
+                                    key={question}
+                                    type="button"
+                                    onClick={() => addPartnerQuestionTemplate(selectedBookingEnquiry, question)}
+                                    disabled={disabled}
+                                  >
+                                    {question.split(" ").slice(0, 4).join(" ")}
+                                  </button>
+                                ))}
+                              </div>
+                              <label className="field">
+                                <span>Questions</span>
+                                <textarea
+                                  value={form.questions}
+                                  onChange={(event) => updateEnquiryMessageForm(selectedBookingEnquiry._id, recipient, "questions", event.target.value)}
+                                  rows="5"
+                                  placeholder="One question per line"
+                                  disabled={disabled}
+                                />
+                              </label>
+                            </>
+                          )}
+                          <label className="field">
+                            <span>Message</span>
+                            <textarea
+                              value={form.message}
+                              onChange={(event) => updateEnquiryMessageForm(selectedBookingEnquiry._id, recipient, "message", event.target.value)}
+                              rows="4"
+                              disabled={disabled}
+                            />
+                          </label>
+                          <label className="field">
+                            <span>Document or image URLs</span>
+                            <textarea
+                              value={form.attachments}
+                              onChange={(event) => updateEnquiryMessageForm(selectedBookingEnquiry._id, recipient, "attachments", event.target.value)}
+                              rows="3"
+                              placeholder="One URL per line"
+                              disabled={disabled}
+                            />
+                          </label>
+                          <label className="field">
+                            <span>Upload image or video</span>
+                            <input
+                              type="file"
+                              accept="image/*,video/mp4,video/webm,video/quicktime"
+                              onChange={(event) => handleEnquiryAttachmentUpload(event, selectedBookingEnquiry, recipient)}
+                              disabled={disabled || uploading}
+                            />
+                          </label>
+                          {disabled ? (
+                            <p className="form-note">No partner is assigned to this booking request.</p>
+                          ) : (
+                            <button className="button primary compact" type="submit">
+                              Send to {recipient === "partner" ? "partner" : "traveller"}
+                            </button>
+                          )}
+                        </form>
+                      </section>
+                    );
+                  })}
+                </>
+              )}
+              {!selectedBookingEnquiry && (
+                <section className="booking-drawer-section full">
+                  <h3>Admin workflow</h3>
+                  <p className="form-note">
+                    This booking record is not linked to an enquiry workflow yet. New traveller booking requests are linked automatically and can be processed here.
+                  </p>
+                </section>
+              )}
+              <section className="booking-drawer-section">
+                <h3>Activity</h3>
+                <ul className="booking-activity-list">
+                  <li>
+                    <strong>Booking started</strong>
+                    <span>{formatDate(selectedBooking.clickedAt)}</span>
+                  </li>
+                  {selectedBooking.convertedAt && (
+                    <li>
+                      <strong>Booking confirmed</strong>
+                      <span>{formatDate(selectedBooking.convertedAt)}</span>
+                    </li>
+                  )}
+                  {selectedBooking.paidAt && (
+                    <li>
+                      <strong>Payment recorded</strong>
+                      <span>{formatDate(selectedBooking.paidAt)}</span>
+                    </li>
+                  )}
+                  {selectedBooking.postbackReceivedAt && (
+                    <li>
+                      <strong>Partner report received</strong>
+                      <span>{formatDate(selectedBooking.postbackReceivedAt)}</span>
+                    </li>
+                  )}
+                </ul>
+              </section>
+              <section className="booking-drawer-section full">
+                <h3>Update payment record</h3>
+                <form
+                  className="commission-edit-grid booking-edit-grid"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    handleReferralConversion(selectedBooking._id);
+                  }}
+                >
+                  <label className="field">
+                    <span>Booking amount EUR</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={referralField(selectedBooking, "bookingValueEUR")}
+                      onChange={(event) => updateReferralField(selectedBooking._id, "bookingValueEUR", event.target.value)}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Commission %</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={referralField(selectedBooking, "commissionRatePercent")}
+                      onChange={(event) => updateReferralField(selectedBooking._id, "commissionRatePercent", event.target.value)}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Commission EUR</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={referralField(selectedBooking, "commissionEUR") || selectedBooking.confirmedCommissionEUR || ""}
+                      onChange={(event) => updateReferralField(selectedBooking._id, "commissionEUR", event.target.value)}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Paid EUR</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={referralField(selectedBooking, "paidCommissionEUR")}
+                      onChange={(event) => updateReferralField(selectedBooking._id, "paidCommissionEUR", event.target.value)}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Payment status</span>
+                    <select
+                      value={referralField(selectedBooking, "status") || selectedBooking.status || "clicked"}
+                      onChange={(event) => updateReferralField(selectedBooking._id, "status", event.target.value)}
+                    >
+                      {referralStatuses.map((status) => (
+                        <option key={status} value={status}>
+                          {statusLabel(status)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>Notes</span>
+                    <input
+                      value={referralField(selectedBooking, "notes")}
+                      onChange={(event) => updateReferralField(selectedBooking._id, "notes", event.target.value)}
+                      placeholder="Partner invoice, booking id, payout note"
+                    />
+                  </label>
+                  <div className="booking-drawer-form-actions">
+                    <button className="button primary compact" type="submit">
+                      Save booking
+                    </button>
+                    <ConfirmActionButton
+                      actionLabel={selectedBooking.isArchived ? "Restore booking" : "Archive booking"}
+                      className="button secondary compact"
+                      confirmMessage={
+                        selectedBooking.isArchived
+                          ? `Restore booking ${selectedBooking.trackingCode || selectedBooking._id} to active queues?`
+                          : `Archive booking ${selectedBooking.trackingCode || selectedBooking._id}? It will leave pending task counts but can be restored later.`
+                      }
+                      onConfirm={() => handleReferralArchive(selectedBooking._id, !selectedBooking.isArchived)}
+                    >
+                      {selectedBooking.isArchived ? "Restore" : "Archive"}
+                    </ConfirmActionButton>
+                    <ConfirmActionButton
+                      actionLabel={`Delete booking ${selectedBooking.trackingCode || selectedBooking._id}`}
+                      confirmMessage={`Permanently delete booking ${selectedBooking.trackingCode || selectedBooking._id}? This cannot be undone.`}
+                      onConfirm={async () => {
+                        await handleReferralDelete(selectedBooking._id);
+                        setSelectedBookingId("");
+                      }}
+                    />
+                  </div>
+                </form>
+              </section>
+            </div>
+          </aside>
+        </div>
+      )}
       <Toast message={toast?.message} tone={toast?.tone} onClose={() => setToast(null)} />
     </section>
   );

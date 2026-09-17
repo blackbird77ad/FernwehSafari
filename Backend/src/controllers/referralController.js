@@ -7,6 +7,7 @@ const Referral = require("../models/Referral");
 const Tour = require("../models/Tour");
 const TourReview = require("../models/TourReview");
 const { notifyOwner, sendEnquiryEmails } = require("../lib/resend");
+const { serializeTravellerEnquiry, serializeTravellerReferral } = require("../utils/privacySerializers");
 
 const clientUrl = (process.env.CLIENT_URL || "https://travellex.tours").replace(/\/+$/, "");
 
@@ -164,8 +165,8 @@ const createReferral = asyncHandler(async (req, res) => {
   runInBackground(() => sendEnquiryEmails(enquiry, { notifyTraveller: false }));
 
   sendResponse(res, 201, {
-    referral,
-    enquiry,
+    referral: serializeTravellerReferral(referral),
+    enquiry: serializeTravellerEnquiry(enquiry),
     bookingPath: `/booking/${trackingCode}`
   });
 });
@@ -184,16 +185,7 @@ const getBookingSession = asyncHandler(async (req, res) => {
   }
 
   sendResponse(res, 200, {
-    referral: {
-      _id: referral._id,
-      trackingCode: referral.trackingCode,
-      status: referral.status,
-      converted: referral.converted,
-      clickedAt: referral.clickedAt,
-      hasExternalBooking: false,
-      tour: referral.tour,
-      partner: referral.partner
-    }
+    referral: serializeTravellerReferral(referral)
   });
 });
 
@@ -217,7 +209,7 @@ const listMyReferrals = asyncHandler(async (req, res) => {
   const referrals = await Referral.find({ user: req.user._id, isArchived: { $ne: true } })
     .populate(["tour", "partner"])
     .sort({ clickedAt: -1 });
-  sendResponse(res, 200, { referrals });
+  sendResponse(res, 200, { referrals: referrals.map(serializeTravellerReferral) });
 });
 
 const listReferrals = asyncHandler(async (req, res) => {

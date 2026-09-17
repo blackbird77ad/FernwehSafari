@@ -5,6 +5,7 @@ const slugify = require("../utils/slugify");
 const TourPartner = require("../models/TourPartner");
 const Tour = require("../models/Tour");
 const { notifyOwner, notifyUser } = require("../lib/resend");
+const { PUBLIC_PARTNER_SELECT } = require("../utils/privacySerializers");
 
 const clientUrl = (process.env.CLIENT_URL || "https://travellex.tours").replace(/\/+$/, "");
 const MAX_TOUR_MEDIA_ITEMS = Tour.MAX_TOUR_MEDIA_ITEMS || 5;
@@ -263,6 +264,10 @@ function queueTourNotification(promise) {
   });
 }
 
+function partnerPopulateForUser(user) {
+  return isStaff(user) ? { path: "partner" } : { path: "partner", select: PUBLIC_PARTNER_SELECT };
+}
+
 async function ensureCanManageTour(req, tour) {
   if (isStaff(req.user)) {
     return;
@@ -295,12 +300,12 @@ const listTours = asyncHandler(async (req, res) => {
   }
 
   const tourQuery = Tour.find(filters)
-    .populate("partner")
+    .populate(partnerPopulateForUser(req.user))
     .populate("approvedGuides.guide", "name country role")
     .sort(sort);
 
   if (!isStaff(req.user)) {
-    tourQuery.select("-referralLink");
+    tourQuery.select("-referralLink -commissionRatePercent -owner");
   }
 
   if (limit) {
@@ -323,8 +328,8 @@ const listTours = asyncHandler(async (req, res) => {
 
 const getTourBySlug = asyncHandler(async (req, res) => {
   const tour = await Tour.findOne({ slug: req.params.slug, isActive: true })
-    .select("-referralLink")
-    .populate("partner")
+    .select("-referralLink -commissionRatePercent -owner")
+    .populate({ path: "partner", select: PUBLIC_PARTNER_SELECT })
     .populate("approvedGuides.guide", "name country role");
 
   if (!tour) {
