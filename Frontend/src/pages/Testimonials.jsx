@@ -51,7 +51,7 @@ export default function Testimonials() {
           </article>
           <article>
             <h2>Next steps</h2>
-            <p>Clear enquiry and booking paths reduce the uncertainty between dreaming and committing.</p>
+            <p>Clear enquiry and booking requests reduce the uncertainty between dreaming and committing.</p>
           </article>
         </div>
       </section>

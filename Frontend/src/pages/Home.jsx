@@ -261,7 +261,7 @@ export default function Home() {
         <div className="steps-grid">
           <StepCard number="01" title="Browse" text="Compare curated Africa routes, starting with Tanzania mainland and Zanzibar." />
           <StepCard number="02" title="Enquire" text="Share your dates, travel style, budget and must-see locations." />
-          <StepCard number="03" title="Book" text="Continue to the selected tour booking page when the route feels right." />
+          <StepCard number="03" title="Book" text="Send a booking request to Travellex admin when the route feels right." />
         </div>
       </section>
       <section className="section split-panel">
@@ -269,8 +269,8 @@ export default function Home() {
           <p className="eyebrow">Travel confidence</p>
           <h2>Clear next steps before you travel.</h2>
           <p className="lead">
-            Each tour page gives you the route, price context, duration, highlights and booking path. You can save
-            tours, ask questions and compare options before committing.
+            Each tour page gives you the route, price context, duration, highlights and a Travellex-managed booking
+            request. You can save tours, ask questions and compare options before committing.
           </p>
         </div>
         <div className="stat-list">

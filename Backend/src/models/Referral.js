@@ -25,6 +25,10 @@ const referralSchema = new mongoose.Schema(
       ref: "TourPartner",
       required: [true, "Referral partner is required."]
     },
+    enquiry: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Enquiry"
+    },
     clickedAt: {
       type: Date,
       default: Date.now
@@ -105,6 +109,21 @@ const referralSchema = new mongoose.Schema(
       trim: true
     },
     userAgent: {
+      type: String,
+      trim: true
+    },
+    isArchived: {
+      type: Boolean,
+      default: false
+    },
+    archivedAt: {
+      type: Date
+    },
+    archivedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    },
+    archiveReason: {
       type: String,
       trim: true
     }

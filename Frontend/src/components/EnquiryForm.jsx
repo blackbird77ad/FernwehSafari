@@ -30,7 +30,11 @@ export default function EnquiryForm({ requestType = "question", tour }) {
         tour: tour?._id,
         requestType
       });
-      setStatus(requestType === "quote" ? "Quote request sent. Travellex will follow up with availability and booking options." : "Enquiry sent. Travellex will follow up with next steps.");
+      setStatus(
+        requestType === "quote"
+          ? "Quote request sent to Travellex admin. Travellex will follow up with availability and booking options."
+          : "Enquiry sent. Travellex will follow up with next steps."
+      );
       setForm({
         name: isAuthenticated ? user?.name || "" : "",
         email: isAuthenticated ? user?.email || "" : "",

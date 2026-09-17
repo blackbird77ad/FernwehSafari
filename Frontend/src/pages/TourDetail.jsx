@@ -7,6 +7,7 @@ import Spinner from "../components/Spinner";
 import fallbackTourImage from "../assets/photos/ngorongoro-wide-with-tourists.jpg";
 import useAuth from "../hooks/useAuth";
 import { createGuideApplication, createGuideBooking } from "../services/guideService";
+import { createTourReview, getTourReviews } from "../services/reviewService";
 import { getTour } from "../services/tourService";
 import { setPendingBookingPath } from "../utils/bookingIntent";
 import { eur } from "../utils/formatters";
@@ -63,10 +64,24 @@ export default function TourDetail() {
     message: ""
   });
   const [guideBookingForms, setGuideBookingForms] = useState({});
+  const [reviews, setReviews] = useState([]);
+  const [reviewForm, setReviewForm] = useState({
+    rating: "5",
+    title: "",
+    comment: "",
+    attachments: ""
+  });
+  const [reviewMessage, setReviewMessage] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
   useEffect(() => {
     getTour(slug)
-      .then((response) => setTour(response.data.tour))
+      .then((response) => {
+        const nextTour = response.data.tour;
+        setTour(nextTour);
+        return getTourReviews(nextTour._id);
+      })
+      .then((response) => setReviews(response.data.reviews || []))
       .catch((error) => setMessage(error.message))
       .finally(() => setLoading(false));
   }, [slug]);
@@ -172,10 +187,44 @@ export default function TourDetail() {
         tourId: tour._id,
         guideId
       });
-      setMessage("Guide request sent. The guide and tour company will be notified.");
+      setMessage("Guide request sent to Travellex admin. Admin will coordinate the next step.");
       setGuideBookingForms((current) => ({ ...current, [guideId]: {} }));
     } catch (error) {
       setMessage(error.message);
+    }
+  }
+
+  function updateReviewField(field, value) {
+    setReviewForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function handleReviewSubmit(event) {
+    event.preventDefault();
+
+    if (!isAuthenticated) {
+      navigate("/login", { state: { from: `/tours/${slug}` } });
+      return;
+    }
+
+    setReviewSubmitting(true);
+    setReviewMessage("");
+
+    try {
+      await createTourReview({
+        ...reviewForm,
+        tourId: tour._id,
+        rating: Number(reviewForm.rating),
+        attachments: reviewForm.attachments
+          .split(/\r?\n/)
+          .map((url) => url.trim())
+          .filter(Boolean)
+      });
+      setReviewMessage("Review submitted. Travellex admin will review it before it appears publicly.");
+      setReviewForm({ rating: "5", title: "", comment: "", attachments: "" });
+    } catch (error) {
+      setReviewMessage(error.message);
+    } finally {
+      setReviewSubmitting(false);
     }
   }
 
@@ -348,6 +397,66 @@ export default function TourDetail() {
             <p>
               Duration: {tour.duration}. Route base: {tour.location}. Listed from {eur.format(tour.priceEUR)} {tour.priceBasis || "Per person"}.
             </p>
+          </div>
+          <div className="tour-comparison-panel" id="reviews">
+            <div>
+              <p className="eyebrow">Traveller reviews</p>
+              <h2>Published after Travellex review.</h2>
+            </div>
+            {reviews.length ? (
+              <div className="admin-list">
+                {reviews.map((review) => (
+                  <article className="side-panel" key={review._id}>
+                    <p className="eyebrow">{Number(review.rating || 0).toFixed(1)} / 5</p>
+                    <h3>{review.title || `${review.name || review.user?.name || "Traveller"} review`}</h3>
+                    <p>{review.comment}</p>
+                    <span>{review.name || review.user?.name || "Verified traveller"}</span>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p>No published reviews yet.</p>
+            )}
+            <form className="panel-form" onSubmit={handleReviewSubmit}>
+              <div className="form-grid">
+                <label className="field">
+                  <span>Rating</span>
+                  <select value={reviewForm.rating} onChange={(event) => updateReviewField("rating", event.target.value)}>
+                    <option value="5">5 - Excellent</option>
+                    <option value="4">4 - Good</option>
+                    <option value="3">3 - Mixed</option>
+                    <option value="2">2 - Poor</option>
+                    <option value="1">1 - Very poor</option>
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Title</span>
+                  <input value={reviewForm.title} onChange={(event) => updateReviewField("title", event.target.value)} />
+                </label>
+              </div>
+              <label className="field">
+                <span>Review</span>
+                <textarea
+                  value={reviewForm.comment}
+                  onChange={(event) => updateReviewField("comment", event.target.value)}
+                  rows="4"
+                  required
+                />
+              </label>
+              <label className="field">
+                <span>Image or document URLs</span>
+                <textarea
+                  value={reviewForm.attachments}
+                  onChange={(event) => updateReviewField("attachments", event.target.value)}
+                  rows="3"
+                  placeholder="One URL per line"
+                />
+              </label>
+              <button className="button secondary" type="submit" disabled={reviewSubmitting}>
+                {reviewSubmitting ? "Submitting..." : "Submit review"}
+              </button>
+              {reviewMessage && <p className="form-note">{reviewMessage}</p>}
+            </form>
           </div>
           <div className="tour-comparison-panel">
             <div>
@@ -561,7 +670,7 @@ export default function TourDetail() {
           </div>
           <div className="side-panel" id="quote">
             <p className="eyebrow">Request quote</p>
-            <h2>Ask Travellex to confirm availability.</h2>
+            <h2>Ask Travellex admin to confirm availability.</h2>
             <EnquiryForm requestType="quote" tour={tour} />
           </div>
           {canApplyAsGuide && (
@@ -679,7 +788,7 @@ export default function TourDetail() {
       <div className="sticky-booking-bar">
         <span>
           <strong>{tour.title}</strong>
-          <small>{eur.format(tour.priceEUR)} · Continue with operator</small>
+          <small>{eur.format(tour.priceEUR)} - Admin-managed booking</small>
         </span>
         <div className="button-row">
           <a className="button secondary compact" href="#quote">

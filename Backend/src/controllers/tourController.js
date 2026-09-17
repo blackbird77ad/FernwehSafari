@@ -206,6 +206,10 @@ function stripAdminOnlyTourFields(payload) {
   delete payload.vrCaption;
 }
 
+function stripPartnerRestrictedTourFields(payload) {
+  delete payload.referralLink;
+}
+
 function nextNumber(value, fallback) {
   if (value === undefined || value === null || value === "") {
     return fallback;
@@ -292,8 +296,12 @@ const listTours = asyncHandler(async (req, res) => {
 
   const tourQuery = Tour.find(filters)
     .populate("partner")
-    .populate("approvedGuides.guide", "name email country role")
+    .populate("approvedGuides.guide", "name country role")
     .sort(sort);
+
+  if (!isStaff(req.user)) {
+    tourQuery.select("-referralLink");
+  }
 
   if (limit) {
     tourQuery.skip((page - 1) * limit).limit(limit);
@@ -315,8 +323,9 @@ const listTours = asyncHandler(async (req, res) => {
 
 const getTourBySlug = asyncHandler(async (req, res) => {
   const tour = await Tour.findOne({ slug: req.params.slug, isActive: true })
+    .select("-referralLink")
     .populate("partner")
-    .populate("approvedGuides.guide", "name email country role");
+    .populate("approvedGuides.guide", "name country role");
 
   if (!tour) {
     throw new ApiError(404, "Tour not found.");
@@ -344,8 +353,9 @@ const createTour = asyncHandler(async (req, res) => {
 
     payload.partner = partner._id;
     payload.owner = req.user._id;
-    payload.isActive = true;
+    payload.isActive = false;
     payload.featured = false;
+    stripPartnerRestrictedTourFields(payload);
   }
 
   if (!canManageTourVr(req.user)) {
@@ -368,11 +378,11 @@ const createTour = asyncHandler(async (req, res) => {
   ]));
 
   if (req.user.role === "tour_company") {
-    queueTourNotification(notifyUser(partnerNotificationEmail(tour, req.user), "Travellex published your tour listing", [
+    queueTourNotification(notifyUser(partnerNotificationEmail(tour, req.user), "Travellex received your tour listing", [
       `Hello ${req.user.name},`,
       "",
-      `Your tour listing for ${tour.title} is now live on Travellex.`,
-      `View listing: ${clientUrl}/tours/${tour.slug}`,
+      `Your tour listing for ${tour.title} has been submitted for Travellex admin review.`,
+      "It will stay unpublished until admin approves it for the public tours page.",
       "",
       "Travellex"
     ]));
@@ -396,7 +406,8 @@ const updateTour = asyncHandler(async (req, res) => {
     delete payload.partner;
     delete payload.owner;
     delete payload.featured;
-    payload.isActive = true;
+    stripPartnerRestrictedTourFields(payload);
+    payload.isActive = false;
   }
 
   if (!canManageTourVr(req.user)) {

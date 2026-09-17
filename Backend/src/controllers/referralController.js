@@ -2,9 +2,13 @@ const crypto = require("node:crypto");
 const ApiError = require("../utils/apiError");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/sendResponse");
+const Enquiry = require("../models/Enquiry");
 const Referral = require("../models/Referral");
 const Tour = require("../models/Tour");
-const { notifyOwner } = require("../lib/resend");
+const TourReview = require("../models/TourReview");
+const { notifyOwner, sendEnquiryEmails } = require("../lib/resend");
+
+const clientUrl = (process.env.CLIENT_URL || "https://travellex.tours").replace(/\/+$/, "");
 
 function toNumber(value, fallback = 0) {
   if (value === undefined || value === null || value === "") {
@@ -119,8 +123,6 @@ const createReferral = asyncHandler(async (req, res) => {
 
   const trackingCode = crypto.randomUUID();
   const commissionRatePercent = resolveCommissionRate(tour);
-  const baseBookingURL = tour.referralLink || tour.partner.bookingURL;
-  const bookingURL = baseBookingURL ? appendTrackingParams(baseBookingURL, trackingCode, tour) : "";
   const estimatedCommissionEUR = roundMoney((toNumber(tour.priceEUR) * commissionRatePercent) / 100);
 
   const referral = await Referral.create({
@@ -128,16 +130,42 @@ const createReferral = asyncHandler(async (req, res) => {
     user: req.user._id,
     tour: tour._id,
     partner: tour.partner._id,
-    outboundUrl: bookingURL || undefined,
     commissionRatePercent,
     estimatedCommissionEUR,
     ipAddress: req.ip,
     userAgent: req.get("user-agent")
   });
-  await referral.populate(["tour", "partner", "user"]);
+
+  const enquiry = await Enquiry.create({
+    user: req.user._id,
+    name: req.user.name,
+    email: req.user.email,
+    tour: tour._id,
+    referral: referral._id,
+    partner: tour.partner._id,
+    destination: tour.location,
+    requestType: "booking",
+    status: "received",
+    message: [
+      "Booking request started from the tour page.",
+      `Travellex booking code: ${trackingCode}`,
+      `Tour: ${tour.title}`,
+      `Partner: ${tour.partner?.name || "Not provided"}`,
+      `Listed price EUR: ${tour.priceEUR ?? "Not provided"}`,
+      "Flow: Admin-managed. Do not send traveller details to partner outside Travellex follow-up."
+    ].join("\n")
+  });
+
+  referral.enquiry = enquiry._id;
+  await referral.save();
+  await referral.populate(["tour", "partner", "user", "enquiry"]);
+  await enquiry.populate(["tour", "partner", "user", "referral"]);
+
+  runInBackground(() => sendEnquiryEmails(enquiry, { notifyTraveller: false }));
 
   sendResponse(res, 201, {
     referral,
+    enquiry,
     bookingPath: `/booking/${trackingCode}`
   });
 });
@@ -162,7 +190,7 @@ const getBookingSession = asyncHandler(async (req, res) => {
       status: referral.status,
       converted: referral.converted,
       clickedAt: referral.clickedAt,
-      hasExternalBooking: Boolean(referral.outboundUrl),
+      hasExternalBooking: false,
       tour: referral.tour,
       partner: referral.partner
     }
@@ -178,27 +206,23 @@ const openBookingSession = asyncHandler(async (req, res) => {
 
   const referral = await Referral.findOne({ trackingCode });
 
-  if (!referral?.outboundUrl) {
+  if (!referral) {
     throw new ApiError(404, "Booking session not found.");
   }
 
-  referral.clickedAt = new Date();
-  referral.ipAddress = req.ip || referral.ipAddress;
-  referral.userAgent = req.get("user-agent") || referral.userAgent;
-  await referral.save();
-
-  res.redirect(302, referral.outboundUrl);
+  throw new ApiError(410, "Travellex now manages tour bookings directly through admin review.");
 });
 
 const listMyReferrals = asyncHandler(async (req, res) => {
-  const referrals = await Referral.find({ user: req.user._id })
+  const referrals = await Referral.find({ user: req.user._id, isArchived: { $ne: true } })
     .populate(["tour", "partner"])
     .sort({ clickedAt: -1 });
   sendResponse(res, 200, { referrals });
 });
 
 const listReferrals = asyncHandler(async (req, res) => {
-  const referrals = await Referral.find()
+  const filters = req.query.includeArchived === "false" ? { isArchived: { $ne: true } } : {};
+  const referrals = await Referral.find(filters)
     .populate(["tour", "partner", "user"])
     .sort({ clickedAt: -1 });
   sendResponse(res, 200, { referrals });
@@ -215,6 +239,41 @@ const markConverted = asyncHandler(async (req, res) => {
   await referral.save();
 
   sendResponse(res, 200, { referral });
+});
+
+const archiveReferral = asyncHandler(async (req, res) => {
+  const referral = await Referral.findById(req.params.id).populate(["tour", "partner", "user"]);
+
+  if (!referral) {
+    throw new ApiError(404, "Referral not found.");
+  }
+
+  const archived = req.body.archived !== false;
+  referral.isArchived = archived;
+  referral.archivedAt = archived ? new Date() : undefined;
+  referral.archivedBy = archived ? req.user._id : undefined;
+  referral.archiveReason = archived ? req.body.reason || req.body.archiveReason || referral.archiveReason : undefined;
+  await referral.save();
+
+  sendResponse(res, 200, { referral });
+});
+
+const deleteReferral = asyncHandler(async (req, res) => {
+  const referral = await Referral.findById(req.params.id);
+
+  if (!referral) {
+    throw new ApiError(404, "Referral not found.");
+  }
+
+  const attachedReview = await TourReview.findOne({ referral: referral._id }).select("_id");
+
+  if (attachedReview) {
+    throw new ApiError(409, "This booking has a tour review attached. Archive it instead to keep the audit trail.");
+  }
+
+  await Referral.findByIdAndDelete(req.params.id);
+
+  sendResponse(res, 200, { id: req.params.id });
 });
 
 const reconcileByTrackingCode = asyncHandler(async (req, res) => {
@@ -292,7 +351,9 @@ const receivePartnerPostback = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  archiveReferral,
   createReferral,
+  deleteReferral,
   getBookingSession,
   listMyReferrals,
   listReferrals,

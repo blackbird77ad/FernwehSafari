@@ -169,7 +169,7 @@ export default function ListYourTours() {
           <div className="partner-action-card">
             <p className="eyebrow">Approved company</p>
             <h2>Your listing flow is in the dashboard.</h2>
-            <p>Add route details, prices, images and referral booking URLs for Travellex staff approval.</p>
+            <p>Add route details, prices, images and internal booking notes for Travellex staff approval.</p>
             <Link className="button primary" to="/dashboard">
               List tours
             </Link>

@@ -2,16 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import SEO from "../components/SEO";
 import Spinner from "../components/Spinner";
-import { createReferral, getBookingOpenURL } from "../services/referralService";
+import { createReferral } from "../services/referralService";
 
 export default function BookingStart() {
   const { tourId } = useParams();
   const navigate = useNavigate();
   const startedRef = useRef(false);
   const [error, setError] = useState("");
-  const [bookingURL, setBookingURL] = useState("");
   const [tourTitle, setTourTitle] = useState("your tour");
-  const [partnerName, setPartnerName] = useState("the tour operator");
 
   useEffect(() => {
     if (startedRef.current || !tourId) {
@@ -30,16 +28,6 @@ export default function BookingStart() {
         }
 
         setTourTitle(referral.tour?.title || "your tour");
-        setPartnerName(referral.partner?.name || "the tour operator");
-
-        if (referral.outboundUrl) {
-          const nextURL = getBookingOpenURL(trackingCode);
-          setBookingURL(nextURL);
-          window.setTimeout(() => {
-            window.location.assign(nextURL);
-          }, 450);
-          return;
-        }
 
         navigate(`/booking/${trackingCode}`, {
           replace: true,
@@ -80,21 +68,13 @@ export default function BookingStart() {
       <div className="booking-session-header booking-start-panel">
         <div>
           <p className="eyebrow">Booking</p>
-          <h1>Opening {partnerName}.</h1>
+          <h1>Sending your request to Travellex.</h1>
           <p>
-            We are preparing {tourTitle} and taking you to the operator booking page.
+            We are preparing {tourTitle} for admin review so Travellex can coordinate availability, quote details and next steps.
           </p>
         </div>
-        <Spinner label="Opening booking" />
+        <Spinner label="Preparing request" />
       </div>
-      {bookingURL && (
-        <div className="booking-session-help">
-          <p>If the page does not open, continue with the button below.</p>
-          <a className="button primary compact" href={bookingURL}>
-            Continue booking
-          </a>
-        </div>
-      )}
     </section>
   );
 }

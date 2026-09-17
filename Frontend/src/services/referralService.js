@@ -4,8 +4,8 @@ export function createReferral(payload) {
   return api.post("/referrals", payload);
 }
 
-export function getReferrals() {
-  return api.get("/referrals");
+export function getReferrals(params = {}) {
+  return api.get("/referrals", { params });
 }
 
 export function getMyReferrals() {
@@ -23,6 +23,14 @@ export function getBookingOpenURL(trackingCode) {
 
 export function markReferralConverted(id, payload = {}) {
   return api.patch(`/referrals/${id}`, payload);
+}
+
+export function archiveReferral(id, payload = {}) {
+  return api.patch(`/referrals/${id}/archive`, payload);
+}
+
+export function deleteReferral(id) {
+  return api.delete(`/referrals/${id}`);
 }
 
 export function reconcileReferralByTrackingCode(trackingCode, payload = {}) {

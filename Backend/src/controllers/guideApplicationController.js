@@ -14,6 +14,8 @@ const {
 } = require("../lib/accountTokens");
 const { notifyMany, notifyOwner, notifyUser } = require("../lib/resend");
 
+const clientUrl = (process.env.CLIENT_URL || "https://travellex.tours").replace(/\/+$/, "");
+
 function parseList(value) {
   if (Array.isArray(value)) {
     return value.map((item) => String(item).trim()).filter(Boolean);
@@ -35,6 +37,24 @@ function canReviewForCompany(user, tour) {
 
 function randomAccountPassword() {
   return crypto.randomBytes(32).toString("hex");
+}
+
+function serializeGuideBookingForRole(booking, user) {
+  const data = booking.toObject ? booking.toObject() : booking;
+
+  if (isStaff(user) || user?.role === "traveller") {
+    return data;
+  }
+
+  return {
+    _id: data._id,
+    tour: data.tour,
+    guide: data.guide,
+    status: data.status,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+    adminManaged: true
+  };
 }
 
 async function getApplication(id) {
@@ -339,19 +359,24 @@ const createGuideBooking = asyncHandler(async (req, res) => {
   });
   await booking.populate(["tour", "guide", "requester"]);
 
-  await notifyMany([booking.guide.email, tour.partner?.contactEmail], `New guide booking request: ${tour.title}`, [
+  await notifyOwner(`New guide booking request: ${tour.title}`, [
     `Tour: ${tour.title}`,
     `Guide: ${booking.guide.name}`,
     `Traveller: ${booking.name} (${booking.email})`,
     `Dates: ${booking.travelDates || "Not provided"}`,
     `Group size: ${booking.groupSize || "Not provided"}`,
     "",
-    booking.message || "No message provided."
+    booking.message || "No message provided.",
+    "",
+    `Open admin portal: ${clientUrl}/admin`
   ]);
-  await notifyOwner(`New guide booking request: ${tour.title}`, [
-    `Tour: ${tour.title}`,
-    `Guide: ${booking.guide.name}`,
-    `Traveller: ${booking.name} (${booking.email})`
+  await notifyUser(booking.email, "Travellex received your guide request", [
+    `Hello ${booking.name},`,
+    "",
+    `Travellex has received your guide request for ${tour.title}.`,
+    "Our admin team will coordinate next steps directly and will not share your contact details with the guide or partner without managing the follow-up.",
+    "",
+    "Travellex"
   ]);
 
   sendResponse(res, 201, { booking });
@@ -377,7 +402,7 @@ const listGuideBookings = asyncHandler(async (req, res) => {
     .populate(["tour", "guide", "requester"])
     .sort({ createdAt: -1 });
 
-  sendResponse(res, 200, { bookings });
+  sendResponse(res, 200, { bookings: bookings.map((booking) => serializeGuideBookingForRole(booking, req.user)) });
 });
 
 const updateGuideBookingStatus = asyncHandler(async (req, res) => {
@@ -387,13 +412,8 @@ const updateGuideBookingStatus = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Guide booking not found.");
   }
 
-  const canUpdate =
-    isStaff(req.user) ||
-    String(booking.guide) === String(req.user._id) ||
-    (req.user.role === "tour_company" && String(booking.tour.owner) === String(req.user._id));
-
-  if (!canUpdate) {
-    throw new ApiError(403, "You cannot update this guide booking.");
+  if (!isStaff(req.user)) {
+    throw new ApiError(403, "Travellex staff must update guide booking requests.");
   }
 
   const statuses = ["requested", "accepted", "declined", "closed"];

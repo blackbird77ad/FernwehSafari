@@ -22,8 +22,8 @@ const wizardSteps = [
   {
     id: "media",
     label: "Media",
-    title: "Media and booking",
-    description: "Add the gallery, booking link and marketplace controls."
+    title: "Media and admin booking",
+    description: "Add the gallery, booking settings and marketplace controls."
   },
   {
     id: "publish",
@@ -341,7 +341,7 @@ export default function TourListingForm({
           </Field>
         </WizardSection>
 
-        <WizardSection activeStep={activeStep} step="media" title="Media and booking" description="The first media item becomes the main card preview.">
+        <WizardSection activeStep={activeStep} step="media" title="Media and admin booking" description="The first media item becomes the main card preview.">
           {showPartnerSelect && (
             <Field label="Partner">
               <select value={form.partner} onChange={(event) => onFieldChange("partner", event.target.value)}>
@@ -354,20 +354,17 @@ export default function TourListingForm({
               </select>
             </Field>
           )}
-          <Field
-            label={isAdmin ? "Referral link" : "External booking/referral link (optional)"}
-            hint={
-              isAdmin
-                ? "Optional handoff URL for partner booking tracking."
-                : "Leave this blank to keep booking tracking inside Travellex. Add it only when the listing must hand off to another booking page."
-            }
-          >
-            <input
-              value={form.referralLink}
-              onChange={(event) => onFieldChange("referralLink", event.target.value)}
-              placeholder={isAdmin ? "" : "Leave blank to keep booking inside Travellex"}
-            />
-          </Field>
+          {isAdmin && (
+            <Field
+              label="Internal booking/reporting link"
+              hint="Optional admin-only reference for partner reporting. Traveller bookings stay inside Travellex."
+            >
+              <input
+                value={form.referralLink}
+                onChange={(event) => onFieldChange("referralLink", event.target.value)}
+              />
+            </Field>
+          )}
           {showCommissionField && (
             <Field
               label="Special commission for this tour %"

@@ -8,6 +8,7 @@ const TourCompanyApplication = require("../models/TourCompanyApplication");
 const TourGuideApplication = require("../models/TourGuideApplication");
 const TourGuideBooking = require("../models/TourGuideBooking");
 const TourPartner = require("../models/TourPartner");
+const TourReview = require("../models/TourReview");
 const User = require("../models/User");
 
 function normalizeCount(value) {
@@ -40,6 +41,7 @@ const getAdminDashboardSummary = asyncHandler(async (req, res) => {
     userRoleCounts,
     tours,
     activeTours,
+    pendingTours,
     partners,
     activePartners,
     companyApplications,
@@ -49,16 +51,24 @@ const getAdminDashboardSummary = asyncHandler(async (req, res) => {
     guideApplications,
     pendingGuideConfirmations,
     guideBookings,
+    requestedGuideBookings,
     galleryMedia,
     pendingGalleryMedia,
+    tourReviews,
+    pendingTourReviews,
     enquiries,
     openEnquiries,
+    openQuoteEnquiries,
+    partnerReplyEnquiries,
+    paymentPendingEnquiries,
+    bookingIntents,
     referralStats
   ] = await Promise.all([
     User.countDocuments(),
     User.aggregate([{ $group: { _id: "$role", count: { $sum: 1 } } }]),
     Tour.countDocuments(),
     Tour.countDocuments({ isActive: true }),
+    Tour.countDocuments({ isActive: false }),
     TourPartner.countDocuments(),
     TourPartner.countDocuments({ isActive: true }),
     TourCompanyApplication.countDocuments(),
@@ -68,11 +78,31 @@ const getAdminDashboardSummary = asyncHandler(async (req, res) => {
     TourGuideApplication.countDocuments(),
     TourGuideApplication.countDocuments({ status: "company_approved" }),
     TourGuideBooking.countDocuments(),
+    TourGuideBooking.countDocuments({ status: "requested" }),
     GalleryMedia.countDocuments(),
     GalleryMedia.countDocuments({ status: "pending" }),
-    Enquiry.countDocuments(),
-    Enquiry.countDocuments({ status: { $ne: "closed" } }),
+    TourReview.countDocuments(),
+    TourReview.countDocuments({ status: "pending" }),
+    Enquiry.countDocuments({ isArchived: { $ne: true } }),
+    Enquiry.countDocuments({ isArchived: { $ne: true }, status: { $nin: ["closed", "cancelled", "completed"] } }),
+    Enquiry.countDocuments({
+      isArchived: { $ne: true },
+      requestType: "quote",
+      status: { $nin: ["closed", "cancelled", "completed"] }
+    }),
+    Enquiry.countDocuments({ isArchived: { $ne: true }, status: "partner_replied" }),
+    Enquiry.countDocuments({ isArchived: { $ne: true }, status: "payment_pending" }),
+    Enquiry.countDocuments({
+      isArchived: { $ne: true },
+      requestType: "booking",
+      status: { $nin: ["closed", "cancelled", "completed"] }
+    }),
     Referral.aggregate([
+      {
+        $match: {
+          isArchived: { $ne: true }
+        }
+      },
       {
         $group: {
           _id: null,
@@ -107,9 +137,13 @@ const getAdminDashboardSummary = asyncHandler(async (req, res) => {
   const unpaidCommissions = normalizeCount(referrals.unpaidCommissions);
   const dashboardActions =
     normalizeCount(pendingCompanyApplications) +
+    normalizeCount(pendingTours) +
     normalizeCount(pendingGuideConfirmations) +
     normalizeCount(pendingGalleryMedia) +
+    normalizeCount(pendingTourReviews) +
     normalizeCount(openEnquiries) +
+    normalizeCount(requestedGuideBookings) +
+    normalizeCount(paymentPendingEnquiries) +
     unpaidCommissions;
 
   sendResponse(res, 200, {
@@ -118,6 +152,7 @@ const getAdminDashboardSummary = asyncHandler(async (req, res) => {
       userRoles: normalizeRoleCounts(userRoleCounts),
       tours: normalizeCount(tours),
       activeTours: normalizeCount(activeTours),
+      pendingTours: normalizeCount(pendingTours),
       partners: normalizeCount(partners),
       activePartners: normalizeCount(activePartners),
       companyApplications: normalizeCount(companyApplications),
@@ -127,10 +162,17 @@ const getAdminDashboardSummary = asyncHandler(async (req, res) => {
       guideApplications: normalizeCount(guideApplications),
       pendingGuideConfirmations: normalizeCount(pendingGuideConfirmations),
       guideBookings: normalizeCount(guideBookings),
+      requestedGuideBookings: normalizeCount(requestedGuideBookings),
       galleryMedia: normalizeCount(galleryMedia),
       pendingGalleryMedia: normalizeCount(pendingGalleryMedia),
+      tourReviews: normalizeCount(tourReviews),
+      pendingTourReviews: normalizeCount(pendingTourReviews),
       enquiries: normalizeCount(enquiries),
       openEnquiries: normalizeCount(openEnquiries),
+      openQuoteEnquiries: normalizeCount(openQuoteEnquiries),
+      partnerReplyEnquiries: normalizeCount(partnerReplyEnquiries),
+      paymentPendingEnquiries: normalizeCount(paymentPendingEnquiries),
+      bookingIntents: normalizeCount(bookingIntents),
       referrals: referralTotal,
       convertedReferrals: converted,
       unpaidCommissions,

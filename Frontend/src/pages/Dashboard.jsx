@@ -8,12 +8,11 @@ import TourListingForm from "../components/TourListingForm";
 import fallbackTourImage from "../assets/photos/ngorongoro-wide-with-tourists.jpg";
 import travellexLogo from "../assets/photos/Travellex-logo-wordmark.png";
 import useAuth from "../hooks/useAuth";
-import { getMyEnquiries } from "../services/enquiryService";
+import { getMyEnquiries, getPartnerEnquiries, replyToPartnerEnquiry } from "../services/enquiryService";
 import {
   decideGuideApplicationByCompany,
   getGuideApplications,
-  getGuideBookings,
-  updateGuideBookingStatus
+  getGuideBookings
 } from "../services/guideService";
 import { getMyReferrals } from "../services/referralService";
 import { createTour, deleteTour, getTours, updateTour } from "../services/tourService";
@@ -170,6 +169,8 @@ export default function Dashboard() {
   const [companyTours, setCompanyTours] = useState([]);
   const [guideApplications, setGuideApplications] = useState([]);
   const [guideBookings, setGuideBookings] = useState([]);
+  const [partnerEnquiries, setPartnerEnquiries] = useState([]);
+  const [partnerReplyForms, setPartnerReplyForms] = useState({});
   const [tourForm, setTourForm] = useState(emptyCompanyTour);
   const [editingTourId, setEditingTourId] = useState("");
   const [tourFormOpen, setTourFormOpen] = useState(false);
@@ -195,6 +196,7 @@ export default function Dashboard() {
       ? [
           { href: "#company-tours", label: "Listings" },
           { href: "#guide-applications", label: "Guide applications" },
+          { href: "#partner-follow-ups", label: "Admin follow-ups" },
           { href: "#guide-requests", label: "Guide requests" }
         ]
       : []),
@@ -215,15 +217,17 @@ export default function Dashboard() {
     const pending = companyTours.length - active;
     const guideQueue = guideApplications.filter((application) => application.status === "submitted").length;
     const bookingQueue = guideBookings.filter((booking) => booking.status === "requested").length;
+    const followUpQueue = partnerEnquiries.filter((enquiry) => ["partner_follow_up", "partner_replied"].includes(enquiry.status)).length;
 
     return {
       total: companyTours.length,
       active,
       pending,
       guideQueue,
-      bookingQueue
+      bookingQueue,
+      followUpQueue
     };
-  }, [companyTours, guideApplications, guideBookings]);
+  }, [companyTours, guideApplications, guideBookings, partnerEnquiries]);
   const guideDashboardStats = useMemo(() => {
     const awaitingPartner = guideApplications.filter((application) => application.status === "submitted").length;
     const awaitingTravellex = guideApplications.filter((application) => application.status === "company_approved").length;
@@ -355,6 +359,7 @@ export default function Dashboard() {
         baseRequests.push(getTours({ mine: true, includeInactive: true }));
         baseRequests.push(getGuideApplications());
         baseRequests.push(getGuideBookings());
+        baseRequests.push(getPartnerEnquiries());
       }
 
       if (isTourGuide) {
@@ -369,6 +374,7 @@ export default function Dashboard() {
         setCompanyTours(responses[2].data.tours);
         setGuideApplications(responses[3].data.applications);
         setGuideBookings(responses[4].data.bookings);
+        setPartnerEnquiries(responses[5].data.enquiries);
       }
 
       if (isTourGuide) {
@@ -418,10 +424,10 @@ export default function Dashboard() {
 
       if (editingTourId) {
         await updateTour(editingTourId, serializeTourForm());
-        setMessage("Tour updated on the public Travellex tours page.");
+        setMessage("Tour update submitted for Travellex admin review.");
       } else {
         await createTour(serializeTourForm());
-        setMessage("Tour published on the public Travellex tours page.");
+        setMessage("Tour submitted for Travellex admin review.");
       }
 
       setTourForm(emptyCompanyTour);
@@ -531,10 +537,94 @@ export default function Dashboard() {
     }
   }
 
-  async function changeGuideBookingStatus(id, status) {
+  function getPartnerReplyForm(enquiry) {
+    return {
+      subject: `Partner reply: ${enquiry.tour?.title || "Travellex follow-up"}`,
+      message: "",
+      attachments: "",
+      answers: {},
+      ...(partnerReplyForms[enquiry._id] || {})
+    };
+  }
+
+  function partnerQuestions(enquiry) {
+    return (enquiry.communications || [])
+      .filter((item) => item.direction === "admin_to_partner")
+      .flatMap((item) => item.questions || [])
+      .filter(Boolean);
+  }
+
+  function updatePartnerReplyField(enquiryId, field, value) {
+    setPartnerReplyForms((current) => ({
+      ...current,
+      [enquiryId]: {
+        ...(current[enquiryId] || {}),
+        [field]: value
+      }
+    }));
+  }
+
+  function updatePartnerAnswer(enquiryId, question, value) {
+    setPartnerReplyForms((current) => ({
+      ...current,
+      [enquiryId]: {
+        ...(current[enquiryId] || {}),
+        answers: {
+          ...(current[enquiryId]?.answers || {}),
+          [question]: value
+        }
+      }
+    }));
+  }
+
+  function appendPartnerReplyAttachment(enquiry, url) {
+    const form = getPartnerReplyForm(enquiry);
+    const attachments = form.attachments ? `${form.attachments.trim()}\n${url}` : url;
+
+    updatePartnerReplyField(enquiry._id, "attachments", attachments);
+  }
+
+  async function handlePartnerReplyAttachmentUpload(event, enquiry) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setUploadingTourImage(true);
+
     try {
-      await updateGuideBookingStatus(id, status);
-      setMessage("Guide booking updated.");
+      const response = await uploadImage(file);
+      appendPartnerReplyAttachment(enquiry, response.data.url);
+      setMessage("Attachment uploaded and added to your reply.");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setUploadingTourImage(false);
+      event.target.value = "";
+    }
+  }
+
+  async function submitPartnerReply(event, enquiry) {
+    event.preventDefault();
+    const form = getPartnerReplyForm(enquiry);
+
+    try {
+      const questions = partnerQuestions(enquiry);
+      const response = await replyToPartnerEnquiry(enquiry._id, {
+        subject: form.subject,
+        message: form.message,
+        attachments: form.attachments
+          .split(/\r?\n/)
+          .map((url) => url.trim())
+          .filter(Boolean),
+        answers: questions.map((question) => ({
+          question,
+          answer: form.answers?.[question] || ""
+        }))
+      });
+      setMessage(emailDeliveryText("Reply sent to Travellex admin.", response.data.emailStatus));
+      setPartnerReplyForms((current) => ({ ...current, [enquiry._id]: {} }));
       await loadDashboard();
     } catch (error) {
       setMessage(error.message);
@@ -687,6 +777,10 @@ export default function Dashboard() {
                   Guide applications
                 </span>
                 <span>
+                  <strong>{partnerListingStats.followUpQueue}</strong>
+                  Admin follow-ups
+                </span>
+                <span>
                   <strong>{partnerListingStats.bookingQueue}</strong>
                   Guide requests
                 </span>
@@ -716,7 +810,7 @@ export default function Dashboard() {
                     onSubmit={handleCompanyTourSubmit}
                     onUpload={handleTourImageUpload}
                     submitting={submittingTour}
-                    submitLabel={editingTourId ? "Update listing" : "Publish listing"}
+                    submitLabel={editingTourId ? "Submit update" : "Submit listing"}
                     uploading={uploadingTourImage}
                   />
                 )}
@@ -899,24 +993,90 @@ export default function Dashboard() {
                     )}
                   </PaginatedList>
                 </section>
+                <section className="side-panel" id="partner-follow-ups">
+                  <p className="eyebrow">Admin follow-ups</p>
+                  <h2>Reply to Travellex listing questions.</h2>
+                  <PaginatedList className="admin-list" items={partnerEnquiries} label="admin follow-ups" emptyText="No admin follow-ups yet.">
+                    {(enquiry) => {
+                      const questions = partnerQuestions(enquiry);
+                      const form = getPartnerReplyForm(enquiry);
+
+                      return (
+                        <article className="admin-row" key={enquiry._id}>
+                          <div>
+                            <strong>{enquiry.tour?.title || enquiry.destination || "Tour follow-up"}</strong>
+                            <span>
+                              {enquiry.status || "received"} - {formatDate(enquiry.updatedAt || enquiry.createdAt)}
+                            </span>
+                            {(enquiry.communications || []).slice(-2).map((item) => (
+                              <p key={item._id || `${enquiry._id}-${item.sentAt}`}>
+                                {item.direction === "partner_to_admin" ? "Partner reply" : "Admin"}: {item.message || item.subject || "Follow-up"}
+                              </p>
+                            ))}
+                          </div>
+                          <form className="panel-form" onSubmit={(event) => submitPartnerReply(event, enquiry)}>
+                            <label className="field">
+                              <span>Subject</span>
+                              <input value={form.subject} onChange={(event) => updatePartnerReplyField(enquiry._id, "subject", event.target.value)} />
+                            </label>
+                            {questions.map((question) => (
+                              <label className="field" key={question}>
+                                <span>{question}</span>
+                                <textarea
+                                  value={form.answers?.[question] || ""}
+                                  onChange={(event) => updatePartnerAnswer(enquiry._id, question, event.target.value)}
+                                  rows="3"
+                                />
+                              </label>
+                            ))}
+                            <label className="field">
+                              <span>Message</span>
+                              <textarea
+                                value={form.message}
+                                onChange={(event) => updatePartnerReplyField(enquiry._id, "message", event.target.value)}
+                                rows="3"
+                              />
+                            </label>
+                            <label className="field">
+                              <span>Document or image URLs</span>
+                              <textarea
+                                value={form.attachments}
+                                onChange={(event) => updatePartnerReplyField(enquiry._id, "attachments", event.target.value)}
+                                rows="2"
+                                placeholder="One URL per line"
+                              />
+                            </label>
+                            <label className="field">
+                              <span>Upload image or video</span>
+                              <input
+                                type="file"
+                                accept="image/*,video/mp4,video/webm,video/quicktime"
+                                onChange={(event) => handlePartnerReplyAttachmentUpload(event, enquiry)}
+                                disabled={uploadingTourImage}
+                              />
+                            </label>
+                            <button className="button primary compact" type="submit">
+                              Send to Travellex admin
+                            </button>
+                          </form>
+                        </article>
+                      );
+                    }}
+                  </PaginatedList>
+                </section>
                 <section className="side-panel" id="guide-requests">
                   <p className="eyebrow">Guide requests</p>
-                  <h2>Manage traveller guide requests.</h2>
+                  <h2>View admin-managed guide requests.</h2>
                   <PaginatedList className="admin-list" items={guideBookings} label="guide bookings" emptyText="No guide booking requests yet.">
                     {(booking) => (
                       <article className="admin-row" key={booking._id}>
                         <div>
                           <strong>{booking.tour?.title}</strong>
                           <span>
-                            Guide: {booking.guide?.name || "Guide"} - Traveller: {booking.name} - {booking.status}
+                            Guide: {booking.guide?.name || "Guide"} - Admin-managed request - {guideBookingStatusLabel(booking.status)}
                           </span>
+                          <p>Travellex admin keeps traveller details private and coordinates any follow-up.</p>
                         </div>
-                        <select value={booking.status} onChange={(event) => changeGuideBookingStatus(booking._id, event.target.value)}>
-                          <option value="requested">requested</option>
-                          <option value="accepted">accepted</option>
-                          <option value="declined">declined</option>
-                          <option value="closed">closed</option>
-                        </select>
                       </article>
                     )}
                   </PaginatedList>
@@ -996,7 +1156,7 @@ export default function Dashboard() {
                   <div className="section-heading split small-heading">
                     <div>
                       <p className="eyebrow">Booking requests</p>
-                      <h2>Traveller requests for your guide service.</h2>
+                      <h2>Admin-managed guide requests.</h2>
                     </div>
                     <span className="guide-panel-count">{guideDashboardStats.bookings} total</span>
                   </div>
@@ -1006,19 +1166,10 @@ export default function Dashboard() {
                         <div>
                           <strong>{booking.tour?.title || "Guide request"}</strong>
                           <span>
-                            {booking.name} - {booking.travelDates || "No dates"} - {booking.groupSize || "Group size not listed"}
+                            {guideBookingStatusLabel(booking.status)} - Travellex admin will coordinate traveller details.
                           </span>
-                          {booking.message && <p>{booking.message}</p>}
+                          <p>Traveller contact information stays with Travellex admin.</p>
                         </div>
-                        <label className="field compact-select">
-                          <span>Status</span>
-                          <select value={booking.status} onChange={(event) => changeGuideBookingStatus(booking._id, event.target.value)}>
-                            <option value="requested">{guideBookingStatusLabel("requested")}</option>
-                            <option value="accepted">{guideBookingStatusLabel("accepted")}</option>
-                            <option value="declined">{guideBookingStatusLabel("declined")}</option>
-                            <option value="closed">{guideBookingStatusLabel("closed")}</option>
-                          </select>
-                        </label>
                       </article>
                     )}
                   </PaginatedList>

@@ -1,6 +1,8 @@
 const express = require("express");
 const {
   createReferral,
+  archiveReferral,
+  deleteReferral,
   getBookingSession,
   listMyReferrals,
   listReferrals,
@@ -22,5 +24,7 @@ router.get("/me", auth, listMyReferrals);
 router.get("/", auth, adminOnly, listReferrals);
 router.patch("/tracking/:trackingCode", auth, adminOnly, reconcileByTrackingCode);
 router.patch("/:id", auth, adminOnly, markConverted);
+router.patch("/:id/archive", auth, adminOnly, archiveReferral);
+router.delete("/:id", auth, adminOnly, deleteReferral);
 
 module.exports = router;

@@ -52,7 +52,19 @@ function enquiryLabel(enquiry) {
     return "Tour listing application";
   }
 
+  if (enquiry.requestType === "booking") {
+    return `Booking request: ${tourLabel(enquiry)}`;
+  }
+
   return enquiry.requestType === "quote" ? `Quote request: ${tourLabel(enquiry)}` : tourLabel(enquiry);
+}
+
+function enquiryRequestTypeLabel(enquiry) {
+  if (enquiry.requestType === "booking") {
+    return "Booking request";
+  }
+
+  return enquiry.requestType === "quote" ? "Quote request" : "Question";
 }
 
 function readableMessageLines(message) {
@@ -379,26 +391,31 @@ async function notifyMany(recipients, subject, lines, options = {}) {
   return { sent: statuses.some((status) => status.sent), recipients: uniqueRecipients, statuses };
 }
 
-async function sendEnquiryEmails(enquiry) {
+async function sendEnquiryEmails(enquiry, options = {}) {
   const tourName = tourLabel(enquiry);
   const label = enquiryLabel(enquiry);
   const destination = enquiry.destination || enquiry.tour?.location || "Not provided";
   const partnerName = enquiry.partner?.name || "Not assigned";
   const partnerEmail = enquiry.partner?.contactEmail || "Not provided";
-  const requestType = enquiry.requestType === "quote" ? "Quote request" : "Question";
+  const requestType = enquiryRequestTypeLabel(enquiry);
+  const bookingCode = enquiry.referral?.trackingCode || "";
+  const notifyTraveller = options.notifyTraveller !== false;
   const messageLines = readableMessageLines(enquiry.message);
   const confirmationText =
     enquiry.type === "partner_application"
       ? "Travellex has received your tour listing application and will follow up to schedule a discussion."
-      : enquiry.requestType === "quote"
-        ? "Travellex has received your quote request and will follow up with availability, operator details and next steps."
-        : "Travellex has received your travel request and will follow up with the best next step.";
+      : enquiry.requestType === "booking"
+        ? "Travellex has received your booking request. Admin will review it first, coordinate operator details where needed and follow up with the next step."
+        : enquiry.requestType === "quote"
+          ? "Travellex has received your quote request and will follow up with availability, operator details and next steps."
+          : "Travellex has received your travel request and will follow up with the best next step.";
 
   const adminLines = [
     `Type: ${enquiry.type || "traveller"}`,
     `Request: ${requestType}`,
     `Name: ${enquiry.name}`,
     `Email: ${enquiry.email}`,
+    bookingCode ? `Booking code: ${bookingCode}` : undefined,
     `Destination: ${destination}`,
     `Tour: ${tourName}`,
     `Partner: ${partnerName}`,
@@ -406,6 +423,7 @@ async function sendEnquiryEmails(enquiry) {
     `Travel date: ${enquiry.travelDate ? enquiry.travelDate.toISOString().slice(0, 10) : "Not provided"}`,
     `Group size: ${enquiry.groupSize || "Not provided"}`,
     `Budget EUR: ${enquiry.budgetEUR || "Not provided"}`,
+    `Open admin portal: ${clientUrl}/admin`,
     "",
     "Traveller message",
     ...messageLines
@@ -422,17 +440,22 @@ async function sendEnquiryEmails(enquiry) {
     "Warm regards,",
     "Travellex"
   ];
-  const statuses = await Promise.all([
+  const notifications = [
     notifyOwner(`New Travellex enquiry: ${label}`, adminLines, {
       preheader: `${requestType} from ${enquiry.name}`,
       replyTo: enquiry.email || undefined
-    }),
-    notifyUser(enquiry.email, "We received your Travellex enquiry", userLines, {
-      preheader: `Travellex received your request about ${label}.`
     })
-  ]);
+  ];
 
-  return { sent: statuses.some((status) => status.sent), statuses };
+  if (notifyTraveller) {
+    notifications.push(notifyUser(enquiry.email, "We received your Travellex enquiry", userLines, {
+      preheader: `Travellex received your request about ${label}.`
+    }));
+  }
+
+  const statuses = await Promise.all(notifications);
+
+  return { sent: statuses.some((status) => status.sent), statuses, travellerNotified: notifyTraveller };
 }
 
 module.exports = {

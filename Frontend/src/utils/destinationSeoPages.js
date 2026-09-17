@@ -9,7 +9,7 @@ export const destinationSeoPages = [
     primaryLocation: "Anywhere in Africa",
     searchLink: "/tours?location=Anywhere+in+Africa",
     keywords: ["Africa tours from Germany", "Germany to Africa travel", "Tanzania safari from Germany", "Zanzibar holiday from Germany"],
-    highlights: ["EUR pricing for easy comparison", "Tanzania and Zanzibar route focus", "Approved operators and clear booking paths"],
+    highlights: ["EUR pricing for easy comparison", "Tanzania and Zanzibar route focus", "Approved operators and Travellex-managed booking requests"],
     faqs: [
       ["Can I plan Africa tours from Germany on Travellex?", "Yes. Travellex is built for international travellers comparing Africa tours, with EUR prices and strong Tanzania and Zanzibar coverage."],
       ["Which Africa routes are strongest?", "Current strongest coverage includes Tanzania safari routes, Zanzibar coast trips, Kilimanjaro, Ngorongoro, Lake Manyara and Stone Town."]

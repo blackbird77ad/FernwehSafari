@@ -42,8 +42,15 @@ import {
   getTours,
   updateTour
 } from "../services/tourService";
-import { getEnquiries, updateEnquiryStatus } from "../services/enquiryService";
-import { getReferrals, markReferralConverted, reconcileReferralByTrackingCode } from "../services/referralService";
+import { archiveEnquiry, deleteEnquiry, getEnquiries, sendEnquiryMessage, updateEnquiryStatus } from "../services/enquiryService";
+import {
+  archiveReferral,
+  deleteReferral,
+  getReferrals,
+  markReferralConverted,
+  reconcileReferralByTrackingCode
+} from "../services/referralService";
+import { getReviews, reviewTourReview } from "../services/reviewService";
 import { getCommissionSettings, updateCommissionSettings } from "../services/settingsService";
 import { uploadImage } from "../services/uploadService";
 import { apiBaseURL } from "../services/api";
@@ -100,7 +107,7 @@ function countValue(value, fallback = 0) {
 
 const partnerFieldLabels = {
   name: "Partner name",
-  bookingURL: "Default booking URL (optional)",
+  bookingURL: "Internal booking/reporting URL (optional)",
   location: "Location",
   contactEmail: "Contact email",
   contactPhone: "Contact phone",
@@ -158,9 +165,13 @@ const tabMeta = {
     title: "Gallery",
     description: "Approve, schedule, switch off and remove public travel photos."
   },
+  "tour reviews": {
+    title: "Tour Reviews",
+    description: "Approve paid-traveller reviews before they appear on public tour pages."
+  },
   enquiries: {
     title: "Enquiries",
-    description: "Read and update traveller messages."
+    description: "Review traveller requests and coordinate partner or traveller follow-ups."
   },
   uploads: {
     title: "Media Uploads",
@@ -180,6 +191,7 @@ const tabAccentColors = {
   "guide applications": "#F59E0B",
   "guide bookings": "#2563EB",
   "gallery media": "#EC4899",
+  "tour reviews": "#10B981",
   enquiries: "#F59E0B",
   uploads: "#0EA5E9"
 };
@@ -196,6 +208,7 @@ const adminNavIcons = {
   "guide applications": "GA",
   "guide bookings": "GB",
   "gallery media": "GL",
+  "tour reviews": "RV",
   enquiries: "EN",
   uploads: "UP"
 };
@@ -204,7 +217,7 @@ const adminTabGroups = [
   { label: "Main", description: "Health and decisions", tabs: ["overview"] },
   { label: "Operations", description: "Tours, bookings, payouts", tabs: ["tours", "guide bookings", "referrals", "commissions"] },
   { label: "People", description: "Partners, customers, access", tabs: ["partners", "users", "role dashboards", "enquiries"] },
-  { label: "Content", description: "Gallery and uploads", tabs: ["gallery media", "uploads"] },
+  { label: "Content", description: "Gallery, reviews and uploads", tabs: ["gallery media", "tour reviews", "uploads"] },
   { label: "Applications", description: "Partner and guide reviews", tabs: ["company applications", "guide applications"] }
 ];
 
@@ -366,14 +379,45 @@ function statusLabel(status) {
 }
 
 const enquiryStatusOptions = [
-  { value: "new", label: "New" },
-  { value: "contacted", label: "Contacted" },
-  { value: "referred", label: "Referred" },
-  { value: "closed", label: "Closed" }
+  { value: "received", label: "Received" },
+  { value: "admin_review", label: "Admin review" },
+  { value: "partner_follow_up", label: "Partner follow-up" },
+  { value: "partner_replied", label: "Partner replied" },
+  { value: "details_shared", label: "Details shared" },
+  { value: "quote_sent", label: "Quote sent" },
+  { value: "payment_pending", label: "Payment pending" },
+  { value: "paid", label: "Paid" },
+  { value: "booked", label: "Booked" },
+  { value: "completed", label: "Completed" },
+  { value: "closed", label: "Closed" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "new", label: "Received" },
+  { value: "contacted", label: "Admin review" },
+  { value: "referred", label: "Partner follow-up" }
 ];
+
+const partnerQuestionTemplates = [
+  "Is this listing available for the traveller's requested date?",
+  "What is the minimum age range for this tour?",
+  "Please share the day-by-day itinerary.",
+  "Please confirm inclusions, exclusions and pickup details.",
+  "Please share payment terms, deposit and cancellation policy."
+];
+
+const finalEnquiryStatuses = ["closed", "cancelled", "completed"];
 
 function enquiryStatusLabel(status) {
   return enquiryStatusOptions.find((option) => option.value === status)?.label || statusLabel(status);
+}
+
+function enquiryRequestTypeLabel(requestType) {
+  const labels = {
+    booking: "Booking request",
+    quote: "Quote request",
+    question: "Question"
+  };
+
+  return labels[requestType] || statusLabel(requestType);
 }
 
 function enquirySubject(enquiry) {
@@ -607,6 +651,7 @@ export default function Admin() {
   const [guideApplications, setGuideApplications] = useState([]);
   const [guideBookings, setGuideBookings] = useState([]);
   const [galleryMedia, setGalleryMedia] = useState([]);
+  const [tourReviews, setTourReviews] = useState([]);
   const [tourForm, setTourForm] = useState(emptyTour);
   const [editingTourId, setEditingTourId] = useState("");
   const [tourFormOpen, setTourFormOpen] = useState(false);
@@ -628,6 +673,7 @@ export default function Admin() {
   const [commissionSettingsForm, setCommissionSettingsForm] = useState(emptyCommissionSettings);
   const [galleryForm, setGalleryForm] = useState(emptyGalleryMedia);
   const [editingGalleryMediaId, setEditingGalleryMediaId] = useState("");
+  const [enquiryMessageForms, setEnquiryMessageForms] = useState({});
   const [uploading, setUploading] = useState(false);
 
   const partnerOptions = useMemo(
@@ -644,7 +690,7 @@ export default function Admin() {
     () => [
       "overview",
       ...(isAdmin ? ["commissions", "referrals", "users", "role dashboards", "company applications"] : []),
-      ...(isStaff ? ["tours", "guide applications", "guide bookings", "gallery media"] : []),
+      ...(isStaff ? ["tours", "guide applications", "guide bookings", "gallery media", "tour reviews"] : []),
       ...(isAdmin ? ["partners", "enquiries"] : []),
       ...(isStaff ? ["uploads"] : [])
     ],
@@ -748,38 +794,118 @@ export default function Admin() {
         : galleryMedia.filter((item) => item.status === "pending").length,
     [dashboardCounts.pendingGalleryMedia, galleryMedia, isAdmin]
   );
+  const pendingTourReviewCount = useMemo(
+    () =>
+      isAdmin
+        ? countValue(dashboardCounts.pendingTourReviews, tourReviews.filter((item) => item.status === "pending").length)
+        : tourReviews.filter((item) => item.status === "pending").length,
+    [dashboardCounts.pendingTourReviews, isAdmin, tourReviews]
+  );
+  const activeEnquiries = useMemo(() => enquiries.filter((enquiry) => !enquiry.isArchived), [enquiries]);
+  const activeReferrals = useMemo(() => referrals.filter((referral) => !referral.isArchived), [referrals]);
   const openEnquiryCount = useMemo(
     () =>
       isAdmin
-        ? countValue(dashboardCounts.openEnquiries, enquiries.filter((enquiry) => enquiry.status !== "closed").length)
-        : enquiries.filter((enquiry) => enquiry.status !== "closed").length,
-    [dashboardCounts.openEnquiries, enquiries, isAdmin]
+        ? countValue(dashboardCounts.openEnquiries, activeEnquiries.filter((enquiry) => !finalEnquiryStatuses.includes(enquiry.status)).length)
+        : activeEnquiries.filter((enquiry) => !finalEnquiryStatuses.includes(enquiry.status)).length,
+    [activeEnquiries, dashboardCounts.openEnquiries, isAdmin]
+  );
+  const pendingTourPublishCount = useMemo(
+    () => tours.filter((tour) => !tour.isActive).length,
+    [tours]
+  );
+  const pendingPartnerAccountCount = useMemo(
+    () => pendingCompanyApplicationCount + partners.filter((partner) => !partner.isActive).length,
+    [partners, pendingCompanyApplicationCount]
+  );
+  const quoteFollowUpCount = useMemo(
+    () =>
+      isAdmin
+        ? countValue(
+            dashboardCounts.openQuoteEnquiries,
+            activeEnquiries.filter((enquiry) => !finalEnquiryStatuses.includes(enquiry.status) && enquiry.requestType === "quote").length
+          )
+        : activeEnquiries.filter((enquiry) => !finalEnquiryStatuses.includes(enquiry.status) && enquiry.requestType === "quote").length,
+    [activeEnquiries, dashboardCounts.openQuoteEnquiries, isAdmin]
+  );
+  const bookingIntentCount = useMemo(
+    () =>
+      isAdmin
+        ? countValue(
+            dashboardCounts.bookingIntents,
+            activeEnquiries.filter((enquiry) => !finalEnquiryStatuses.includes(enquiry.status) && enquiry.requestType === "booking").length
+          )
+        : activeEnquiries.filter((enquiry) => !finalEnquiryStatuses.includes(enquiry.status) && enquiry.requestType === "booking").length,
+    [activeEnquiries, dashboardCounts.bookingIntents, isAdmin]
+  );
+  const enquiryFollowUpCount = useMemo(
+    () =>
+      activeEnquiries.filter(
+        (enquiry) =>
+          enquiry.requestType !== "booking" &&
+          !finalEnquiryStatuses.includes(enquiry.status) &&
+          (enquiry.requestType === "quote" ||
+            ["received", "admin_review", "partner_follow_up", "partner_replied", "details_shared", "quote_sent", "payment_pending", "new", "contacted", "referred"].includes(
+              enquiry.status
+            ))
+      ).length,
+    [activeEnquiries]
+  );
+  const partnerReplyCount = useMemo(
+    () => activeEnquiries.filter((enquiry) => enquiry.status === "partner_replied").length,
+    [activeEnquiries]
+  );
+  const guideBookingRequestCount = useMemo(
+    () => guideBookings.filter((booking) => booking.status === "requested").length,
+    [guideBookings]
+  );
+  const paymentTaskCount = useMemo(
+    () =>
+      activeEnquiries.filter((enquiry) => enquiry.status === "payment_pending").length +
+      activeReferrals.filter(
+        (referral) =>
+          referral.status === "converted" ||
+          Number(referral.confirmedCommissionEUR || 0) > Number(referral.paidCommissionEUR || 0)
+      ).length,
+    [activeEnquiries, activeReferrals]
   );
   const unpaidCommissionCount = useMemo(
     () =>
       isAdmin
         ? countValue(
             dashboardCounts.unpaidCommissions,
-            referrals.filter((referral) => Number(referral.confirmedCommissionEUR || 0) > Number(referral.paidCommissionEUR || 0)).length
+            activeReferrals.filter((referral) => Number(referral.confirmedCommissionEUR || 0) > Number(referral.paidCommissionEUR || 0)).length
           )
-        : referrals.filter((referral) => Number(referral.confirmedCommissionEUR || 0) > Number(referral.paidCommissionEUR || 0)).length,
-    [dashboardCounts.unpaidCommissions, isAdmin, referrals]
+        : activeReferrals.filter((referral) => Number(referral.confirmedCommissionEUR || 0) > Number(referral.paidCommissionEUR || 0)).length,
+    [activeReferrals, dashboardCounts.unpaidCommissions, isAdmin]
   );
   const dashboardActionCount = useMemo(
     () =>
       isAdmin
         ? countValue(
             dashboardCounts.dashboardActions,
-            pendingCompanyApplicationCount + pendingGuideConfirmationCount + pendingGalleryCount + openEnquiryCount + unpaidCommissionCount
+            pendingCompanyApplicationCount +
+              pendingTourPublishCount +
+              pendingGuideConfirmationCount +
+              pendingGalleryCount +
+              pendingTourReviewCount +
+              guideBookingRequestCount +
+              paymentTaskCount +
+              openEnquiryCount +
+              unpaidCommissionCount
           )
-        : pendingCompanyApplicationCount + pendingGuideConfirmationCount + pendingGalleryCount,
+        : pendingCompanyApplicationCount + pendingTourPublishCount + pendingGuideConfirmationCount + pendingGalleryCount + pendingTourReviewCount,
     [
       dashboardCounts.dashboardActions,
+      guideBookingRequestCount,
       isAdmin,
       openEnquiryCount,
+      paymentTaskCount,
       pendingCompanyApplicationCount,
       pendingGalleryCount,
+      pendingTourReviewCount,
       pendingGuideConfirmationCount,
+      pendingTourPublishCount,
       unpaidCommissionCount
     ]
   );
@@ -794,6 +920,7 @@ export default function Admin() {
     : guideApplications.length;
   const totalGuideBookingCount = isAdmin ? countValue(dashboardCounts.guideBookings, guideBookings.length) : guideBookings.length;
   const totalGalleryMediaCount = isAdmin ? countValue(dashboardCounts.galleryMedia, galleryMedia.length) : galleryMedia.length;
+  const totalTourReviewCount = isAdmin ? countValue(dashboardCounts.tourReviews, tourReviews.length) : tourReviews.length;
   const totalEnquiryCount = isAdmin ? countValue(dashboardCounts.enquiries, enquiries.length) : enquiries.length;
   const totalReferralCount = isAdmin ? countValue(dashboardCounts.referrals, referrals.length) : referrals.length;
 
@@ -818,6 +945,7 @@ export default function Admin() {
         value: pendingGuideConfirmationCount
       },
       { label: "Gallery pending", value: pendingGalleryCount },
+      { label: "Reviews pending", value: pendingTourReviewCount },
       ...(isAdmin
         ? [
             { label: "Open enquiries", value: openEnquiryCount },
@@ -832,6 +960,7 @@ export default function Admin() {
       openEnquiryCount,
       pendingCompanyApplicationCount,
       pendingGalleryCount,
+      pendingTourReviewCount,
       pendingGuideConfirmationCount,
       totalPartnerCount,
       totalReferralCount,
@@ -853,6 +982,7 @@ export default function Admin() {
       "guide applications": totalGuideApplicationCount,
       "guide bookings": totalGuideBookingCount,
       "gallery media": totalGalleryMediaCount,
+      "tour reviews": totalTourReviewCount,
       enquiries: totalEnquiryCount,
       uploads: uploading ? 1 : 0
     }),
@@ -861,6 +991,7 @@ export default function Admin() {
       totalCompanyApplicationCount,
       totalEnquiryCount,
       totalGalleryMediaCount,
+      totalTourReviewCount,
       totalGuideApplicationCount,
       totalGuideBookingCount,
       totalPartnerCount,
@@ -899,47 +1030,130 @@ export default function Admin() {
     );
   }, [adminSearch, tabs]);
 
+  const pendingTaskMetrics = useMemo(
+    () =>
+      [
+        {
+          label: "Partner accounts",
+          value: pendingPartnerAccountCount,
+          detail: "applications or inactive partner accounts need review",
+          tab: "company applications",
+          tone: pendingPartnerAccountCount ? "warning" : "success"
+        },
+        {
+          label: "Tours to publish",
+          value: pendingTourPublishCount,
+          detail: "unpublished listings waiting for admin approval",
+          tab: "tours",
+          tone: pendingTourPublishCount ? "warning" : "success"
+        },
+        {
+          label: "Quotes/enquiries",
+          value: enquiryFollowUpCount,
+          detail: `${quoteFollowUpCount} quote requests and ${partnerReplyCount} partner replies`,
+          tab: "enquiries",
+          tone: enquiryFollowUpCount ? "warning" : "success"
+        },
+        {
+          label: "Booking requests",
+          value: bookingIntentCount,
+          detail: "admin-managed booking enquiries awaiting follow-up",
+          tab: "enquiries",
+          tone: bookingIntentCount ? "warning" : "success"
+        },
+        {
+          label: "Post reviews",
+          value: pendingTourReviewCount,
+          detail: "paid-traveller tour reviews to approve",
+          tab: "tour reviews",
+          tone: pendingTourReviewCount ? "warning" : "success"
+        },
+        {
+          label: "Gallery posts",
+          value: pendingGalleryCount,
+          detail: "public gallery submissions to approve",
+          tab: "gallery media",
+          tone: pendingGalleryCount ? "warning" : "success"
+        },
+        {
+          label: "Guide approvals",
+          value: pendingGuideConfirmationCount,
+          detail: "company-approved guides need Travellex confirmation",
+          tab: "guide applications",
+          tone: pendingGuideConfirmationCount ? "warning" : "success"
+        },
+        {
+          label: "Guide requests",
+          value: guideBookingRequestCount,
+          detail: "guide booking requests for admin coordination",
+          tab: "guide bookings",
+          tone: guideBookingRequestCount ? "warning" : "success"
+        },
+        {
+          label: "Payments",
+          value: paymentTaskCount,
+          detail: "payment-pending quotes or unpaid confirmed commissions",
+          tab: paymentTaskCount && tabs.includes("referrals") ? "referrals" : "enquiries",
+          tone: paymentTaskCount ? "warning" : "success"
+        }
+      ].filter((task) => tabs.includes(task.tab)),
+    [
+      bookingIntentCount,
+      enquiryFollowUpCount,
+      guideBookingRequestCount,
+      partnerReplyCount,
+      paymentTaskCount,
+      pendingGalleryCount,
+      pendingGuideConfirmationCount,
+      pendingPartnerAccountCount,
+      pendingTourPublishCount,
+      pendingTourReviewCount,
+      quoteFollowUpCount,
+      tabs
+    ]
+  );
+
   const adminQuickActions = useMemo(
     () =>
       [
         {
           tab: "company applications",
-          label: "Review partner requests",
-          value: pendingCompanyApplicationCount,
-          detail: "waiting"
-        },
-        {
-          tab: "partners",
-          label: "Create approved partner",
-          value: totalPartnerCount,
-          detail: "ready to list"
+          label: "Partner account tasks",
+          value: pendingPartnerAccountCount,
+          detail: "pending"
         },
         {
           tab: "tours",
-          label: "Manage public tours",
-          value: totalTourCount,
-          detail: "listings"
+          label: "Publish listings",
+          value: pendingTourPublishCount,
+          detail: "waiting"
         },
         {
-          tab: "referrals",
-          label: "Record booking",
-          value: eur.format(commissionStats.open),
-          detail: "unpaid"
+          tab: "enquiries",
+          label: "Quote follow-up",
+          value: enquiryFollowUpCount,
+          detail: "open"
         },
         {
-          tab: "users",
-          label: "Manage access",
-          value: totalUserCount,
-          detail: "accounts"
+          tab: "enquiries",
+          label: "Booking requests",
+          value: bookingIntentCount,
+          detail: "new"
+        },
+        {
+          tab: "tour reviews",
+          label: "Review posts",
+          value: pendingTourReviewCount,
+          detail: "pending"
         }
       ].filter((action) => tabs.includes(action.tab)),
     [
-      commissionStats.open,
-      pendingCompanyApplicationCount,
-      tabs,
-      totalPartnerCount,
-      totalTourCount,
-      totalUserCount
+      bookingIntentCount,
+      enquiryFollowUpCount,
+      pendingPartnerAccountCount,
+      pendingTourPublishCount,
+      pendingTourReviewCount,
+      tabs
     ]
   );
 
@@ -1251,13 +1465,14 @@ export default function Admin() {
   const loadAdminData = useCallback(async () => {
     setLoading(true);
     try {
-      const [tourResponse, partnerResponse, galleryMediaResponse, guideApplicationResponse, guideBookingResponse] =
+      const [tourResponse, partnerResponse, galleryMediaResponse, guideApplicationResponse, guideBookingResponse, reviewResponse] =
         await Promise.all([
           getTours({ includeInactive: true }),
           getPartners({ includeInactive: true }),
           getAdminGalleryMedia(),
           getGuideApplications(),
-          getGuideBookings()
+          getGuideBookings(),
+          getReviews()
         ]);
 
       setTours(tourResponse.data.tours);
@@ -1265,6 +1480,7 @@ export default function Admin() {
       setGuideApplications(guideApplicationResponse.data.applications);
       setGuideBookings(guideBookingResponse.data.bookings);
       setGalleryMedia(galleryMediaResponse.data.media);
+      setTourReviews(reviewResponse.data.reviews);
 
       if (isAdmin) {
         const [
@@ -1314,6 +1530,7 @@ export default function Admin() {
         setEnquiries([]);
         setReferrals([]);
         setCompanyApplications([]);
+        setTourReviews(reviewResponse.data.reviews);
         setCommissionSettings(emptyCommissionSettings);
         setCommissionSettingsForm(emptyCommissionSettings);
       }
@@ -1687,6 +1904,16 @@ export default function Admin() {
     }
   }
 
+  async function handleTourReviewDecision(id, status) {
+    try {
+      const response = await reviewTourReview(id, { status, reviewNotes: "" });
+      setToast(emailDeliveryMessage(`Tour review ${status}.`, response.data.emailStatus));
+      await loadAdminData();
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    }
+  }
+
   async function removeGalleryMedia(id) {
     try {
       await deleteGalleryMedia(id);
@@ -1750,6 +1977,115 @@ export default function Admin() {
     }
   }
 
+  function getEnquiryMessageForm(enquiry, recipient) {
+    const key = `${enquiry._id}-${recipient}`;
+
+    return {
+      subject:
+        recipient === "partner"
+          ? `Travellex follow-up: ${enquiry.tour?.title || enquiry.destination || "Tour request"}`
+          : `Travellex update: ${enquiry.tour?.title || enquiry.destination || "Your request"}`,
+      message: "",
+      questions: "",
+      attachments: "",
+      ...(enquiryMessageForms[key] || {})
+    };
+  }
+
+  function updateEnquiryMessageForm(enquiryId, recipient, field, value) {
+    const key = `${enquiryId}-${recipient}`;
+    setEnquiryMessageForms((current) => ({
+      ...current,
+      [key]: {
+        ...(current[key] || {}),
+        [field]: value
+      }
+    }));
+  }
+
+  function addPartnerQuestionTemplate(enquiry, question) {
+    const form = getEnquiryMessageForm(enquiry, "partner");
+    const questions = form.questions
+      ? `${form.questions.trim()}\n${question}`
+      : question;
+
+    updateEnquiryMessageForm(enquiry._id, "partner", "questions", questions);
+  }
+
+  function appendEnquiryAttachmentUrl(enquiry, recipient, url) {
+    const form = getEnquiryMessageForm(enquiry, recipient);
+    const attachments = form.attachments ? `${form.attachments.trim()}\n${url}` : url;
+
+    updateEnquiryMessageForm(enquiry._id, recipient, "attachments", attachments);
+  }
+
+  async function handleEnquiryAttachmentUpload(event, enquiry, recipient) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const response = await uploadImage(file);
+      appendEnquiryAttachmentUrl(enquiry, recipient, response.data.url);
+      setToast({ message: "Attachment uploaded and added to the follow-up." });
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    } finally {
+      setUploading(false);
+      event.target.value = "";
+    }
+  }
+
+  async function handleEnquiryArchive(id, archived) {
+    try {
+      await archiveEnquiry(id, { archived });
+      setToast({ message: archived ? "Enquiry archived." : "Enquiry restored." });
+      await loadAdminData();
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    }
+  }
+
+  async function handleEnquiryDelete(id) {
+    try {
+      await deleteEnquiry(id);
+      setToast({ message: "Enquiry permanently deleted." });
+      await loadAdminData();
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    }
+  }
+
+  async function handleEnquiryMessageSubmit(event, enquiry, recipient) {
+    event.preventDefault();
+    const form = getEnquiryMessageForm(enquiry, recipient);
+
+    try {
+      const response = await sendEnquiryMessage(enquiry._id, {
+        recipient,
+        subject: form.subject,
+        message: form.message,
+        questions: form.questions
+          .split(/\r?\n/)
+          .map((item) => item.trim())
+          .filter(Boolean),
+        attachments: form.attachments
+          .split(/\r?\n/)
+          .map((url) => url.trim())
+          .filter(Boolean)
+      });
+      setToast(emailDeliveryMessage(`${recipient === "partner" ? "Partner" : "Traveller"} follow-up saved.`, response.data.emailStatus));
+      setEnquiryMessageForms((current) => ({ ...current, [`${enquiry._id}-${recipient}`]: {} }));
+      await loadAdminData();
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    }
+  }
+
   async function handleReferralConversion(id) {
     const payload = {
       status: "converted",
@@ -1759,6 +2095,26 @@ export default function Admin() {
     try {
       await markReferralConverted(id, payload);
       setToast({ message: "Booking commission updated." });
+      await loadAdminData();
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    }
+  }
+
+  async function handleReferralArchive(id, archived) {
+    try {
+      await archiveReferral(id, { archived });
+      setToast({ message: archived ? "Booking archived." : "Booking restored." });
+      await loadAdminData();
+    } catch (error) {
+      setToast({ tone: "error", message: error.message });
+    }
+  }
+
+  async function handleReferralDelete(id) {
+    try {
+      await deleteReferral(id);
+      setToast({ message: "Booking permanently deleted." });
       await loadAdminData();
     } catch (error) {
       setToast({ tone: "error", message: error.message });
@@ -2261,6 +2617,20 @@ export default function Admin() {
           <>
             {activeTab === "overview" && (
               <div className="admin-list full">
+                <div className="admin-task-grid" aria-label="Pending admin tasks">
+                  {pendingTaskMetrics.map((task) => (
+                    <button
+                      className={`admin-task-card tone-${task.tone}`}
+                      key={task.label}
+                      type="button"
+                      onClick={() => handleTabChange(task.tab)}
+                    >
+                      <span>{task.label}</span>
+                      <strong>{task.value}</strong>
+                      <small>{task.detail}</small>
+                    </button>
+                  ))}
+                </div>
                 <div className="admin-kpi-grid">
                   {crmStats.map((item) => (
                     <article className="admin-kpi-card" key={item.label}>
@@ -2314,6 +2684,10 @@ export default function Admin() {
                     <p className="eyebrow">Review queues</p>
                     <h2>Work that protects quality.</h2>
                     <div className="admin-metric-row">
+                      <span>Tours to publish</span>
+                      <strong>{pendingTourPublishCount}</strong>
+                    </div>
+                    <div className="admin-metric-row">
                       <span>Partner applications</span>
                       <strong>{pendingCompanyApplicationCount}</strong>
                     </div>
@@ -2325,15 +2699,19 @@ export default function Admin() {
                       <span>Gallery pending</span>
                       <strong>{pendingGalleryCount}</strong>
                     </div>
+                    <div className="admin-metric-row">
+                      <span>Tour reviews</span>
+                      <strong>{pendingTourReviewCount}</strong>
+                    </div>
                   </article>
                 </div>
                 <div className="side-panel">
                   <p className="eyebrow">Booking tracking</p>
                   <h2>Every booking click gets a Travellex booking code.</h2>
                   <p>
-                    When a traveller starts booking, Travellex creates a code for that enquiry. If the partner website
-                    sends the booking result back, the commission updates automatically. If not, use Bookings & Payments
-                    to enter the booking from the partner report.
+                    When a traveller starts booking, Travellex creates a code for that enquiry. If a partner reporting
+                    system sends the booking result back, the commission updates automatically. If not, use Bookings &
+                    Payments to enter the booking from the partner report.
                   </p>
                 </div>
                 <div className="admin-dashboard-widgets">
@@ -2348,7 +2726,7 @@ export default function Admin() {
                           type="button"
                           onClick={() => {
                             if (signal.label === "Business health") {
-                              handleTabChange(dashboardActionCount ? "company applications" : "overview");
+                              handleTabChange(pendingTaskMetrics.find((task) => Number(task.value) > 0)?.tab || "overview");
                             } else if (signal.label === "Tour supply") {
                               handleTabChange("tours");
                             } else if (signal.label === "Media quality") {
@@ -3157,6 +3535,89 @@ export default function Admin() {
                 </AdminCollection>
               </div>
             )}
+            {activeTab === "tour reviews" && (
+              <AdminCollection
+                className="admin-list full"
+                defaultView="list"
+                items={tourReviews}
+                label="tour reviews"
+                emptyText="No tour reviews yet."
+                searchKeys={["name", "title", "comment", "tour.title", "user.email", "status"]}
+                filterOptions={[
+                  { value: "pending", label: "Pending", predicate: (review) => review.status === "pending" },
+                  { value: "approved", label: "Approved", predicate: (review) => review.status === "approved" },
+                  { value: "rejected", label: "Rejected", predicate: (review) => review.status === "rejected" }
+                ]}
+                sortOptions={[
+                  { value: "newest", label: "Newest", compare: (left, right) => compareDateNewest(left.createdAt, right.createdAt) },
+                  { value: "rating", label: "Rating high-low", compare: (left, right) => compareNumber(right.rating, left.rating) },
+                  { value: "status", label: "Status", compare: (left, right) => compareText(left.status, right.status) }
+                ]}
+                searchPlaceholder="Search reviewer, tour, comment or status"
+                viewModes={[
+                  { value: "list", label: "Review queue" },
+                  { value: "cards", label: "Cards" }
+                ]}
+              >
+                {(review) => (
+                  <article className="admin-row enquiry-message-card" key={review._id}>
+                    <div className="enquiry-message-main">
+                      <div className="enquiry-message-head">
+                        <div>
+                          <span className={`enquiry-status-pill status-${review.status || "pending"}`}>
+                            {statusLabel(review.status)}
+                          </span>
+                          <strong>{review.title || `${review.name || review.user?.name || "Traveller"} review`}</strong>
+                          <span>
+                            {review.tour?.title || "Tour"} - {Number(review.rating || 0).toFixed(1)} / 5 - {formatDate(review.createdAt)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="enquiry-detail-grid">
+                        <span>
+                          <strong>Reviewer</strong>
+                          {review.name || review.user?.name || "Traveller"}
+                        </span>
+                        <span>
+                          <strong>Email</strong>
+                          {review.user?.email || "Not provided"}
+                        </span>
+                        <span>
+                          <strong>Tour</strong>
+                          {review.tour?.title || "Not provided"}
+                        </span>
+                        <span>
+                          <strong>Booking</strong>
+                          {review.referral?.trackingCode || "Paid booking"}
+                        </span>
+                      </div>
+                      <section className="enquiry-message-body" aria-label="Review body">
+                        <span>Review</span>
+                        <p>{review.comment}</p>
+                        {review.attachments?.map((item) => (
+                          <p key={item.url}>
+                            <a href={item.url} target="_blank" rel="noreferrer">
+                              {item.name || item.url}
+                            </a>
+                          </p>
+                        ))}
+                      </section>
+                      <div className="button-row">
+                        <button className="button primary compact" type="button" onClick={() => handleTourReviewDecision(review._id, "approved")}>
+                          Approve & publish
+                        </button>
+                        <button className="button secondary compact" type="button" onClick={() => handleTourReviewDecision(review._id, "pending")}>
+                          Pending
+                        </button>
+                        <button className="button danger compact" type="button" onClick={() => handleTourReviewDecision(review._id, "rejected")}>
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                )}
+              </AdminCollection>
+            )}
             {activeTab === "tours" && (
               <div className="admin-grid users-admin-grid tours-admin-grid">
                 <section className="side-panel user-form-fold">
@@ -3427,7 +3888,7 @@ export default function Admin() {
                         <details className="postback-box">
                           <summary>Advanced: automatic booking report setup</summary>
                           <p>
-                            Share this only with the partner&apos;s website team. It lets their booking system tell
+                            Share this only with the partner&apos;s reporting or operations team. It lets their booking system tell
                             Travellex when a tracked booking is confirmed.
                           </p>
                           <code>{`${apiBaseURL}/referrals/postback`}</code>
@@ -3461,12 +3922,21 @@ export default function Admin() {
                 items={enquiries}
                 label="enquiries"
                 emptyText="No enquiries yet."
-                searchKeys={["name", "email", "destination", "message", "tour.title", "partner.name", "type", "status"]}
+                searchKeys={["name", "email", "destination", "message", "tour.title", "partner.name", "type", "requestType", "status", "referral.trackingCode"]}
                 filterOptions={[
-                  { value: "new", label: "New", predicate: (enquiry) => enquiry.status === "new" },
-                  { value: "contacted", label: "Contacted", predicate: (enquiry) => enquiry.status === "contacted" },
-                  { value: "referred", label: "Referred", predicate: (enquiry) => enquiry.status === "referred" },
+                  { value: "booking", label: "Booking requests", predicate: (enquiry) => enquiry.requestType === "booking" },
+                  { value: "quote", label: "Quote requests", predicate: (enquiry) => enquiry.requestType === "quote" },
+                  { value: "received", label: "Received", predicate: (enquiry) => ["received", "new"].includes(enquiry.status) },
+                  { value: "admin_review", label: "Admin review", predicate: (enquiry) => ["admin_review", "contacted"].includes(enquiry.status) },
+                  { value: "partner_follow_up", label: "Partner follow-up", predicate: (enquiry) => ["partner_follow_up", "referred"].includes(enquiry.status) },
+                  { value: "partner_replied", label: "Partner replied", predicate: (enquiry) => enquiry.status === "partner_replied" },
+                  { value: "details_shared", label: "Details shared", predicate: (enquiry) => enquiry.status === "details_shared" },
+                  { value: "quote_sent", label: "Quote sent", predicate: (enquiry) => enquiry.status === "quote_sent" },
+                  { value: "payment_pending", label: "Payment pending", predicate: (enquiry) => enquiry.status === "payment_pending" },
+                  { value: "paid", label: "Paid", predicate: (enquiry) => enquiry.status === "paid" },
+                  { value: "booked", label: "Booked", predicate: (enquiry) => enquiry.status === "booked" },
                   { value: "closed", label: "Closed", predicate: (enquiry) => enquiry.status === "closed" },
+                  { value: "archived", label: "Archived", predicate: (enquiry) => enquiry.isArchived },
                   { value: "partner_application", label: "Partner applications", predicate: (enquiry) => enquiry.type === "partner_application" }
                 ]}
                 sortOptions={[
@@ -3475,7 +3945,7 @@ export default function Admin() {
                   { value: "status", label: "Status", compare: (left, right) => compareText(left.status, right.status) },
                   { value: "destination", label: "Destination A-Z", compare: (left, right) => compareText(left.destination, right.destination) }
                 ]}
-                searchPlaceholder="Search name, email, destination or message"
+                searchPlaceholder="Search name, email, booking code, destination or message"
                 viewModes={[
                   { value: "list", label: "Inbox" },
                   { value: "cards", label: "Cards" }
@@ -3486,8 +3956,8 @@ export default function Admin() {
                     <div className="enquiry-message-main">
                       <div className="enquiry-message-head">
                         <div>
-                          <span className={`enquiry-status-pill status-${enquiry.status || "new"}`}>
-                            {enquiryStatusLabel(enquiry.status)}
+                          <span className={`enquiry-status-pill status-${enquiry.isArchived ? "archived" : enquiry.status || "new"}`}>
+                            {enquiry.isArchived ? "Archived" : enquiryStatusLabel(enquiry.status)}
                           </span>
                           <strong>{enquiry.name || "Traveller"}</strong>
                           <span>
@@ -3500,6 +3970,23 @@ export default function Admin() {
                               Reply by email
                             </a>
                           )}
+                          <ConfirmActionButton
+                            actionLabel={enquiry.isArchived ? "Restore enquiry" : "Archive enquiry"}
+                            className="button secondary compact"
+                            confirmMessage={
+                              enquiry.isArchived
+                                ? `Restore enquiry from ${enquiry.name || "this traveller"} to active queues?`
+                                : `Archive enquiry from ${enquiry.name || "this traveller"}? It will leave pending task counts but can be restored later.`
+                            }
+                            onConfirm={() => handleEnquiryArchive(enquiry._id, !enquiry.isArchived)}
+                          >
+                            {enquiry.isArchived ? "Restore" : "Archive"}
+                          </ConfirmActionButton>
+                          <ConfirmActionButton
+                            actionLabel={`Delete enquiry from ${enquiry.name || "traveller"}`}
+                            confirmMessage={`Permanently delete this enquiry from ${enquiry.name || "traveller"}? This cannot be undone.`}
+                            onConfirm={() => handleEnquiryDelete(enquiry._id)}
+                          />
                         </div>
                       </div>
                       <div className="enquiry-quick-grid">
@@ -3513,8 +4000,14 @@ export default function Admin() {
                         </span>
                         <span>
                           <strong>Request</strong>
-                          {enquiry.requestType === "quote" ? "Quote request" : "Question"}
+                          {enquiryRequestTypeLabel(enquiry.requestType)}
                         </span>
+                        {enquiry.referral?.trackingCode && (
+                          <span>
+                            <strong>Booking code</strong>
+                            {enquiry.referral.trackingCode}
+                          </span>
+                        )}
                       </div>
                       <details className="enquiry-toggle-panel">
                         <summary>View message and details</summary>
@@ -3529,8 +4022,14 @@ export default function Admin() {
                           </span>
                           <span>
                             <strong>Request</strong>
-                            {enquiry.requestType === "quote" ? "Quote request" : "Question"}
+                            {enquiryRequestTypeLabel(enquiry.requestType)}
                           </span>
+                          {enquiry.referral?.trackingCode && (
+                            <span>
+                              <strong>Booking code</strong>
+                              {enquiry.referral.trackingCode}
+                            </span>
+                          )}
                           <span>
                             <strong>Tour</strong>
                             {enquiry.tour?.title || "General enquiry"}
@@ -3558,7 +4057,99 @@ export default function Admin() {
                             <p key={`${enquiry._id}-message-${index}`}>{line}</p>
                           ))}
                         </section>
+                        {enquiry.communications?.length > 0 && (
+                          <section className="enquiry-message-body" aria-label="Follow-up history">
+                            <span>Follow-up history</span>
+                            {enquiry.communications.map((item) => (
+                              <p key={item._id || `${enquiry._id}-${item.sentAt}`}>
+                                {item.direction?.replace(/_/g, " ")} - {item.subject || item.message || "Message"} - {formatDate(item.sentAt)}
+                              </p>
+                            ))}
+                          </section>
+                        )}
                       </details>
+                      {["partner", "traveller"].map((recipient) => {
+                        const form = getEnquiryMessageForm(enquiry, recipient);
+                        const disabled = recipient === "partner" && !enquiry.partner?.name;
+
+                        return (
+                          <details className="enquiry-toggle-panel" key={`${enquiry._id}-${recipient}`}>
+                            <summary>{recipient === "partner" ? "Ask partner" : "Message traveller"}</summary>
+                            <form className="panel-form" onSubmit={(event) => handleEnquiryMessageSubmit(event, enquiry, recipient)}>
+                              <label className="field">
+                                <span>Subject</span>
+                                <input
+                                  value={form.subject}
+                                  onChange={(event) => updateEnquiryMessageForm(enquiry._id, recipient, "subject", event.target.value)}
+                                  disabled={disabled}
+                                />
+                              </label>
+                              {recipient === "partner" && (
+                                <>
+                                  <div className="button-row">
+                                    {partnerQuestionTemplates.map((question) => (
+                                      <button
+                                        className="button secondary compact"
+                                        key={question}
+                                        type="button"
+                                        onClick={() => addPartnerQuestionTemplate(enquiry, question)}
+                                        disabled={disabled}
+                                      >
+                                        {question.split(" ").slice(0, 4).join(" ")}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  <label className="field">
+                                    <span>Questions</span>
+                                    <textarea
+                                      value={form.questions}
+                                      onChange={(event) => updateEnquiryMessageForm(enquiry._id, recipient, "questions", event.target.value)}
+                                      rows="5"
+                                      placeholder="One question per line"
+                                      disabled={disabled}
+                                    />
+                                  </label>
+                                </>
+                              )}
+                              <label className="field">
+                                <span>Message</span>
+                                <textarea
+                                  value={form.message}
+                                  onChange={(event) => updateEnquiryMessageForm(enquiry._id, recipient, "message", event.target.value)}
+                                  rows="4"
+                                  disabled={disabled}
+                                />
+                              </label>
+                              <label className="field">
+                                <span>Document or image URLs</span>
+                                <textarea
+                                  value={form.attachments}
+                                  onChange={(event) => updateEnquiryMessageForm(enquiry._id, recipient, "attachments", event.target.value)}
+                                  rows="3"
+                                  placeholder="One URL per line"
+                                  disabled={disabled}
+                                />
+                              </label>
+                              <label className="field">
+                                <span>Upload image or video</span>
+                                <input
+                                  type="file"
+                                  accept="image/*,video/mp4,video/webm,video/quicktime"
+                                  onChange={(event) => handleEnquiryAttachmentUpload(event, enquiry, recipient)}
+                                  disabled={disabled || uploading}
+                                />
+                              </label>
+                              {disabled ? (
+                                <p className="form-note">No partner is assigned to this request.</p>
+                              ) : (
+                                <button className="button primary compact" type="submit">
+                                  Send to {recipient === "partner" ? "partner" : "traveller"}
+                                </button>
+                              )}
+                            </form>
+                          </details>
+                        );
+                      })}
                       <details className="enquiry-toggle-panel enquiry-status-panel">
                         <summary>Update status</summary>
                         <div className="enquiry-status-actions">
@@ -3616,7 +4207,7 @@ export default function Admin() {
                     <h2>Record a partner booking.</h2>
                     <p>
                       Use this when the partner confirms a booking by email, WhatsApp or invoice. If the partner&apos;s
-                      website is connected, this can happen automatically.
+                      reporting system is connected, this can happen automatically.
                     </p>
                   </div>
                   <div className="commission-edit-grid">
@@ -3704,7 +4295,8 @@ export default function Admin() {
                       predicate: (referral) => (referral.status || (referral.converted ? "converted" : "clicked")) === status
                     })),
                     { value: "unpaid", label: "Unpaid commission", predicate: (referral) => Number(referral.confirmedCommissionEUR || 0) > Number(referral.paidCommissionEUR || 0) },
-                    { value: "guest", label: "Guest travellers", predicate: (referral) => !referral.user }
+                    { value: "guest", label: "Guest travellers", predicate: (referral) => !referral.user },
+                    { value: "archived", label: "Archived", predicate: (referral) => referral.isArchived }
                   ]}
                   sortOptions={[
                     { value: "newest", label: "Newest", compare: (left, right) => compareDateNewest(left.clickedAt, right.clickedAt) },
@@ -3731,8 +4323,8 @@ export default function Admin() {
                               {referral.partner?.name || "Partner"} - {formatDate(referral.clickedAt)}
                             </span>
                           </div>
-                          <span className={`booking-status-pill status-${referral.status || (referral.converted ? "converted" : "clicked")}`}>
-                            {statusLabel(referral.status || (referral.converted ? "converted" : "clicked"))}
+                          <span className={`booking-status-pill status-${referral.isArchived ? "archived" : referral.status || (referral.converted ? "converted" : "clicked")}`}>
+                            {referral.isArchived ? "Archived" : statusLabel(referral.status || (referral.converted ? "converted" : "clicked"))}
                           </span>
                         </div>
                         <div className="booking-mini-grid">
@@ -3755,6 +4347,23 @@ export default function Admin() {
                               Partner page
                             </a>
                           )}
+                          <ConfirmActionButton
+                            actionLabel={referral.isArchived ? "Restore booking" : "Archive booking"}
+                            className="button secondary compact"
+                            confirmMessage={
+                              referral.isArchived
+                                ? `Restore booking ${referral.trackingCode || referral._id} to active queues?`
+                                : `Archive booking ${referral.trackingCode || referral._id}? It will leave pending task counts but can be restored later.`
+                            }
+                            onConfirm={() => handleReferralArchive(referral._id, !referral.isArchived)}
+                          >
+                            {referral.isArchived ? "Restore" : "Archive"}
+                          </ConfirmActionButton>
+                          <ConfirmActionButton
+                            actionLabel={`Delete booking ${referral.trackingCode || referral._id}`}
+                            confirmMessage={`Permanently delete booking ${referral.trackingCode || referral._id}? This cannot be undone.`}
+                            onConfirm={() => handleReferralDelete(referral._id)}
+                          />
                         </div>
                         <details className="booking-card-details">
                           <summary>Details and update</summary>

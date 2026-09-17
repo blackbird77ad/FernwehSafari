@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import SEO from "../components/SEO";
 import Spinner from "../components/Spinner";
-import { getBookingOpenURL, getBookingSession } from "../services/referralService";
+import { getBookingSession } from "../services/referralService";
 
 export default function BookingSession() {
   const { trackingCode } = useParams();
@@ -15,8 +15,6 @@ export default function BookingSession() {
   const tour = session?.referral?.tour;
   const partner = session?.referral?.partner;
   const bookingTitle = useMemo(() => tour?.title || "your selected tour", [tour?.title]);
-  const hasExternalBooking = Boolean(session?.referral?.hasExternalBooking ?? session?.referral?.outboundUrl);
-  const bookingOpenURL = trackingCode && hasExternalBooking ? getBookingOpenURL(trackingCode) : "";
 
   useEffect(() => {
     if (session || !trackingCode) {
@@ -55,7 +53,7 @@ export default function BookingSession() {
         <div className="booking-session-empty">
           <p className="eyebrow">Booking</p>
           <h1>We could not open this booking.</h1>
-          <p>{message || "The booking link may have expired. You can start again from the tour page."}</p>
+          <p>{message || "The booking reference may have expired. You can start again from the tour page."}</p>
           <Link className="button primary" to="/tours">
             Browse tours
           </Link>
@@ -70,9 +68,9 @@ export default function BookingSession() {
       <div className="booking-session-header">
         <div>
           <p className="eyebrow">Booking</p>
-          <h1>Continue with {partner?.name || "the tour operator"}.</h1>
+          <h1>Travellex received your booking request.</h1>
           <p>
-            You are ready to book {bookingTitle}. We have prepared the right operator link for you.
+            Admin will review {bookingTitle}, coordinate with the operator when needed, then follow up with quote, itinerary and payment next steps.
           </p>
         </div>
         <div className="booking-session-meta" aria-label="Booking session details">
@@ -86,71 +84,42 @@ export default function BookingSession() {
           </span>
           <span>
             <strong>Reference</strong>
-            Ready
+            {trackingCode}
           </span>
         </div>
       </div>
-      {hasExternalBooking ? (
-        <div className="booking-handoff-panel">
-          <div>
-            <p className="eyebrow">Next step</p>
-            <h2>Finish your booking with {partner?.name || "the operator"}.</h2>
-            <p>
-              Complete availability, traveller details and payment on the operator booking page.
-            </p>
-          </div>
-          <details className="booking-reference-details">
-            <summary>Support reference</summary>
-            <div className="booking-code-box">
-              <span>For Travellex support</span>
-              <strong>{trackingCode}</strong>
-              <small>You only need this if you ask us for help with this booking.</small>
-            </div>
-          </details>
-          <div className="button-row">
-            <a className="button primary" href={bookingOpenURL}>
-              Continue booking
-            </a>
-            <button className="button secondary" type="button" onClick={copySupportReference}>
-              {copied ? "Copied" : "Copy support reference"}
-            </button>
-            <Link className="button secondary" to={tour?.slug ? `/tours/${tour.slug}#quote` : "/contact"}>
-              Ask a question
-            </Link>
-          </div>
-          {message && <p className="form-note error">{message}</p>}
+      <div className="booking-internal-panel">
+        <p className="eyebrow">Admin-managed booking</p>
+        <h2>Travellex will coordinate this request.</h2>
+        <p>
+          Your traveller details stay with Travellex admin. If operator input is needed, admin will request availability, itinerary and payment details first.
+        </p>
+        <div className="booking-session-meta" aria-label="Booking request details">
+          <span>
+            <strong>Support ref</strong>
+            {trackingCode}
+          </span>
+          <span>
+            <strong>Tour</strong>
+            {tour?.title || "Selected tour"}
+          </span>
+          <span>
+            <strong>Next step</strong>
+            Admin review
+          </span>
         </div>
-      ) : (
-        <div className="booking-internal-panel">
-          <p className="eyebrow">Booking request</p>
-          <h2>Send your trip details to Travellex.</h2>
-          <p>
-            This operator does not have instant online booking yet. Share your dates and questions and Travellex will help with the next step.
-          </p>
-          <div className="booking-session-meta" aria-label="Booking request details">
-            <span>
-              <strong>Support ref</strong>
-              {trackingCode}
-            </span>
-            <span>
-              <strong>Tour</strong>
-              {tour?.title || "Selected tour"}
-            </span>
-            <span>
-              <strong>Next step</strong>
-              Trip details
-            </span>
-          </div>
-          <div className="button-row">
-            <a className="button primary" href={`mailto:experience@travellex.tours?subject=${encodeURIComponent(`Booking ${trackingCode}`)}`}>
-              Contact Travellex
-            </a>
-            <Link className="button secondary" to={tour?.slug ? `/tours/${tour.slug}#quote` : "/contact"}>
-              Send trip details
-            </Link>
-          </div>
+        <div className="button-row">
+          <a className="button primary" href={`mailto:experience@travellex.tours?subject=${encodeURIComponent(`Booking ${trackingCode}`)}`}>
+            Contact Travellex
+          </a>
+          <button className="button secondary" type="button" onClick={copySupportReference}>
+            {copied ? "Copied" : "Copy reference"}
+          </button>
+          <Link className="button secondary" to={tour?.slug ? `/tours/${tour.slug}#quote` : "/contact"}>
+            Add trip details
+          </Link>
         </div>
-      )}
+      </div>
       <div className="booking-session-help">
         <p>
           Need help before you continue? Ask Travellex and we will connect the details to this tour.
